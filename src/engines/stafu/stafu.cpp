@@ -41,7 +41,7 @@ public:
         }
         if (!cdRoot.empty()) {
             const auto cdDetection = stafu::detectSource(
-                cdRoot, stafu::DetectedSourceKind::CdData);
+                cdRoot, stafu::DetectedSourceKind::CdContents);
             if (cdDetection.status != stafu::DetectionStatus::Recognized)
                 return Error::fail("STAFU CD source files are missing or incomplete at: " +
                                    cdRoot.string());
