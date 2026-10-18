@@ -14,7 +14,7 @@ int failures = 0;
 
 #define CHECK(cond) do { \
     if (!(cond)) { \
-        std::fprintf(stderr, "%s:%d: CHECK failed: %s\\n", __FILE__, __LINE__, #cond); \
+        std::fprintf(stderr, "%s:%d: CHECK failed: %s\n", __FILE__, __LINE__, #cond); \
         ++failures; \
     } \
 } while (0)
@@ -76,8 +76,8 @@ int main() {
     testInventory(tmp / "tree");
     testInvalidRoot(tmp / "invalid");
     if (failures)
-        std::fprintf(stderr, "%d check(s) failed\\n", failures);
+        std::fprintf(stderr, "%d check(s) failed\n", failures);
     else
-        std::printf("All STAFU inventory tests passed\\n");
+        std::printf("All STAFU inventory tests passed\n");
     return failures ? 1 : 0;
 }
