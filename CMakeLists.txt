@@ -76,7 +76,8 @@ add_library(reluva_engines STATIC
     src/engines/newworlds/texture_viewer.cpp
     src/engines/stafu/stafu.cpp
     src/engines/stafu/source_inventory.cpp
-    src/engines/stafu/source_detection.cpp)
+    src/engines/stafu/source_detection.cpp
+    src/engines/stafu/zip_archive.cpp)
 target_link_libraries(reluva_engines PUBLIC reluva_common PRIVATE reluva_warnings)
 
 # --- executable: SDL3 backend + ImGui launcher --------------------------------
@@ -104,7 +105,8 @@ if(NOT ZLIB_FOUND)
     FetchContent_MakeAvailable(stafu_zlib)
     add_library(ZLIB::ZLIB ALIAS zlibstatic)
 endif()
-target_link_libraries(reluva-tool PRIVATE reluva_engines reluva_warnings ZLIB::ZLIB)
+target_link_libraries(reluva_engines PUBLIC ZLIB::ZLIB)
+target_link_libraries(reluva-tool PRIVATE reluva_engines reluva_warnings)
 
 add_executable(reluva-stafu-inventory src/tools/stafu_inventory_tool.cpp)
 target_link_libraries(reluva-stafu-inventory PRIVATE reluva_engines reluva_warnings)
