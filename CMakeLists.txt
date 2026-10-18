@@ -74,7 +74,8 @@ add_library(reluva_engines STATIC
     src/engines/newworlds/map_viewer.cpp
     src/engines/newworlds/model_viewer.cpp
     src/engines/newworlds/texture_viewer.cpp
-    src/engines/stafu/stafu.cpp)
+    src/engines/stafu/stafu.cpp
+    src/engines/stafu/source_inventory.cpp)
 target_link_libraries(reluva_engines PUBLIC reluva_common PRIVATE reluva_warnings)
 
 # --- executable: SDL3 backend + ImGui launcher --------------------------------
@@ -98,4 +99,8 @@ if(RELUVA_BUILD_TESTS)
     add_executable(reluva_newworlds_tests tests/test_newworlds_cat.cpp)
     target_link_libraries(reluva_newworlds_tests PRIVATE reluva_engines reluva_warnings)
     add_test(NAME newworlds_cat COMMAND reluva_newworlds_tests)
+
+    add_executable(reluva_stafu_inventory_tests tests/test_stafu_inventory.cpp)
+    target_link_libraries(reluva_stafu_inventory_tests PRIVATE reluva_engines reluva_warnings)
+    add_test(NAME stafu_inventory COMMAND reluva_stafu_inventory_tests)
 endif()
