@@ -89,6 +89,9 @@ target_link_libraries(reluva PRIVATE reluva_engines imgui SDL3::SDL3 reluva_warn
 add_executable(reluva-tool src/tools/reluva_tool.cpp)
 target_link_libraries(reluva-tool PRIVATE reluva_engines reluva_warnings)
 
+add_executable(reluva-stafu-inventory src/tools/stafu_inventory_tool.cpp)
+target_link_libraries(reluva-stafu-inventory PRIVATE reluva_engines reluva_warnings)
+
 # --- tests ----------------------------------------------------------------------
 if(RELUVA_BUILD_TESTS)
     enable_testing()
