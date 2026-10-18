@@ -75,7 +75,8 @@ add_library(reluva_engines STATIC
     src/engines/newworlds/model_viewer.cpp
     src/engines/newworlds/texture_viewer.cpp
     src/engines/stafu/stafu.cpp
-    src/engines/stafu/source_inventory.cpp)
+    src/engines/stafu/source_inventory.cpp
+    src/engines/stafu/source_detection.cpp)
 target_link_libraries(reluva_engines PUBLIC reluva_common PRIVATE reluva_warnings)
 
 # --- executable: SDL3 backend + ImGui launcher --------------------------------
@@ -92,6 +93,9 @@ target_link_libraries(reluva-tool PRIVATE reluva_engines reluva_warnings)
 add_executable(reluva-stafu-inventory src/tools/stafu_inventory_tool.cpp)
 target_link_libraries(reluva-stafu-inventory PRIVATE reluva_engines reluva_warnings)
 
+add_executable(reluva-stafu-detect src/tools/stafu_detect_tool.cpp)
+target_link_libraries(reluva-stafu-detect PRIVATE reluva_engines reluva_warnings)
+
 # --- tests ----------------------------------------------------------------------
 if(RELUVA_BUILD_TESTS)
     enable_testing()
@@ -106,4 +110,8 @@ if(RELUVA_BUILD_TESTS)
     add_executable(reluva_stafu_inventory_tests tests/test_stafu_inventory.cpp)
     target_link_libraries(reluva_stafu_inventory_tests PRIVATE reluva_engines reluva_warnings)
     add_test(NAME stafu_inventory COMMAND reluva_stafu_inventory_tests)
+
+    add_executable(reluva_stafu_detection_tests tests/test_stafu_detection.cpp)
+    target_link_libraries(reluva_stafu_detection_tests PRIVATE reluva_engines reluva_warnings)
+    add_test(NAME stafu_detection COMMAND reluva_stafu_detection_tests)
 endif()
