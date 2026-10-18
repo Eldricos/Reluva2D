@@ -132,4 +132,8 @@ if(RELUVA_BUILD_TESTS)
     add_executable(reluva_stafu_detection_tests tests/test_stafu_detection.cpp)
     target_link_libraries(reluva_stafu_detection_tests PRIVATE reluva_engines reluva_warnings)
     add_test(NAME stafu_detection COMMAND reluva_stafu_detection_tests)
+
+    add_executable(reluva_stafu_zip_tests tests/test_stafu_zip.cpp)
+    target_link_libraries(reluva_stafu_zip_tests PRIVATE reluva_engines reluva_warnings)
+    add_test(NAME stafu_zip COMMAND reluva_stafu_zip_tests)
 endif()
