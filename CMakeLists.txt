@@ -77,7 +77,8 @@ add_library(reluva_engines STATIC
     src/engines/stafu/stafu.cpp
     src/engines/stafu/source_inventory.cpp
     src/engines/stafu/source_detection.cpp
-    src/engines/stafu/zip_archive.cpp)
+    src/engines/stafu/zip_archive.cpp
+    src/engines/stafu/resource_manager.cpp)
 target_link_libraries(reluva_engines PUBLIC reluva_common PRIVATE reluva_warnings)
 
 # --- executable: SDL3 backend + ImGui launcher --------------------------------
@@ -136,4 +137,8 @@ if(RELUVA_BUILD_TESTS)
     add_executable(reluva_stafu_zip_tests tests/test_stafu_zip.cpp)
     target_link_libraries(reluva_stafu_zip_tests PRIVATE reluva_engines reluva_warnings)
     add_test(NAME stafu_zip COMMAND reluva_stafu_zip_tests)
+
+    add_executable(reluva_stafu_resource_tests tests/test_stafu_resources.cpp)
+    target_link_libraries(reluva_stafu_resource_tests PRIVATE reluva_engines reluva_warnings)
+    add_test(NAME stafu_resources COMMAND reluva_stafu_resource_tests)
 endif()
