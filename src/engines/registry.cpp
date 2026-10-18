@@ -13,6 +13,7 @@ const std::vector<const MetaEngine*>& allEngines() {
     static const std::vector<const MetaEngine*> engines = {
         &testbedMetaEngine(),
         &newWorldsMetaEngine(),
+        & stafuMetaEngine(),
     };
     return engines;
 }

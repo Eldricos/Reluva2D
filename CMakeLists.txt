@@ -73,7 +73,8 @@ add_library(reluva_engines STATIC
     src/engines/newworlds/model_textures.cpp
     src/engines/newworlds/map_viewer.cpp
     src/engines/newworlds/model_viewer.cpp
-    src/engines/newworlds/texture_viewer.cpp)
+    src/engines/newworlds/texture_viewer.cpp
+    src/engines/stafu/stafu.cpp)
 target_link_libraries(reluva_engines PUBLIC reluva_common PRIVATE reluva_warnings)
 
 # --- executable: SDL3 backend + ImGui launcher --------------------------------
