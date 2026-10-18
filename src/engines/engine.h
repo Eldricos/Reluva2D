@@ -21,6 +21,7 @@ struct GameTarget {
     std::string gameId;
     std::string description;
     std::filesystem::path path; // game data directory
+    std::filesystem::path cdPath; // optional separate CD data directory
 };
 
 // A running game. Created by its MetaEngine, run once, then destroyed.
