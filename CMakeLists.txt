@@ -87,7 +87,9 @@ add_executable(reluva
 target_link_libraries(reluva PRIVATE reluva_engines imgui SDL3::SDL3 reluva_warnings)
 
 # --- developer tools -----------------------------------------------------------
-add_executable(reluva-tool src/tools/reluva_tool.cpp)
+add_executable(reluva-tool
+    src/tools/reluva_tool.cpp
+    src/tools/stafu_archive_probe.cpp)
 target_link_libraries(reluva-tool PRIVATE reluva_engines reluva_warnings)
 
 add_executable(reluva-stafu-inventory src/tools/stafu_inventory_tool.cpp)
