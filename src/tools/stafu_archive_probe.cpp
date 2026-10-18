@@ -116,11 +116,16 @@ int stafuResourceTest(const char* installed, const char* cd, const char* name);
 int stafuInstallAnalyze(const char* installed, const char* cd);
 int stafuInstallManifest(const char* installed, const char* cd);
 int stafuInstallExtract(const char* manifest, const char* cd, const char* destination);
+int stafuInstallValidate(const char* installed, const char* cd);
 int stafuArchiveTest(const char* path, const char* entry);
 int stafuArchiveList(const char* path);
 int stafuArchiveCompare(const char* zipPath, const char* dirPath);
 
 int stafuToolMain(int argc, char** argv) {
+    if (argc == 4 && std::strcmp(argv[2], "install-validate") == 0)
+        return stafuInstallValidate(argv[3], nullptr);
+    if (argc == 5 && std::strcmp(argv[2], "install-validate") == 0)
+        return stafuInstallValidate(argv[3], argv[4]);
     if (argc == 6 && std::strcmp(argv[2], "install-extract") == 0)
         return stafuInstallExtract(argv[3], argv[4], argv[5]);
     if (argc == 5 && std::strcmp(argv[2], "install-manifest") == 0)
@@ -139,6 +144,7 @@ int stafuToolMain(int argc, char** argv) {
         return probe(argv[3]);
     std::fprintf(stderr,
         "STAFU usage:\n"
+        "  reluva-tool -stafu install-validate <installed> [cd]\n"
         "  reluva-tool -stafu install-extract <manifest.csv> <cd> <new-destination>\n"
         "  reluva-tool -stafu install-manifest <installed> <cd>\n"
         "  reluva-tool -stafu install-analyze <installed> <cd>\n"
