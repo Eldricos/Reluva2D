@@ -112,16 +112,19 @@ int probe(const char* name) {
 
 } // namespace
 
+int stafuArchiveTest(const char* path, const char* entry);
 int stafuArchiveList(const char* path);
 int stafuArchiveCompare(const char* zipPath, const char* dirPath);
 
 int stafuToolMain(int argc, char** argv) {
+    if (argc == 5 && std::strcmp(argv[2], "archive-test") == 0)
+        return stafuArchiveTest(argv[3], argv[4]);
     if (argc == 4 && std::strcmp(argv[2], "archive-list") == 0)
         return stafuArchiveList(argv[3]);
     if (argc == 5 && std::strcmp(argv[2], "archive-compare") == 0)
         return stafuArchiveCompare(argv[3], argv[4]);
     if (argc == 4 && std::strcmp(argv[2], "archive-probe") == 0)
         return probe(argv[3]);
-    std::fprintf(stderr, "STAFU usage:\n  reluva-tool -stafu archive-probe <file>\n  reluva-tool -stafu archive-list <file>\n  reluva-tool -stafu archive-compare <archive.zip> <archive.dir>\n");
+    std::fprintf(stderr, "STAFU usage:\n  reluva-tool -stafu archive-probe <file>\n  reluva-tool -stafu archive-test <archive.zip> <entry>\n  reluva-tool -stafu archive-list <file>\n  reluva-tool -stafu archive-compare <archive.zip> <archive.dir>\n");
     return 2;
 }
