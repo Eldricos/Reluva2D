@@ -233,7 +233,8 @@ void Launcher::addGame(const DetectedGame& game, const std::string& path) {
 
 GameTarget Launcher::targetFromConfig(const std::string& name) const {
     return GameTarget{name, config_.get(name, "engine"), config_.get(name, "gameid"),
-                      config_.get(name, "description", name), config_.get(name, "path")};
+                      config_.get(name, "description", name), config_.get(name, "path"),
+                      config_.get(name, "cd_path")};
 }
 
 } // namespace reluva
