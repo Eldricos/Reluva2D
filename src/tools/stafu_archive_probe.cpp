@@ -112,11 +112,14 @@ int probe(const char* name) {
 
 } // namespace
 
+int stafuResourceTest(const char* installed, const char* cd, const char* name);
 int stafuArchiveTest(const char* path, const char* entry);
 int stafuArchiveList(const char* path);
 int stafuArchiveCompare(const char* zipPath, const char* dirPath);
 
 int stafuToolMain(int argc, char** argv) {
+    if (argc == 6 && std::strcmp(argv[2], "resource-test") == 0)
+        return stafuResourceTest(argv[3], argv[4], argv[5]);
     if (argc == 5 && std::strcmp(argv[2], "archive-test") == 0)
         return stafuArchiveTest(argv[3], argv[4]);
     if (argc == 4 && std::strcmp(argv[2], "archive-list") == 0)
