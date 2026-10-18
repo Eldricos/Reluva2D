@@ -8,6 +8,8 @@
 #include <fstream>
 #include <limits>
 #include <map>
+#include <iterator>
+#include <sstream>
 #include <string>
 #include <vector>
 #include <zlib.h>
@@ -95,8 +97,36 @@ int stafuInstallExtract(const char* manifestArg, const char* cdArg, const char* 
     }
     std::ifstream input(manifestArg, std::ios::binary);
     if (!input) { std::fprintf(stderr, "install-extract: cannot open manifest\n"); return 1; }
+    // Windows PowerShell 5.1 redirects native stdout as UTF-16 LE.
+    // Normalize that representation to the ASCII CSV emitted by install-manifest.
+    std::string raw((std::istreambuf_iterator<char>(input)),
+                    std::istreambuf_iterator<char>());
+    std::string normalized;
+    if (raw.size() >= 2 &&
+        static_cast<unsigned char>(raw[0]) == 0xFF &&
+        static_cast<unsigned char>(raw[1]) == 0xFE) {
+        if ((raw.size() - 2) % 2 != 0) {
+            std::fprintf(stderr, "install-extract: truncated UTF-16 LE manifest\n");
+            return 1;
+        }
+        for (size_t i = 2; i < raw.size(); i += 2) {
+            if (raw[i + 1] != '\0' || static_cast<unsigned char>(raw[i]) > 0x7F) {
+                std::fprintf(stderr, "install-extract: unsupported non-ASCII UTF-16 manifest\n");
+                return 1;
+            }
+            normalized.push_back(raw[i]);
+        }
+    } else {
+        normalized = std::move(raw);
+        if (normalized.size() >= 3 &&
+            static_cast<unsigned char>(normalized[0]) == 0xEF &&
+            static_cast<unsigned char>(normalized[1]) == 0xBB &&
+            static_cast<unsigned char>(normalized[2]) == 0xBF)
+            normalized.erase(0, 3);
+    }
+    std::istringstream manifest(normalized);
     std::string line;
-    if (!std::getline(input, line)) {
+    if (!std::getline(manifest, line)) {
         std::fprintf(stderr, "install-extract: empty manifest\n"); return 1;
     }
     if (!line.empty() && line.back() == '\r') line.pop_back();
@@ -107,7 +137,7 @@ int stafuInstallExtract(const char* manifestArg, const char* cdArg, const char* 
     std::map<std::string, bool> destinations;
     std::vector<std::string> fields;
     size_t unresolved = 0, lineNumber = 1;
-    while (std::getline(input, line)) {
+    while (std::getline(manifest, line)) {
         ++lineNumber;
         if (!line.empty() && line.back() == '\r') line.pop_back();
         if (!csvFields(line, fields) || fields.size() != 6 ||
@@ -135,7 +165,7 @@ int stafuInstallExtract(const char* manifestArg, const char* cdArg, const char* 
         }
         records.push_back(std::move(r));
     }
-    if (!input.eof() || records.empty()) {
+    if (!manifest.eof() || records.empty()) {
         std::fprintf(stderr, "install-extract: read failure or no MATCH entries\n"); return 1;
     }
     std::map<std::string, reluva::stafu::ZipArchive> archives;
