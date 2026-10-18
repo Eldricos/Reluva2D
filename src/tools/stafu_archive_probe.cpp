@@ -131,6 +131,13 @@ int stafuToolMain(int argc, char** argv) {
         return stafuArchiveCompare(argv[3], argv[4]);
     if (argc == 4 && std::strcmp(argv[2], "archive-probe") == 0)
         return probe(argv[3]);
-    std::fprintf(stderr, "STAFU usage:\\n  reluva-tool -stafu install-analyze <installed> <cd>\\n  reluva-tool -stafu resource-test <installed> <cd> <entry>\\n\n  reluva-tool -stafu archive-probe <file>\n  reluva-tool -stafu archive-test <archive.zip> <entry>\n  reluva-tool -stafu archive-list <file>\n  reluva-tool -stafu archive-compare <archive.zip> <archive.dir>\n");
+    std::fprintf(stderr,
+        "STAFU usage:\\n"
+        "  reluva-tool -stafu install-analyze <installed> <cd>\\n"
+        "  reluva-tool -stafu resource-test <installed> <cd> <entry>\\n"
+        "  reluva-tool -stafu archive-probe <file>\\n"
+        "  reluva-tool -stafu archive-test <archive.zip> <entry>\\n"
+        "  reluva-tool -stafu archive-list <file>\\n"
+        "  reluva-tool -stafu archive-compare <archive.zip> <archive.dir>\\n");
     return 2;
 }
