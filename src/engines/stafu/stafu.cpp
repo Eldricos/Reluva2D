@@ -32,9 +32,20 @@ public:
         // Do not guess sibling directory names or mutate original game data.
         std::filesystem::path cdRoot;
         std::error_code ec;
-        const auto candidate = target_.path / "cd";
-        if (std::filesystem::is_directory(candidate, ec))
-            cdRoot = candidate;
+        if (!target_.cdPath.empty()) {
+            cdRoot = target_.cdPath; // explicit configuration takes precedence
+        } else {
+            const auto candidate = target_.path / "cd";
+            if (std::filesystem::is_directory(candidate, ec))
+                cdRoot = candidate;
+        }
+        if (!cdRoot.empty()) {
+            const auto cdDetection = stafu::detectSource(
+                cdRoot, stafu::DetectedSourceKind::CdData);
+            if (cdDetection.status != stafu::DetectionStatus::Recognized)
+                return Error::fail("STAFU CD source files are missing or incomplete at: " +
+                                   cdRoot.string());
+        }
 
         stafu::ResourceManager resources;
         std::string error;
