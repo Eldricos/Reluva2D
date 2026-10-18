@@ -1290,7 +1290,11 @@ int cmdGeoSurvey(int argc, char** argv) {
 
 } // namespace
 
+int stafuToolMain(int argc, char** argv);
+
 int main(int argc, char** argv) {
+    if (argc >= 2 && std::strcmp(argv[1], "-stafu") == 0)
+        return stafuToolMain(argc, argv);
     if (argc >= 2 && std::strcmp(argv[1], "hexdump") == 0)
         return cmdHexdump(argc, argv);
     if (argc >= 2 && std::strcmp(argv[1], "cat-probe") == 0)
@@ -1325,6 +1329,7 @@ int main(int argc, char** argv) {
         return cmdGeoFaces(argc, argv);
     std::fprintf(stderr,
                  "usage:\n"
+                 "  reluva-tool -stafu archive-probe <file>\n"
                  "  reluva-tool hexdump <file> [offset] [length]\n"
                  "  reluva-tool cat-probe <file.cat> [-q]\n"
                  "  reluva-tool cat-list <file.cat>\n"
