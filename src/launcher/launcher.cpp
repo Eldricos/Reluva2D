@@ -5,6 +5,7 @@
 
 #include "backends/sdl3/sdl_system.h"
 #include "engines/registry.h"
+#include "engines/stafu/source_detection.h"
 
 #include <imgui.h>
 #include <imgui_impl_sdl3.h>
@@ -131,6 +132,15 @@ void Launcher::drawUi(std::optional<GameTarget>& launch, bool& quit) {
     }
     ImGui::EndDisabled();
 
+    ImGui::BeginDisabled(!haveSelection || pickInProgress_ ||
+                         config_.get(selected_, "engine") != "stafu");
+    if (ImGui::Button("Set CD Folder...", bsize)) {
+        pendingCdTarget_ = selected_;
+        pickInProgress_ = true;
+        SDL_ShowOpenFolderDialog(pickFolderCallback, this, sys_.window(), nullptr, false);
+    }
+    ImGui::EndDisabled();
+
     ImGui::BeginDisabled(!haveSelection);
     if (ImGui::Button("Remove", bsize)) {
         config_.removeSection(selected_);
@@ -199,8 +209,29 @@ void Launcher::handlePickedFolder() {
     }
     if (error)
         status_ = *error;
-    if (!folder)
+    if (!folder) {
+        if (!pickInProgress_)
+            pendingCdTarget_.clear();
         return;
+    }
+
+    if (!pendingCdTarget_.empty()) {
+        const std::string target = std::move(pendingCdTarget_);
+        pendingCdTarget_.clear();
+        if (!config_.hasSection(target) || config_.get(target, "engine") != "stafu") {
+            status_ = "Selected STAFU game no longer exists.";
+            return;
+        }
+        const auto cd = stafu::detectSource(*folder, stafu::DetectedSourceKind::CdContents);
+        if (cd.status != stafu::DetectionStatus::Recognized) {
+            status_ = "Folder does not contain a recognized STAFU CD source.";
+            return;
+        }
+        config_.set(target, "cd_path", *folder);
+        if (Error err = config_.save()) status_ = err.message;
+        else status_ = "STAFU CD source configured for " + target;
+        return;
+    }
 
     auto found = detectGames(*folder);
     if (found.empty()) {
