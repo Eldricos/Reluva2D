@@ -142,4 +142,8 @@ if(RELUVA_BUILD_TESTS)
     add_executable(reluva_stafu_resource_tests tests/test_stafu_resources.cpp)
     target_link_libraries(reluva_stafu_resource_tests PRIVATE reluva_engines reluva_warnings)
     add_test(NAME stafu_resources COMMAND reluva_stafu_resource_tests)
+
+    add_executable(reluva_stafu_meta_tests tests/test_stafu_meta.cpp)
+    target_link_libraries(reluva_stafu_meta_tests PRIVATE reluva_engines reluva_warnings)
+    add_test(NAME stafu_meta COMMAND reluva_stafu_meta_tests)
 endif()
