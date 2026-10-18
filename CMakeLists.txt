@@ -90,8 +90,21 @@ target_link_libraries(reluva PRIVATE reluva_engines imgui SDL3::SDL3 reluva_warn
 add_executable(reluva-tool
     src/tools/reluva_tool.cpp
     src/tools/stafu_archive_probe.cpp
-    src/tools/stafu_archive_directory.cpp)
-target_link_libraries(reluva-tool PRIVATE reluva_engines reluva_warnings)
+    src/tools/stafu_archive_directory.cpp
+    src/tools/stafu_archive_reader.cpp)
+# ZIP method 8 requires raw DEFLATE support. Prefer an installed zlib;
+# otherwise fetch a pinned upstream release for reproducible Windows builds.
+find_package(ZLIB QUIET)
+if(NOT ZLIB_FOUND)
+    set(ZLIB_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+    FetchContent_Declare(stafu_zlib
+        GIT_REPOSITORY https://github.com/madler/zlib.git
+        GIT_TAG v1.3.1
+        GIT_SHALLOW TRUE)
+    FetchContent_MakeAvailable(stafu_zlib)
+    add_library(ZLIB::ZLIB ALIAS zlibstatic)
+endif()
+target_link_libraries(reluva-tool PRIVATE reluva_engines reluva_warnings ZLIB::ZLIB)
 
 add_executable(reluva-stafu-inventory src/tools/stafu_inventory_tool.cpp)
 target_link_libraries(reluva-stafu-inventory PRIVATE reluva_engines reluva_warnings)
