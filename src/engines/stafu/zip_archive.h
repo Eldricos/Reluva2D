@@ -22,6 +22,7 @@ public:
     bool read(const std::string& name, std::vector<uint8_t>& bytes, std::string& error,
               uint64_t maxBytes = 64ull * 1024 * 1024) const;
     size_t size() const { return entries_.size(); }
+    const std::vector<ZipEntry>& entries() const { return entries_; }
 private:
     std::filesystem::path path_;
     uint64_t fileSize_ = 0;
