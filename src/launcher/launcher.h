@@ -42,6 +42,7 @@ private:
     SdlSystem& sys_;
     Config& config_;
     std::string selected_;
+    std::string pendingCdTarget_;
     std::string status_;
 
     // The folder dialog answers on another thread.
