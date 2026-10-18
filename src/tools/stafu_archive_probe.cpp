@@ -114,11 +114,14 @@ int probe(const char* name) {
 
 int stafuResourceTest(const char* installed, const char* cd, const char* name);
 int stafuInstallAnalyze(const char* installed, const char* cd);
+int stafuInstallManifest(const char* installed, const char* cd);
 int stafuArchiveTest(const char* path, const char* entry);
 int stafuArchiveList(const char* path);
 int stafuArchiveCompare(const char* zipPath, const char* dirPath);
 
 int stafuToolMain(int argc, char** argv) {
+    if (argc == 5 && std::strcmp(argv[2], "install-manifest") == 0)
+        return stafuInstallManifest(argv[3], argv[4]);
     if (argc == 5 && std::strcmp(argv[2], "install-analyze") == 0)
         return stafuInstallAnalyze(argv[3], argv[4]);
     if (argc == 6 && std::strcmp(argv[2], "resource-test") == 0)
@@ -132,12 +135,13 @@ int stafuToolMain(int argc, char** argv) {
     if (argc == 4 && std::strcmp(argv[2], "archive-probe") == 0)
         return probe(argv[3]);
     std::fprintf(stderr,
-        "STAFU usage:\\n"
-        "  reluva-tool -stafu install-analyze <installed> <cd>\\n"
-        "  reluva-tool -stafu resource-test <installed> <cd> <entry>\\n"
-        "  reluva-tool -stafu archive-probe <file>\\n"
-        "  reluva-tool -stafu archive-test <archive.zip> <entry>\\n"
-        "  reluva-tool -stafu archive-list <file>\\n"
-        "  reluva-tool -stafu archive-compare <archive.zip> <archive.dir>\\n");
+        "STAFU usage:\n"
+        "  reluva-tool -stafu install-manifest <installed> <cd>\n"
+        "  reluva-tool -stafu install-analyze <installed> <cd>\n"
+        "  reluva-tool -stafu resource-test <installed> <cd> <entry>\n"
+        "  reluva-tool -stafu archive-probe <file>\n"
+        "  reluva-tool -stafu archive-test <archive.zip> <entry>\n"
+        "  reluva-tool -stafu archive-list <file>\n"
+        "  reluva-tool -stafu archive-compare <archive.zip> <archive.dir>\n");
     return 2;
 }
