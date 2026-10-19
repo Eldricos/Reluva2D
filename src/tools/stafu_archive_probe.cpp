@@ -112,6 +112,7 @@ int probe(const char* name) {
 
 } // namespace
 
+int stafuValidateComputerLayout(const char* installed, const char* cd);
 int stafuInspectComputerSourceDisplacement(const char* installed, const char* cd);
 int stafuCorrelateComputerPrimary(const char* installed, const char* cd);
 int stafuInspectComputerRunReferences(const char* installed, const char* cd);
@@ -141,6 +142,8 @@ int stafuArchiveList(const char* path);
 int stafuArchiveCompare(const char* zipPath, const char* dirPath);
 
 int stafuToolMain(int argc, char** argv) {
+    if (argc == 5 && std::strcmp(argv[2], "computer-layout-validate") == 0)
+        return stafuValidateComputerLayout(argv[3], argv[4]);
     if (argc == 5 && std::strcmp(argv[2], "computer-source-displacement") == 0)
         return stafuInspectComputerSourceDisplacement(argv[3], argv[4]);
     if (argc == 5 && std::strcmp(argv[2], "computer-primary-correlation") == 0)
@@ -225,6 +228,7 @@ int stafuToolMain(int argc, char** argv) {
         "  reluva-tool -stafu computer-run-references <installed> <cd>\n"
         "  reluva-tool -stafu computer-primary-correlation <installed> <cd>\n"
         "  reluva-tool -stafu computer-source-displacement <installed> <cd>\n"
+        "  reluva-tool -stafu computer-layout-validate <installed> <cd>\n"
         "  reluva-tool -stafu archive-probe <file>\n"
         "  reluva-tool -stafu archive-test <archive.zip> <entry>\n"
         "  reluva-tool -stafu archive-list <file>\n"
