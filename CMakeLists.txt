@@ -111,6 +111,7 @@ add_executable(reluva-tool
     src/tools/stafu_computer_header_compare.cpp
     src/tools/stafu_computer_article_scan.cpp
     src/tools/stafu_computer_reference_layout.cpp
+    src/tools/stafu_computer_byte_patterns.cpp
     src/tools/stafu_install_analyze.cpp
     src/tools/stafu_install_manifest.cpp
     src/tools/stafu_install_extract.cpp
