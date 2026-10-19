@@ -112,6 +112,7 @@ int probe(const char* name) {
 
 } // namespace
 
+int stafuInspectIndex(const char* installed, const char* cd, const char* name);
 int stafuInspectReferences(const char* installed, const char* cd, const char* name);
 int stafuInspectRanges(const char* installed, const char* cd, const char* name);
 int stafuInspectOffsets(const char* installed, const char* cd, const char* name);
@@ -128,6 +129,8 @@ int stafuArchiveList(const char* path);
 int stafuArchiveCompare(const char* zipPath, const char* dirPath);
 
 int stafuToolMain(int argc, char** argv) {
+    if (argc == 6 && std::strcmp(argv[2], "index-inspect") == 0)
+        return stafuInspectIndex(argv[3], argv[4], argv[5]);
     if (argc == 6 && std::strcmp(argv[2], "reference-inspect") == 0)
         return stafuInspectReferences(argv[3], argv[4], argv[5]);
     if (argc == 6 && std::strcmp(argv[2], "range-inspect") == 0)
@@ -173,6 +176,7 @@ int stafuToolMain(int argc, char** argv) {
         "  reluva-tool -stafu offset-inspect <installed> <cd> <entry>\n"
         "  reluva-tool -stafu range-inspect <installed> <cd> <entry>\n"
         "  reluva-tool -stafu reference-inspect <installed> <cd> <entry>\n"
+        "  reluva-tool -stafu index-inspect <installed> <cd> <entry>\n"
         "  reluva-tool -stafu archive-probe <file>\n"
         "  reluva-tool -stafu archive-test <archive.zip> <entry>\n"
         "  reluva-tool -stafu archive-list <file>\n"
