@@ -56,8 +56,8 @@ int stafuCorrelateComputerPrimary(const char* installed,const char* cd) {
     std::vector<size_t> examples,contradictions;
     std::printf("computer.db=%zu primary=%zu candidate groups=%zu\n",
                 bytes.size(),offsets.size(),candidates.size());
-    std::puts("Association rule: first target belongs to nearest preceding primary offset;");
-    std::puts("groups are included only when their source precedes the next primary offset.");
+    std::puts("Association rule: first target belongs to nearest preceding primary offset.");
+    std::puts("Source location is reported independently (it may cross primary intervals).");
     for(size_t i=0;i<candidates.size();++i) {
         const auto& c=candidates[i];
         auto it=std::upper_bound(offsets.begin(),offsets.end(),c.a);
@@ -65,8 +65,6 @@ int stafuCorrelateComputerPrimary(const char* installed,const char* cd) {
         --it;
         const size_t primaryIndex=size_t(it-offsets.begin());
         const uint32_t base=*it;
-        const uint32_t next=primaryIndex+1<offsets.size()?offsets[primaryIndex+1]:uint32_t(bytes.size());
-        if(c.source<base || c.source>=next)continue;
         ++correlated;
         const int64_t delta=int64_t(c.a)-base;
         ++distanceCounts[delta];
