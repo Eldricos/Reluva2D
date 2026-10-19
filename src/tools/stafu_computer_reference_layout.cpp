@@ -40,7 +40,7 @@ struct Candidate {
 };
 struct Stats {
     size_t candidates = 0, overlaps = 0, examined = 0, inFile = 0;
-    size_t stringStarts = 0, primary = 0, increasingTriples = 0;
+    size_t stringStarts = 0, primary = 0, increasingTriples = 0, triplesWithString = 0;
 };
 struct Hit {
     size_t position;
@@ -88,7 +88,7 @@ int stafuAnalyzeComputerReferences(const char* installed, const char* cd) {
     std::printf("computer.db: %zu bytes; primary offsets=%zu; ASCII string starts=%zu\n",
                 b.size(), primary.size(), stringStarts.size());
     std::printf("Candidate triples: %zu\n", candidates.size());
-    std::puts("Testing all byte alignments in the 48 bytes preceding each zero run.");
+    std::puts("Testing all byte alignments near each zero-run boundary, including up to 3 zero bytes.");
     std::puts("Offsets and target previews are observational; pointer semantics unverified.\n");
     for (size_t i = 0; i < candidates.size(); ++i) {
         const auto& c = candidates[i];
@@ -104,9 +104,12 @@ int stafuAnalyzeComputerReferences(const char* installed, const char* cd) {
                 c.start, c.id.c_str(), c.label.c_str(), c.title.c_str(),
                 c.zeroLength, overlap ? "[OVERLAP RISK]" : "");
         const size_t from = c.zeroStart > 48 ? c.zeroStart - 48 : 0;
+        // The high byte of the last little-endian pointer can be zero,
+        // making it appear to belong to the padding run.
+        const size_t end = std::min(b.size(), c.zeroStart + 3);
         std::vector<Hit> hits;
         // Examine every byte position, not just words aligned to zeroStart.
-        for (size_t pos = from; pos + 4 <= c.zeroStart; ++pos) {
+        for (size_t pos = from; pos + 4 <= end; ++pos) {
             const uint32_t value = word(b, pos);
             ++total.examined;
             const bool valid = value != 0 && value < b.size();
@@ -117,17 +120,17 @@ int stafuAnalyzeComputerReferences(const char* installed, const char* cd) {
             if (isPrimary) ++total.primary;
             if (valid) hits.push_back({pos, value, isString, isPrimary});
         }
-        // A candidate triplet requires three consecutive u32 values, increasing,
-        // in bounds, and with at least one target recognized as a string start.
+        // Inspect complete consecutive increasing triples, even if their
+        // targets are binary or do not meet our strict string-start heuristic.
         size_t triples = 0;
-        for (size_t pos = from; pos + 12 <= c.zeroStart; ++pos) {
+        for (size_t pos = from; pos + 12 <= end; ++pos) {
             const uint32_t v0 = word(b, pos), v1 = word(b, pos + 4),
                            v2 = word(b, pos + 8);
             if (!(v0 && v0 < v1 && v1 < v2 && v2 < b.size())) continue;
-            if (!stringStarts.contains(v0) && !stringStarts.contains(v1) &&
-                !stringStarts.contains(v2)) continue;
             ++triples;
             ++total.increasingTriples;
+            if (stringStarts.contains(v0) || stringStarts.contains(v1) ||
+                stringStarts.contains(v2)) ++total.triplesWithString;
             if (selected && triples <= 4) {
                 std::printf("  triple at 0x%08zx: 0x%08x 0x%08x 0x%08x\n",
                             pos, v0, v1, v2);
@@ -136,10 +139,14 @@ int stafuAnalyzeComputerReferences(const char* installed, const char* cd) {
                     std::string preview;
                     const bool text = stringAt(b, target, preview, 160);
                     if (preview.size() > 80) preview.resize(80);
-                    std::printf("    -> 0x%08x %s%s%s\n", value,
+                    std::printf("    -> 0x%08x %s%s%s", value,
                         stringStarts.contains(value) ? "[STRING START] " : "",
                         primary.contains(value) ? "[PRIMARY] " : "",
                         text ? preview.c_str() : "(no bounded printable string)");
+                    std::printf(" | bytes:");
+                    for (size_t j = value; j < b.size() && j - value < 12; ++j)
+                        std::printf(" %02x", unsigned(b[j]));
+                    std::printf("\n");
                 }
             }
         }
@@ -152,15 +159,15 @@ int stafuAnalyzeComputerReferences(const char* installed, const char* cd) {
                     h.position, h.value, h.isString ? "[STRING START] " : "",
                     h.isPrimary ? "[PRIMARY]" : "");
             }
-            if (!triples) std::puts("  no qualifying increasing string-reference triple");
+            if (!triples) std::puts("  no increasing in-file triple found");
         }
     }
     std::printf("\nSummary: candidates=%zu overlap-risk=%zu examined-u32=%zu nonzero-in-file=%zu\n",
                 total.candidates, total.overlaps, total.examined, total.inFile);
     std::printf("Exact ASCII string-start matches=%zu; primary-offset matches=%zu\n",
                 total.stringStarts, total.primary);
-    std::printf("Increasing in-file triples with >=1 string-start target=%zu\n",
-                total.increasingTriples);
+    std::printf("Increasing in-file triples=%zu; with >=1 string-start target=%zu\n",
+                total.increasingTriples, total.triplesWithString);
     std::puts("Common zero-run lengths:");
     std::vector<std::pair<size_t,size_t>> histogram(zeroHistogram.begin(), zeroHistogram.end());
     std::sort(histogram.begin(), histogram.end(), [](const auto& a, const auto& b) {
