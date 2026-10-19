@@ -99,7 +99,8 @@ add_executable(reluva-tool
     src/tools/stafu_install_manifest.cpp
     src/tools/stafu_install_extract.cpp
     src/tools/stafu_install_validate.cpp
-    src/tools/stafu_install_stage.cpp)
+    src/tools/stafu_install_stage.cpp
+    src/tools/stafu_install_from_cd.cpp)
 # ZIP method 8 requires raw DEFLATE support. Prefer an installed zlib;
 # otherwise fetch a pinned upstream release for reproducible Windows builds.
 find_package(ZLIB QUIET)
