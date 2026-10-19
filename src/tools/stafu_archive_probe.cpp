@@ -112,6 +112,7 @@ int probe(const char* name) {
 
 } // namespace
 
+int stafuInspectComputerBytePatterns(const char* installed, const char* cd);
 int stafuAnalyzeComputerReferences(const char* installed, const char* cd);
 int stafuScanComputerArticles(const char* installed, const char* cd);
 int stafuInspectComputerHeaders(const char* installed, const char* cd);
@@ -135,6 +136,8 @@ int stafuArchiveList(const char* path);
 int stafuArchiveCompare(const char* zipPath, const char* dirPath);
 
 int stafuToolMain(int argc, char** argv) {
+    if (argc == 5 && std::strcmp(argv[2], "computer-byte-patterns") == 0)
+        return stafuInspectComputerBytePatterns(argv[3], argv[4]);
     if (argc == 5 && std::strcmp(argv[2], "computer-reference-layout") == 0)
         return stafuAnalyzeComputerReferences(argv[3], argv[4]);
     if (argc == 5 && std::strcmp(argv[2], "computer-article-scan") == 0)
@@ -201,6 +204,7 @@ int stafuToolMain(int argc, char** argv) {
         "  reluva-tool -stafu computer-header-compare <installed> <cd>\n"
         "  reluva-tool -stafu computer-article-scan <installed> <cd>\n"
         "  reluva-tool -stafu computer-reference-layout <installed> <cd>\n"
+        "  reluva-tool -stafu computer-byte-patterns <installed> <cd>\n"
         "  reluva-tool -stafu archive-probe <file>\n"
         "  reluva-tool -stafu archive-test <archive.zip> <entry>\n"
         "  reluva-tool -stafu archive-list <file>\n"
