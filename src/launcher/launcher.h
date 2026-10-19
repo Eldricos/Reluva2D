@@ -36,7 +36,9 @@ public:
 private:
     void drawUi(std::optional<GameTarget>& launch, bool& quit);
     void handlePickedFolder();
+    void inspectInstallSource(const std::string& folder);
     void startStafuInstall(const std::string& cdFolder);
+    std::string existingStafuInstallation() const;
     void finishStafuInstall();
     void addGame(const DetectedGame& game, const std::string& path);
     GameTarget targetFromConfig(const std::string& name) const;
@@ -47,7 +49,10 @@ private:
     Config& config_;
     std::string selected_;
     std::string pendingCdTarget_;
-    bool pendingInstallCd_ = false;
+    bool pendingInstallSource_ = false;
+    bool showInstallConfirmation_ = false;
+    std::string confirmedInstallSource_;
+    std::string installBlockedReason_;
     std::thread installThread_;
     std::atomic<bool> installRunning_{false};
     std::atomic<bool> installFinished_{false};
