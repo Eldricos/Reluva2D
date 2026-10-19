@@ -260,7 +260,7 @@ void Launcher::handlePickedFolder() {
     }
 
     if (pendingInstallSource_) {
-        pendingInstallCd_ = false;
+        pendingInstallSource_ = false;
         inspectInstallSource(*folder);
         return;
     }
