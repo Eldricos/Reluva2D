@@ -117,6 +117,7 @@ add_executable(reluva-tool
     src/tools/stafu_computer_run_references.cpp
     src/tools/stafu_computer_primary_correlation.cpp
     src/tools/stafu_computer_source_displacement.cpp
+    src/tools/stafu_computer_layout_validate.cpp
     src/tools/stafu_install_analyze.cpp
     src/tools/stafu_install_manifest.cpp
     src/tools/stafu_install_extract.cpp
