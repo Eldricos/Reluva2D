@@ -11,6 +11,8 @@
 #include <mutex>
 #include <optional>
 #include <string>
+#include <thread>
+#include <filesystem>
 #include <vector>
 
 namespace reluva {
@@ -34,6 +36,8 @@ public:
 private:
     void drawUi(std::optional<GameTarget>& launch, bool& quit);
     void handlePickedFolder();
+    void startStafuInstall(const std::string& cdFolder);
+    void finishStafuInstall();
     void addGame(const DetectedGame& game, const std::string& path);
     GameTarget targetFromConfig(const std::string& name) const;
 
@@ -43,6 +47,12 @@ private:
     Config& config_;
     std::string selected_;
     std::string pendingCdTarget_;
+    bool pendingInstallCd_ = false;
+    std::thread installThread_;
+    std::atomic<bool> installRunning_{false};
+    std::atomic<bool> installFinished_{false};
+    std::atomic<int> installResult_{1};
+    std::filesystem::path installDestination_;
     std::string status_;
 
     // The folder dialog answers on another thread.
