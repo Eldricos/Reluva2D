@@ -57,7 +57,11 @@ bool copyTree(const fs::path& source, const fs::path& target, size_t& count, std
         }
         fs::create_directories(output.parent_path(), ec);
         if (ec) break;
-        if (!fs::copy_file(item.path(), output, fs::copy_options::none, ec) || ec) break;
+        if (!fs::copy_file(item.path(), output, fs::copy_options::none, ec) || ec) {
+            error = "cannot copy file: " + item.path().string() +
+                    (ec ? " (" + ec.message() + ")" : "");
+            return false;
+        }
         uint64_t sourceSize = 0, outputSize = 0;
         uint32_t sourceCrc = 0, outputCrc = 0;
         if (!digest(item.path(), sourceSize, sourceCrc) ||
