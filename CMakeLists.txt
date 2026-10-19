@@ -85,7 +85,11 @@ target_link_libraries(reluva_engines PUBLIC reluva_common PRIVATE reluva_warning
 add_executable(reluva
     src/main.cpp
     src/backends/sdl3/sdl_system.cpp
-    src/launcher/launcher.cpp)
+    src/launcher/launcher.cpp
+    src/tools/stafu_install_extract.cpp
+    src/tools/stafu_install_validate.cpp
+    src/tools/stafu_install_stage.cpp
+    src/tools/stafu_install_from_cd.cpp)
 target_link_libraries(reluva PRIVATE reluva_engines imgui SDL3::SDL3 reluva_warnings)
 
 # --- developer tools -----------------------------------------------------------
