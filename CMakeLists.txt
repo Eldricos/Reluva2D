@@ -102,6 +102,7 @@ add_executable(reluva-tool
     src/tools/stafu_resource_inspect.cpp
     src/tools/stafu_offset_inspect.cpp
     src/tools/stafu_range_inspect.cpp
+    src/tools/stafu_reference_inspect.cpp
     src/tools/stafu_install_analyze.cpp
     src/tools/stafu_install_manifest.cpp
     src/tools/stafu_install_extract.cpp
