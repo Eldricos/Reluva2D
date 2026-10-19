@@ -8,6 +8,9 @@
 #include "engines/stafu/source_detection.h"
 
 #include <imgui.h>
+#include <filesystem>
+
+int stafuInstallFromCd(const char* cd, const char* destination);
 #include <imgui_impl_sdl3.h>
 #include <imgui_impl_sdlrenderer3.h>
 
@@ -34,6 +37,7 @@ Launcher::Launcher(SdlSystem& system, Config& config) : sys_(system), config_(co
 }
 
 Launcher::~Launcher() {
+    if (installThread_.joinable()) installThread_.join();
     ImGui_ImplSDLRenderer3_Shutdown();
     ImGui_ImplSDL3_Shutdown();
     ImGui::DestroyContext();
@@ -52,6 +56,7 @@ std::optional<GameTarget> Launcher::run() {
             if (ev.type == SDL_EVENT_QUIT)
                 quit = true;
         }
+        finishStafuInstall();
         if (SDL_GetWindowFlags(sys_.window()) & SDL_WINDOW_MINIMIZED) {
             SDL_Delay(16);
             continue;
@@ -125,14 +130,14 @@ void Launcher::drawUi(std::optional<GameTarget>& launch, bool& quit) {
         launch = targetFromConfig(selected_);
     ImGui::EndDisabled();
 
-    ImGui::BeginDisabled(pickInProgress_);
+    ImGui::BeginDisabled(pickInProgress_ || installRunning_);
     if (ImGui::Button("Add Game...", bsize)) {
         pickInProgress_ = true;
         SDL_ShowOpenFolderDialog(pickFolderCallback, this, sys_.window(), nullptr, false);
     }
     ImGui::EndDisabled();
 
-    ImGui::BeginDisabled(!haveSelection || pickInProgress_ ||
+    ImGui::BeginDisabled(!haveSelection || pickInProgress_ || installRunning_ ||
                          config_.get(selected_, "engine") != "stafu");
     if (ImGui::Button("Set CD Folder...", bsize)) {
         pendingCdTarget_ = selected_;
@@ -141,7 +146,15 @@ void Launcher::drawUi(std::optional<GameTarget>& launch, bool& quit) {
     }
     ImGui::EndDisabled();
 
-    ImGui::BeginDisabled(!haveSelection);
+    ImGui::BeginDisabled(pickInProgress_ || installRunning_);
+    if (ImGui::Button("Install STAFU...", bsize)) {
+        pendingInstallCd_ = true;
+        pickInProgress_ = true;
+        SDL_ShowOpenFolderDialog(pickFolderCallback, this, sys_.window(), nullptr, false);
+    }
+    ImGui::EndDisabled();
+
+    ImGui::BeginDisabled(!haveSelection || installRunning_);
     if (ImGui::Button("Remove", bsize)) {
         config_.removeSection(selected_);
         config_.save();
@@ -161,7 +174,8 @@ void Launcher::drawUi(std::optional<GameTarget>& launch, bool& quit) {
 
     // Status bar
     ImGui::Separator();
-    ImGui::TextUnformatted(status_.empty() ? "Ready." : status_.c_str());
+    ImGui::TextUnformatted(installRunning_ ? "Installing STAFU from CD folder; please wait..." :
+                           (status_.empty() ? "Ready." : status_.c_str()));
 
     // Several games matched one folder: let the user pick.
     if (!pendingChoices_.empty()) {
@@ -210,8 +224,16 @@ void Launcher::handlePickedFolder() {
     if (error)
         status_ = *error;
     if (!folder) {
-        if (!pickInProgress_)
+        if (!pickInProgress_) {
             pendingCdTarget_.clear();
+            pendingInstallCd_ = false;
+        }
+        return;
+    }
+
+    if (pendingInstallCd_) {
+        pendingInstallCd_ = false;
+        startStafuInstall(*folder);
         return;
     }
 
@@ -242,6 +264,62 @@ void Launcher::handlePickedFolder() {
         pendingPath_ = *folder;
         pendingChoices_ = std::move(found);
     }
+}
+
+
+void Launcher::startStafuInstall(const std::string& cdFolder) {
+    namespace fs = std::filesystem;
+    if (installRunning_) return;
+    const auto detection = stafu::detectSource(cdFolder, stafu::DetectedSourceKind::CdContents);
+    if (detection.status != stafu::DetectionStatus::Recognized) {
+        status_ = "Selected folder is not a recognized STAFU CD source.";
+        return;
+    }
+    installDestination_ = fs::path("games") / "stafu";
+    std::error_code ec;
+    if (!fs::is_directory(installDestination_.parent_path(), ec) || ec) {
+        status_ = "Missing games folder. Create games/ before installing.";
+        return;
+    }
+    if (fs::exists(installDestination_, ec) || ec) {
+        status_ = "games/stafu already exists; installation will not overwrite it.";
+        return;
+    }
+    if (installThread_.joinable()) installThread_.join();
+    installFinished_ = false;
+    installResult_ = 1;
+    installRunning_ = true;
+    const std::string destination = installDestination_.string();
+    try {
+        installThread_ = std::thread([this, cdFolder, destination] {
+            const int result = stafuInstallFromCd(cdFolder.c_str(), destination.c_str());
+            installResult_ = result;
+            installFinished_ = true;
+        });
+    } catch (...) {
+        installRunning_ = false;
+        status_ = "Could not start STAFU installer thread.";
+    }
+}
+
+void Launcher::finishStafuInstall() {
+    if (!installFinished_) return;
+    if (installThread_.joinable()) installThread_.join();
+    installFinished_ = false;
+    installRunning_ = false;
+    if (installResult_ != 0) {
+        status_ = "STAFU installation failed. Check console output and staging folders.";
+        return;
+    }
+    const auto found = detectGames(installDestination_);
+    for (const auto& game : found) {
+        if (game.engineId == "stafu") {
+            addGame(game, installDestination_.string());
+            status_ = "STAFU installed and added. Gameplay is not yet implemented.";
+            return;
+        }
+    }
+    status_ = "STAFU installed, but launcher detection did not recognize it.";
 }
 
 void Launcher::addGame(const DetectedGame& game, const std::string& path) {
