@@ -147,8 +147,8 @@ void Launcher::drawUi(std::optional<GameTarget>& launch, bool& quit) {
     ImGui::EndDisabled();
 
     ImGui::BeginDisabled(pickInProgress_ || installRunning_);
-    if (ImGui::Button("Install STAFU...", bsize)) {
-        pendingInstallCd_ = true;
+    if (ImGui::Button("Install from Source...", bsize)) {
+        pendingInstallSource_ = true;
         pickInProgress_ = true;
         SDL_ShowOpenFolderDialog(pickFolderCallback, this, sys_.window(), nullptr, false);
     }
@@ -199,6 +199,34 @@ void Launcher::drawUi(std::optional<GameTarget>& launch, bool& quit) {
         }
     }
 
+    if (showInstallConfirmation_) {
+        ImGui::OpenPopup("Confirm installation");
+        if (ImGui::BeginPopupModal("Confirm installation", nullptr,
+                                  ImGuiWindowFlags_AlwaysAutoResize)) {
+            ImGui::TextUnformatted("Detected: Star Trek: The Next Generation - A Final Unity");
+            ImGui::Text("Source: %s", confirmedInstallSource_.c_str());
+            ImGui::TextUnformatted("Destination: games/stafu");
+            ImGui::TextWrapped("This installation recipe is verified for one reference release.");
+            if (!installBlockedReason_.empty()) {
+                ImGui::Separator();
+                ImGui::TextWrapped("%s", installBlockedReason_.c_str());
+            }
+            ImGui::BeginDisabled(!installBlockedReason_.empty() || installRunning_);
+            if (ImGui::Button("Install")) {
+                showInstallConfirmation_ = false;
+                startStafuInstall(confirmedInstallSource_);
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::EndDisabled();
+            ImGui::SameLine();
+            if (ImGui::Button("Cancel")) {
+                showInstallConfirmation_ = false;
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::EndPopup();
+        }
+    }
+
     ImGui::End();
 }
 
@@ -226,14 +254,14 @@ void Launcher::handlePickedFolder() {
     if (!folder) {
         if (!pickInProgress_) {
             pendingCdTarget_.clear();
-            pendingInstallCd_ = false;
+            pendingInstallSource_ = false;
         }
         return;
     }
 
-    if (pendingInstallCd_) {
+    if (pendingInstallSource_) {
         pendingInstallCd_ = false;
-        startStafuInstall(*folder);
+        inspectInstallSource(*folder);
         return;
     }
 
@@ -267,9 +295,49 @@ void Launcher::handlePickedFolder() {
 }
 
 
+std::string Launcher::existingStafuInstallation() const {
+    namespace fs = std::filesystem;
+    const fs::path destination = fs::path("games") / "stafu";
+    std::error_code ec;
+    if (fs::exists(destination, ec) || ec)
+        return "The managed destination games/stafu already exists. No files will be overwritten.";
+    for (const auto& target : config_.targets()) {
+        if (config_.get(target, "engine") != "stafu") continue;
+        const fs::path path(config_.get(target, "path"));
+        if (path.empty()) continue;
+        ec.clear();
+        if (fs::is_directory(path, ec) && !ec) {
+            const auto detected = stafu::detectSource(
+                path, stafu::DetectedSourceKind::InstalledGame);
+            if (detected.status == stafu::DetectionStatus::Recognized)
+                return "STAFU is already installed and registered as '" + target +
+                       "' at " + path.string() + ".";
+        }
+    }
+    return {};
+}
+
+void Launcher::inspectInstallSource(const std::string& folder) {
+    // Source detection is separate from the installer: future engines can
+    // register their own recognizers and installation handlers here.
+    const auto cd = stafu::detectSource(folder, stafu::DetectedSourceKind::CdContents);
+    if (cd.status != stafu::DetectionStatus::Recognized) {
+        status_ = "No supported installable game detected in the selected source folder.";
+        return;
+    }
+    confirmedInstallSource_ = folder;
+    installBlockedReason_ = existingStafuInstallation();
+    showInstallConfirmation_ = true;
+}
+
 void Launcher::startStafuInstall(const std::string& cdFolder) {
     namespace fs = std::filesystem;
     if (installRunning_) return;
+    const std::string duplicate = existingStafuInstallation();
+    if (!duplicate.empty()) {
+        status_ = duplicate;
+        return;
+    }
     const auto detection = stafu::detectSource(cdFolder, stafu::DetectedSourceKind::CdContents);
     if (detection.status != stafu::DetectionStatus::Recognized) {
         status_ = "Selected folder is not a recognized STAFU CD source.";
