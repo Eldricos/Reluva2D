@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <string>
 #include <vector>
+#include <map>
 int stafuInspectSprStructure(const char* installed,const char* cd,const char* name) {
     reluva::stafu::ResourceManager resources;
     std::string error;
@@ -54,6 +55,61 @@ int stafuInspectSprStructure(const char* installed,const char* cd,const char* na
             std::printf("\n");
         }
     }
+
+    // Correlate compact image-like chunks against large chunks in the same file.
+    // Candidate address bases are hypotheses, not decoded pointer semantics.
+    struct Large { std::string tag; size_t offset,payload; uint32_t a,b; };
+    std::vector<Large> large;
+    auto word=[&](size_t p)->uint32_t {
+        return uint32_t(bytes[p])|(uint32_t(bytes[p+1])<<8)|
+               (uint32_t(bytes[p+2])<<16)|(uint32_t(bytes[p+3])<<24);
+    };
+    for(const auto& record:container.records())
+        for(const auto& chunk:record.chunks)
+            if((chunk.tag=="PMOC"||chunk.tag=="MOCS")&&chunk.size>24)
+                large.push_back({chunk.tag,chunk.offset,chunk.offset+8,
+                                 word(chunk.offset+8),word(chunk.offset+12)});
+    std::map<std::string,size_t> hits;
+    size_t compact=0,flagged=0,unmatched=0;
+    std::puts("CORRELATION (compact PMOC/MOCS, same-file large chunks)");
+    for(size_t ri=0;ri<container.records().size();++ri) {
+        const auto& record=container.records()[ri];
+        for(const auto& chunk:record.chunks) {
+            if((chunk.tag!="PMOC"&&chunk.tag!="MOCS")||chunk.size!=24)continue;
+            ++compact;
+            const uint32_t a=word(chunk.offset+8),b=word(chunk.offset+12);
+            const uint32_t marker=word(chunk.offset+16),relative=word(chunk.offset+20);
+            if(marker==0x00030000)++flagged;
+            bool matched=false;
+            // Test absolute file, TSIL-relative and record-relative addresses.
+            const size_t candidates[]={size_t(relative),size_t(relative)+12,
+                                       size_t(relative)+record.start};
+            const char* bases[]={"file","TSIL","record"};
+            for(size_t bi=0;bi<3;++bi) {
+                const size_t address=candidates[bi];
+                for(const auto& target:large) {
+                    if(target.tag!=chunk.tag||target.a!=a||target.b!=b)continue;
+                    const char* location=nullptr;
+                    if(address==target.offset)location="chunk";
+                    else if(address==target.payload)location="payload";
+                    if(!location)continue;
+                    matched=true;
+                    const std::string key=std::string(bases[bi])+"-"+location;
+                    ++hits[key];
+                    std::printf("  match record=%zu compact=0x%zx tag=%s dims=%u,%u marker=0x%08x ref=%u base=%s location=%s target=0x%zx direction=%s\n",
+                                ri,chunk.offset,chunk.tag.c_str(),a,b,marker,relative,
+                                bases[bi],location,target.offset,
+                                target.offset<chunk.offset?"earlier":"later");
+                }
+            }
+            if(!matched)++unmatched;
+        }
+    }
+    std::printf("  summary compact=%zu marker00030000=%zu unmatched=%zu large=%zu\n",
+                compact,flagged,unmatched,large.size());
+    for(const auto& hit:hits)
+        std::printf("  match-type %s count=%zu\n",hit.first.c_str(),hit.second);
+    std::puts("Correlations are hypotheses; no payloads decoded or addresses dereferenced.");
     std::puts("Validated chunk boundaries; payloads remain opaque.");
     return 0;
 }
