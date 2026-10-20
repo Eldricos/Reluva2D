@@ -72,7 +72,7 @@ int stafuAnalyzeComputerBoundaries(const char* installed,const char* cd) {
         if(b>0)show(entries,baseline,b-1);
         show(entries,baseline,b);
         if(b+1<entries.size())show(entries,baseline,b+1);
-        std::puts("  active ancestors and outstanding direct children before boundary:");
+        std::puts("  ancestors with incomplete final child counts (not boundary-time balances):");
         size_t ancestor=b;
         bool any=false;
         while(baseline.nodes[ancestor].hasParent) {
