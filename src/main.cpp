@@ -16,6 +16,7 @@
 #include <optional>
 #include <string>
 
+namespace reluva { void registerStafuRuntimeUi(); }
 using namespace reluva;
 
 static std::filesystem::path configPath() {
@@ -75,6 +76,7 @@ int main(int argc, char** argv) {
     }
 
     Launcher launcher(system, config);
+    registerStafuRuntimeUi();
     while (auto target = direct ? direct : launcher.run()) {
         const MetaEngine* meta = findEngine(target->engineId);
         if (!meta) {
