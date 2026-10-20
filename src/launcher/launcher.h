@@ -6,9 +6,12 @@
 #include "common/config.h"
 #include "common/detection.h"
 #include "engines/engine.h"
+#include "engines/stafu/computer_browser.h"
+#include "engines/stafu/computer_string_index.h"
 
 #include <atomic>
 #include <mutex>
+#include <memory>
 #include <optional>
 #include <string>
 #include <thread>
@@ -35,6 +38,8 @@ public:
 
 private:
     void drawUi(std::optional<GameTarget>& launch, bool& quit);
+    void drawComputerUi();
+    void openComputer(const GameTarget& target);
     void handlePickedFolder();
     void inspectInstallSource(const std::string& folder);
     void startStafuInstall(const std::string& cdFolder);
@@ -48,6 +53,10 @@ private:
     SdlSystem& sys_;
     Config& config_;
     std::string selected_;
+    stafu::ComputerNavigationIndex computerGraph_;
+    stafu::ComputerStringIndex computerStrings_;
+    std::unique_ptr<stafu::ComputerBrowser> computerBrowser_;
+    bool computerOpen_ = false;
     std::string pendingCdTarget_;
     bool pendingInstallSource_ = false;
     bool showInstallConfirmation_ = false;
