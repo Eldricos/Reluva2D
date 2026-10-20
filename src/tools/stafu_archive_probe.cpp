@@ -123,6 +123,7 @@ int stafuAnalyzeComputerBoundaries(const char* installed, const char* cd);
 int stafuInspectComputerStructure(const char* installed, const char* cd);
 int stafuValidateComputerNavigation(const char* installed, const char* cd);
 int stafuAuditComputerContent(const char* installed, const char* cd);
+int stafuBrowseComputer(const char* installed, const char* cd);
 int stafuCompareComputerGapLengths(const char* installed, const char* cd);
 int stafuCompareComputerStringLengths(const char* installed, const char* cd);
 int stafuInspectComputerTripleTargets(const char* installed, const char* cd);
@@ -158,6 +159,8 @@ int stafuArchiveList(const char* path);
 int stafuArchiveCompare(const char* zipPath, const char* dirPath);
 
 int stafuToolMain(int argc, char** argv) {
+    if (argc == 5 && std::strcmp(argv[2], "computer-browse") == 0)
+        return stafuBrowseComputer(argv[3], argv[4]);
     if (argc == 5 && std::strcmp(argv[2], "computer-content-audit") == 0)
         return stafuAuditComputerContent(argv[3], argv[4]);
     if (argc == 5 && std::strcmp(argv[2], "computer-navigation") == 0)
