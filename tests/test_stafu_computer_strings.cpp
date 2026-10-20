@@ -25,6 +25,21 @@ int main() {
     CHECK(index.entries()[0].fields[0].text=="AB");
     CHECK(index.entries()[0].fields[1].status==I::Status::Empty);
     CHECK(index.entries()[0].fields[2].status==I::Status::NonText);
+    // Multiline and tabbed DOS text is valid; retain its original bytes.
+    b[52]='A';b[53]=0x0d;b[54]='B';b[55]=0x0d;b[56]=0x09;b[57]='C';b[58]=0;
+    CHECK(index.parse(b,error));
+    CHECK(index.entries()[0].fields[0].status==I::Status::Text);
+    CHECK(index.entries()[0].fields[0].text==std::string("A\rB\r\tC"));
+    // Other control bytes and high bytes remain unsupported.
+    b[53]=0x0a;
+    CHECK(index.parse(b,error));
+    CHECK(index.entries()[0].fields[0].status==I::Status::NonText);
+    b[53]=0x80;
+    CHECK(index.parse(b,error));
+    CHECK(index.entries()[0].fields[0].status==I::Status::NonText);
+    b[53]=0x0d;
+    CHECK(index.parse(b,error));
+    CHECK(index.entries()[0].fields[0].status==I::Status::Text);
     set32(b,24,250);
     CHECK(index.parse(b,error));
     CHECK(index.entries()[0].fields[2].status==I::Status::OutOfBounds);
