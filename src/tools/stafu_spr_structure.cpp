@@ -132,6 +132,67 @@ int stafuInspectSprStructure(const char* installed,const char* cd,const char* na
     std::puts("LARGE PAYLOAD MARKER FREQUENCIES");
     for(const auto& pair:markerCounts)
         std::printf("  %s count=%zu\n",pair.first.c_str(),pair.second);
+    // Read-only byte-pattern survey. Never interpret output as decoded pixels.
+    struct PatternStats {
+        size_t chunks=0, bytes=0, adjacentPairs=0, samePairs=0;
+        size_t runs3=0, longest=0, zeroBytes=0, ffBytes=0;
+        size_t highBit=0, distinctSum=0, pairTokens=0, pairZero=0;
+    };
+    std::map<std::string,PatternStats> patterns;
+    std::puts("PAYLOAD BYTE PATTERN SURVEY");
+    for(size_t ri=0;ri<container.records().size();++ri)
+        for(const auto& chunk:container.records()[ri].chunks) {
+            if((chunk.tag!="PMOC"&&chunk.tag!="MOCS")||chunk.size<=24)continue;
+            const size_t p=chunk.offset+8;
+            const uint32_t marker=word(p+8);
+            const size_t start=p+12, n=chunk.size-20;
+            char label[80];
+            std::snprintf(label,sizeof(label),"%s/0x%08x",chunk.tag.c_str(),marker);
+            auto& st=patterns[label];
+            ++st.chunks;st.bytes+=n;
+            bool seen[256]={};
+            size_t distinct=0,longest=0,runs3=0,same=0,zeros=0,ffs=0,high=0;
+            for(size_t j=0;j<n;) {
+                const uint8_t v=bytes[start+j];
+                if(!seen[v]) {seen[v]=true;++distinct;}
+                if(v==0)++zeros;
+                if(v==255)++ffs;
+                if(v&128)++high;
+                if(j&&v==bytes[start+j-1])++same;
+                ++j;
+            }
+            for(size_t j=0;j<n;) {
+                size_t end=j+1;
+                while(end<n&&bytes[start+end]==bytes[start+j])++end;
+                const size_t length=end-j;
+                longest=std::max(longest,length);
+                if(length>=3)++runs3;
+                j=end;
+            }
+            st.adjacentPairs+=n?n-1:0;st.samePairs+=same;
+            st.runs3+=runs3;st.longest=std::max(st.longest,longest);
+            st.zeroBytes+=zeros;st.ffBytes+=ffs;st.highBit+=high;
+            st.distinctSum+=distinct;
+            // Hypothetical byte-pair RLE: count-byte, value-byte.
+            // Zero-count incidence is a diagnostic only, not a validation.
+            for(size_t j=0;j+1<n;j+=2) {
+                ++st.pairTokens;
+                if(bytes[start+j]==0)++st.pairZero;
+            }
+            std::printf("  record=%zu at=0x%zx family=%s n=%zu distinct=%zu adjacentEqual=%zu runs3plus=%zu longest=%zu zeros=%zu ff=%zu highBit=%zu pairCountZero=%zu/%zu\n",
+                ri,chunk.offset,label,n,distinct,same,runs3,longest,zeros,ffs,high,
+                [&](){size_t z=0;for(size_t j=0;j+1<n;j+=2)if(bytes[start+j]==0)++z;return z;}(),
+                n/2);
+        }
+    std::puts("PAYLOAD PATTERN FAMILY SUMMARY");
+    for(const auto& item:patterns) {
+        const auto& st=item.second;
+        std::printf("  %s chunks=%zu bytes=%zu adjacentEqual=%zu/%zu runs3plus=%zu maxRun=%zu zero=%zu ff=%zu highBit=%zu distinctSum=%zu pairCountZero=%zu/%zu\n",
+            item.first.c_str(),st.chunks,st.bytes,st.samePairs,st.adjacentPairs,
+            st.runs3,st.longest,st.zeroBytes,st.ffBytes,st.highBit,
+            st.distinctSum,st.pairZero,st.pairTokens);
+    }
+    std::puts("Pair-token counts are hypothetical; no RLE scheme has been established.");
     std::puts("Raw observations only: field semantics and compression remain unknown.");
     std::puts("Correlations are hypotheses; no payloads decoded or addresses dereferenced.");
     std::puts("Validated chunk boundaries; payloads remain opaque.");
