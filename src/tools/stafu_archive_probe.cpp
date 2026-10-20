@@ -118,6 +118,7 @@ int stafuValidateComputerOffsetBase(const char* installed, const char* cd);
 int stafuListComputerStrings(const char* installed, const char* cd);
 int stafuInspectComputerRejectedFields(const char* installed, const char* cd);
 int stafuAuditComputerTextAndHeaders(const char* installed, const char* cd);
+int stafuValidateComputerHierarchy(const char* installed, const char* cd);
 int stafuCompareComputerGapLengths(const char* installed, const char* cd);
 int stafuCompareComputerStringLengths(const char* installed, const char* cd);
 int stafuInspectComputerTripleTargets(const char* installed, const char* cd);
@@ -153,6 +154,8 @@ int stafuArchiveList(const char* path);
 int stafuArchiveCompare(const char* zipPath, const char* dirPath);
 
 int stafuToolMain(int argc, char** argv) {
+    if (argc == 5 && std::strcmp(argv[2], "computer-hierarchy") == 0)
+        return stafuValidateComputerHierarchy(argv[3], argv[4]);
     if (argc == 5 && std::strcmp(argv[2], "computer-text-headers") == 0)
         return stafuAuditComputerTextAndHeaders(argv[3], argv[4]);
     if (argc == 5 && std::strcmp(argv[2], "computer-rejected-fields") == 0)
@@ -273,6 +276,7 @@ int stafuToolMain(int argc, char** argv) {
         "  reluva-tool -stafu computer-strings <installed> <cd>\n"
         "  reluva-tool -stafu computer-rejected-fields <installed> <cd>\n"
         "  reluva-tool -stafu computer-text-headers <installed> <cd>\n"
+        "  reluva-tool -stafu computer-hierarchy <installed> <cd>\n"
         "  reluva-tool -stafu archive-probe <file>\n"
         "  reluva-tool -stafu archive-test <archive.zip> <entry>\n"
         "  reluva-tool -stafu archive-list <file>\n"
