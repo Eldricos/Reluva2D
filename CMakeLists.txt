@@ -90,6 +90,7 @@ add_executable(reluva
     src/main.cpp
     src/backends/sdl3/sdl_system.cpp
     src/launcher/launcher.cpp
+    src/launcher/stafu_runtime_ui.cpp
     src/tools/stafu_install_extract.cpp
     src/tools/stafu_install_validate.cpp
     src/tools/stafu_install_stage.cpp
