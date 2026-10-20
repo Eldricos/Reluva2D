@@ -54,7 +54,7 @@ int stafuAuditComputerGlobalLayout(const char* installed,const char* cd) {
         else if(i+1<p.size() && s>=p[i+1] && (i+2==p.size() || s<p[i+2]))++inNext;
         else if(s>=end)++inLater;
         if(s<end && s+16>end)++crossing;
-        if(i+1<p.size() && uint64_t(p[i+1])+0x570>s)++overlapNext;
+        if(i+1<p.size() && uint64_t(p[i+1])-p[i]<16)++overlapNext;
         if(owner!=i)++sourceInsideOther;
         ++ownerDistance[owner-i];
         if(i+1<p.size())++sourceDeltaToNext[width];
@@ -86,7 +86,7 @@ int stafuAuditComputerGlobalLayout(const char* installed,const char* cd) {
     std::sort(widths.begin(),widths.end(),[](const auto& a,const auto& b){return a.second!=b.second?a.second>b.second:a.first<b.first;});
     for(size_t i=0;i<std::min<size_t>(12,widths.size());++i)
         std::printf("  width=%zu count=%zu\n",widths[i].first,widths[i].second);
-    std::printf("adjacent +0x570 source windows overlapping=%zu (count is not evidence of a record boundary)\n",overlapNext);
+    std::printf("adjacent 16-byte +0x570 source windows overlapping=%zu (count is not evidence of a record boundary)\n",overlapNext);
     std::puts("All positions are observational; +0x570 is a tested correlation, not an asserted record structure.");
     return valid==p.size()?0:1;
 }
