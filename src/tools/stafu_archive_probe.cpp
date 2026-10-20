@@ -112,6 +112,7 @@ int probe(const char* name) {
 
 } // namespace
 
+int stafuInspectComputerTripleTargets(const char* installed, const char* cd);
 int stafuCompareComputerFieldLayout(const char* installed, const char* cd);
 int stafuInspectComputerGroupSurroundings(const char* installed, const char* cd);
 int stafuValidateComputerLayout(const char* installed, const char* cd);
@@ -144,6 +145,8 @@ int stafuArchiveList(const char* path);
 int stafuArchiveCompare(const char* zipPath, const char* dirPath);
 
 int stafuToolMain(int argc, char** argv) {
+    if (argc == 5 && std::strcmp(argv[2], "computer-triple-targets") == 0)
+        return stafuInspectComputerTripleTargets(argv[3], argv[4]);
     if (argc == 5 && std::strcmp(argv[2], "computer-field-layout") == 0)
         return stafuCompareComputerFieldLayout(argv[3], argv[4]);
     if (argc == 5 && std::strcmp(argv[2], "computer-group-surroundings") == 0)
@@ -237,6 +240,7 @@ int stafuToolMain(int argc, char** argv) {
         "  reluva-tool -stafu computer-layout-validate <installed> <cd>\n"
         "  reluva-tool -stafu computer-group-surroundings <installed> <cd>\n"
         "  reluva-tool -stafu computer-field-layout <installed> <cd>\n"
+        "  reluva-tool -stafu computer-triple-targets <installed> <cd>\n"
         "  reluva-tool -stafu archive-probe <file>\n"
         "  reluva-tool -stafu archive-test <archive.zip> <entry>\n"
         "  reluva-tool -stafu archive-list <file>\n"
