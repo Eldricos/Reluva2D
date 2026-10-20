@@ -10,7 +10,8 @@ uint32_t read32(const std::vector<uint8_t>& b,size_t p) {
 uint16_t read16(const std::vector<uint8_t>& b,size_t p) {
     return uint16_t(b[p])|(uint16_t(b[p+1])<<8);
 }
-bool printable(uint8_t c) {return c>=32&&c<=126;}
+// Preserve observed DOS text formatting bytes without guessing at other encodings.
+bool printable(uint8_t c) {return (c>=32&&c<=126)||c==0x0d||c==0x09;}
 }
 const char* ComputerStringIndex::statusName(Status s) {
     switch(s) {
