@@ -4,6 +4,9 @@
 #include "engines/engine.h"
 #include "engines/stafu/resource_manager.h"
 #include "engines/stafu/source_detection.h"
+#include "engines/stafu/computer_navigation_index.h"
+#include "engines/stafu/computer_string_index.h"
+#include "engines/stafu/runtime_ui.h"
 
 #include <filesystem>
 #include <memory>
@@ -12,6 +15,10 @@
 #include <vector>
 
 namespace reluva {
+namespace stafu {
+namespace { ComputerUiRunner computerRunner; }
+void setComputerUiRunner(ComputerUiRunner runner) { computerRunner = std::move(runner); }
+}
 namespace {
 
 class StafuEngine : public Engine {
@@ -54,16 +61,24 @@ public:
 
         // Verify actual resource reads, not just filenames and sizes.
         // Both resources are known to exist in the verified installed source.
+        std::vector<uint8_t> computerBytes;
         for (const char* name : {"astro.db", "computer.db"}) {
             std::vector<uint8_t> bytes;
             if (!resources.read(name, bytes, error) || bytes.empty())
                 return Error::fail(std::string("STAFU cannot load ") + name + ": " +
                                    (error.empty() ? "empty resource" : error));
+            if (std::string(name) == "computer.db") computerBytes = std::move(bytes);
         }
 
-        return Error::fail(
-            "STAFU installation recognized and initial resources loaded successfully; "
-            "gameplay initialization is not implemented yet.");
+        stafu::ComputerNavigationIndex graph;
+        stafu::ComputerStringIndex strings;
+        if (!graph.parse(computerBytes, error) || !strings.parse(computerBytes, error))
+            return Error::fail("STAFU computer database: " + error);
+        if (graph.nodes().empty() || graph.nodes().size() != strings.entries().size())
+            return Error::fail("STAFU computer database has inconsistent records.");
+        if (!stafu::computerRunner)
+            return Error::fail("STAFU graphical runtime is unavailable.");
+        return stafu::computerRunner(system_, graph, strings);
     }
 
 private:
