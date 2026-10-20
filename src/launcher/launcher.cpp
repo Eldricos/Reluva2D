@@ -6,6 +6,7 @@
 #include "backends/sdl3/sdl_system.h"
 #include "engines/registry.h"
 #include "engines/stafu/source_detection.h"
+#include "engines/stafu/resource_manager.h"
 
 #include <imgui.h>
 #include <filesystem>
@@ -87,6 +88,7 @@ std::optional<GameTarget> Launcher::run() {
 }
 
 void Launcher::drawUi(std::optional<GameTarget>& launch, bool& quit) {
+    if (computerOpen_) { drawComputerUi(); return; }
     const ImGuiViewport* vp = ImGui::GetMainViewport();
     ImGui::SetNextWindowPos(vp->WorkPos);
     ImGui::SetNextWindowSize(vp->WorkSize);
@@ -128,6 +130,11 @@ void Launcher::drawUi(std::optional<GameTarget>& launch, bool& quit) {
     ImGui::BeginDisabled(!haveSelection);
     if (ImGui::Button("Start", bsize))
         launch = targetFromConfig(selected_);
+    ImGui::EndDisabled();
+
+    ImGui::BeginDisabled(!haveSelection || config_.get(selected_, "engine") != "stafu");
+    if (ImGui::Button("Ship's Computer", bsize))
+        openComputer(targetFromConfig(selected_));
     ImGui::EndDisabled();
 
     ImGui::BeginDisabled(pickInProgress_ || installRunning_);
@@ -414,4 +421,100 @@ GameTarget Launcher::targetFromConfig(const std::string& name) const {
                       config_.get(name, "cd_path")};
 }
 
+} // namespace reluva
+
+namespace reluva {
+namespace {
+std::string computerDisplay(const stafu::ComputerStringIndex::Field& field) {
+    using Index=stafu::ComputerStringIndex;
+    if(field.status==Index::Status::Empty)return {};
+    if(field.status!=Index::Status::Text)
+        return std::string("[")+Index::statusName(field.status)+"]";
+    std::string result;
+    result.reserve(field.text.size());
+    for(size_t i=0;i<field.text.size();++i) {
+        if(field.text[i]=='\\r') {
+            result+='\\n';
+            if(i+1<field.text.size()&&field.text[i+1]=='\\n')++i;
+        } else result+=field.text[i];
+    }
+    return result;
+}
+}
+void Launcher::openComputer(const GameTarget& target) {
+    computerBrowser_.reset();
+    computerOpen_=false;
+    std::filesystem::path cd=target.cdPath;
+    if(cd.empty()) {
+        std::error_code ec;
+        if(std::filesystem::is_directory(target.path/"cd",ec))cd=target.path/"cd";
+    }
+    stafu::ResourceManager resources;
+    std::string error;
+    std::vector<uint8_t> bytes;
+    if(!resources.open(target.path,cd,error) ||
+       !resources.read("computer.db",bytes,error) ||
+       !computerGraph_.parse(bytes,error) ||
+       !computerStrings_.parse(bytes,error)) {
+        status_="Ship's computer: "+error;
+        return;
+    }
+    if(computerGraph_.nodes().empty() ||
+       computerGraph_.nodes().size()!=computerStrings_.entries().size()) {
+        status_="Ship's computer: inconsistent database entries.";
+        return;
+    }
+    computerBrowser_=std::make_unique<stafu::ComputerBrowser>(computerGraph_);
+    computerOpen_=true;
+}
+void Launcher::drawComputerUi() {
+    const ImGuiViewport* vp=ImGui::GetMainViewport();
+    ImGui::SetNextWindowPos(vp->WorkPos);
+    ImGui::SetNextWindowSize(vp->WorkSize);
+    ImGui::Begin("STAFU Ship's Computer",nullptr,
+        ImGuiWindowFlags_NoDecoration|ImGuiWindowFlags_NoMove|
+        ImGuiWindowFlags_NoSavedSettings);
+    if(ImGui::Button("Return to Launcher")) {
+        computerOpen_=false;
+        computerBrowser_.reset();
+        ImGui::End();
+        return;
+    }
+    ImGui::SameLine();
+    ImGui::BeginDisabled(computerBrowser_->depth()<2);
+    if(ImGui::Button("Back"))computerBrowser_->back();
+    ImGui::EndDisabled();
+    ImGui::SameLine();
+    if(ImGui::Button("Home"))computerBrowser_->home();
+    ImGui::Separator();
+    const size_t current=computerBrowser_->current();
+    const auto& node=computerGraph_.nodes()[current];
+    const auto& entry=computerStrings_.entries()[current];
+    const float width=ImGui::GetContentRegionAvail().x;
+    const float sidebar=width*0.32f;
+    ImGui::BeginChild("STAFU topics",ImVec2(sidebar,0),ImGuiChildFlags_Borders);
+    ImGui::TextUnformatted("Topics");
+    ImGui::Separator();
+    for(size_t i=0;i<node.children.size();++i) {
+        const size_t child=node.children[i];
+        const auto label=computerDisplay(computerStrings_.entries()[child].fields[0]);
+        ImGui::PushID(static_cast<int>(i));
+        if(ImGui::Selectable(label.empty()?"(untitled)":label.c_str())) {
+            computerBrowser_->select(i+1);
+        }
+        ImGui::PopID();
+    }
+    ImGui::EndChild();
+    ImGui::SameLine();
+    ImGui::BeginChild("STAFU article",ImVec2(0,0),ImGuiChildFlags_Borders);
+    const auto heading=computerDisplay(entry.fields[1]);
+    const auto title=computerDisplay(entry.fields[0]);
+    ImGui::TextWrapped("%s",heading.empty()?title.c_str():heading.c_str());
+    ImGui::Separator();
+    const auto article=computerDisplay(entry.fields[2]);
+    if(article.empty())ImGui::TextDisabled("No article text.");
+    else ImGui::TextUnformatted(article.c_str());
+    ImGui::EndChild();
+    ImGui::End();
+}
 } // namespace reluva
