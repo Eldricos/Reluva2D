@@ -112,6 +112,7 @@ int probe(const char* name) {
 
 } // namespace
 
+int stafuCompareComputerGapLengths(const char* installed, const char* cd);
 int stafuCompareComputerStringLengths(const char* installed, const char* cd);
 int stafuInspectComputerTripleTargets(const char* installed, const char* cd);
 int stafuCompareComputerFieldLayout(const char* installed, const char* cd);
@@ -146,6 +147,8 @@ int stafuArchiveList(const char* path);
 int stafuArchiveCompare(const char* zipPath, const char* dirPath);
 
 int stafuToolMain(int argc, char** argv) {
+    if (argc == 5 && std::strcmp(argv[2], "computer-gap-lengths") == 0)
+        return stafuCompareComputerGapLengths(argv[3], argv[4]);
     if (argc == 5 && std::strcmp(argv[2], "computer-string-lengths") == 0)
         return stafuCompareComputerStringLengths(argv[3], argv[4]);
     if (argc == 5 && std::strcmp(argv[2], "computer-triple-targets") == 0)
@@ -245,6 +248,7 @@ int stafuToolMain(int argc, char** argv) {
         "  reluva-tool -stafu computer-field-layout <installed> <cd>\n"
         "  reluva-tool -stafu computer-triple-targets <installed> <cd>\n"
         "  reluva-tool -stafu computer-string-lengths <installed> <cd>\n"
+        "  reluva-tool -stafu computer-gap-lengths <installed> <cd>\n"
         "  reluva-tool -stafu archive-probe <file>\n"
         "  reluva-tool -stafu archive-test <archive.zip> <entry>\n"
         "  reluva-tool -stafu archive-list <file>\n"
