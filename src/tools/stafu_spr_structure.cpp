@@ -38,7 +38,57 @@ void chunks(const std::vector<uint8_t>& b,size_t start,size_t end,unsigned level
         if(tag(b,p)=="TSIL"&&size>=16) {
             const uint32_t n=u32(b,p+8);
             std::printf("%*sTSIL firstWord=%u remainingBytes=%zu\n",int(level*2+2),"",n,size_t(size)-12);
-            // Do not treat the following words as offsets without verification.
+            // Candidate table: firstWord 32-bit offsets, relative to the TSIL header.
+            // Report validity before interpreting any nested records.
+            const size_t tableStart=p+12;
+            const size_t listEnd=p+size;
+            if(n>4096||size_t(n)>(listEnd-tableStart)/4) {
+                std::puts("    TSIL offset table exceeds available bytes or safety limit");
+            } else {
+                const size_t tableEnd=tableStart+size_t(n)*4;
+                std::vector<size_t> starts;
+                bool valid=true;
+                for(uint32_t i=0;i<n;++i) {
+                    const uint32_t relative=u32(b,tableStart+size_t(i)*4);
+                    const size_t absolute=p+size_t(relative);
+                    const bool inRange=absolute>=tableEnd&&absolute<listEnd;
+                    const bool ordered=starts.empty()||absolute>starts.back();
+                    std::printf("    candidate[%u] relative=0x%x absolute=0x%zx inRange=%s increasing=%s\\n",
+                                i,relative,absolute,inRange?"yes":"no",ordered?"yes":"no");
+                    if(!inRange||!ordered)valid=false;
+                    starts.push_back(absolute);
+                }
+                if(valid) {
+                    for(size_t i=0;i<starts.size();++i) {
+                        const size_t recordEnd=i+1<starts.size()?starts[i+1]:listEnd;
+                        std::printf("    record[%zu] start=0x%zx end=0x%zx bytes=%zu\\n",
+                                    i,starts[i],recordEnd,recordEnd-starts[i]);
+                        // Inspect chunk headers only; compressed payloads are opaque.
+                        size_t cursor=starts[i];
+                        unsigned scanned=0;
+                        while(cursor<recordEnd&&scanned<32) {
+                            if(recordEnd-cursor<8) {
+                                std::printf("      trailing bytes=%zu at 0x%zx\\n",recordEnd-cursor,cursor);
+                                break;
+                            }
+                            const uint32_t length=u32(b,cursor+4);
+                            if(length<8||size_t(length)>recordEnd-cursor) {
+                                std::printf("      boundary stop at 0x%zx tag=%s size=%u remaining=%zu\\n",
+                                            cursor,tag(b,cursor).c_str(),length,recordEnd-cursor);
+                                break;
+                            }
+                            std::printf("      tag=%s at=0x%zx size=%u\\n",
+                                        tag(b,cursor).c_str(),cursor,length);
+                            cursor+=length;
+                            ++scanned;
+                        }
+                        if(scanned==32&&cursor<recordEnd)
+                            std::puts("      chunk scan truncated at 32 records");
+                    }
+                } else {
+                    std::puts("    Candidate offsets invalid; nested scan skipped");
+                }
+            }
         }
         p+=size;
         ++count;
