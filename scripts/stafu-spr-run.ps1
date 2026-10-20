@@ -36,4 +36,6 @@ foreach ($name in $names) {
 }
 $summary | ConvertTo-Json -Depth 3 | Set-Content (Join-Path $OutputDir "summary.json") -Encoding utf8
 $summary | Format-Table -AutoSize
+python (Join-Path $PSScriptRoot "stafu-spr-summary.py") $OutputDir
+if ($LASTEXITCODE -ne 0) { throw "SPR summary failed" }
 Write-Host "Reports: $OutputDir"
