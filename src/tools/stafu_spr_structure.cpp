@@ -109,6 +109,30 @@ int stafuInspectSprStructure(const char* installed,const char* cd,const char* na
                 compact,flagged,unmatched,large.size());
     for(const auto& hit:hits)
         std::printf("  match-type %s count=%zu\n",hit.first.c_str(),hit.second);
+    std::puts("LARGE PAYLOAD HEADER SURVEY");
+    std::map<std::string,size_t> markerCounts;
+    for(size_t ri=0;ri<container.records().size();++ri)
+        for(const auto& chunk:container.records()[ri].chunks) {
+            if((chunk.tag!="PMOC"&&chunk.tag!="MOCS")||chunk.size<=24)continue;
+            const size_t p=chunk.offset+8;
+            const uint32_t a=word(p),b=word(p+4),marker=word(p+8);
+            const size_t dataBytes=chunk.size-20;
+            const uint64_t area=uint64_t(a)*b;
+            char label[80];
+            std::snprintf(label,sizeof(label),"%s/0x%08x",chunk.tag.c_str(),marker);
+            ++markerCounts[label];
+            std::printf("  record=%zu offset=0x%zx tag=%s a=%u b=%u marker=0x%08x dataBytes=%zu area=%llu ratioX1000=%llu prefix=",
+                ri,chunk.offset,chunk.tag.c_str(),a,b,marker,dataBytes,
+                static_cast<unsigned long long>(area),
+                static_cast<unsigned long long>(area?uint64_t(dataBytes)*1000/area:0));
+            for(size_t j=0;j<std::min(dataBytes,size_t(16));++j)
+                std::printf("%s%02x",j?" ":"",unsigned(bytes[p+12+j]));
+            std::puts("");
+        }
+    std::puts("LARGE PAYLOAD MARKER FREQUENCIES");
+    for(const auto& pair:markerCounts)
+        std::printf("  %s count=%zu\n",pair.first.c_str(),pair.second);
+    std::puts("Raw observations only: field semantics and compression remain unknown.");
     std::puts("Correlations are hypotheses; no payloads decoded or addresses dereferenced.");
     std::puts("Validated chunk boundaries; payloads remain opaque.");
     return 0;
