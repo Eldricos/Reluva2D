@@ -132,6 +132,7 @@ add_executable(reluva-tool
     src/tools/stafu_computer_rejected_fields.cpp
     src/tools/stafu_computer_text_headers.cpp
     src/tools/stafu_computer_hierarchy.cpp
+    src/tools/stafu_computer_boundaries.cpp
     src/tools/stafu_install_analyze.cpp
     src/tools/stafu_install_manifest.cpp
     src/tools/stafu_install_extract.cpp
