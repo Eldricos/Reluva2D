@@ -115,6 +115,7 @@ int probe(const char* name) {
 int stafuAuditComputerGlobalLayout(const char* installed, const char* cd);
 int stafuAuditComputerSourceOrdering(const char* installed, const char* cd);
 int stafuValidateComputerOffsetBase(const char* installed, const char* cd);
+int stafuListComputerStrings(const char* installed, const char* cd);
 int stafuCompareComputerGapLengths(const char* installed, const char* cd);
 int stafuCompareComputerStringLengths(const char* installed, const char* cd);
 int stafuInspectComputerTripleTargets(const char* installed, const char* cd);
@@ -150,6 +151,8 @@ int stafuArchiveList(const char* path);
 int stafuArchiveCompare(const char* zipPath, const char* dirPath);
 
 int stafuToolMain(int argc, char** argv) {
+    if (argc == 5 && std::strcmp(argv[2], "computer-strings") == 0)
+        return stafuListComputerStrings(argv[3], argv[4]);
     if (argc == 5 && std::strcmp(argv[2], "computer-offset-base") == 0)
         return stafuValidateComputerOffsetBase(argv[3], argv[4]);
     if (argc == 5 && std::strcmp(argv[2], "computer-source-ordering") == 0)
@@ -261,6 +264,7 @@ int stafuToolMain(int argc, char** argv) {
         "  reluva-tool -stafu computer-global-layout <installed> <cd>\n"
         "  reluva-tool -stafu computer-source-ordering <installed> <cd>\n"
         "  reluva-tool -stafu computer-offset-base <installed> <cd>\n"
+        "  reluva-tool -stafu computer-strings <installed> <cd>\n"
         "  reluva-tool -stafu archive-probe <file>\n"
         "  reluva-tool -stafu archive-test <archive.zip> <entry>\n"
         "  reluva-tool -stafu archive-list <file>\n"
