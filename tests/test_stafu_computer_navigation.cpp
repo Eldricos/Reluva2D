@@ -17,7 +17,7 @@ std::vector<uint8_t> fixture() {
     // 3 records, base=0x14, metadata offsets 0, 40, 80.
     std::vector<uint8_t> b(160,0);
     w32(b,0,3);w32(b,4,0);w32(b,8,40);w32(b,12,80);
-    const size_t base=16;
+    const size_t base=20;
     w16(b,base,2);w16(b,base+2,2);w32(b,base+16,0x1234);
     w32(b,base+20,40);w32(b,base+24,80);
     w16(b,base+40,1);w32(b,base+40+20,80);
@@ -40,12 +40,12 @@ int main() {
     CHECK(index.nodes()[0].opaqueWord==0x1234);
     CHECK(index.nodes()[0].children[0]==1);
     CHECK(index.nodes()[0].children[1]==2);
-    w32(b,16+20,0xdeadbeef);
+    w32(b,20+20,0xdeadbeef);
     CHECK(!index.parse(b,error));
     CHECK(index.nodes().empty());
-    b=fixture();w16(b,16,20);
+    b=fixture();w16(b,20,20);
     CHECK(!index.parse(b,error));
-    b=fixture();w16(b,16+40,0);w16(b,16+80,0);
+    b=fixture();w16(b,20+40,0);w16(b,20+80,0);
     CHECK(index.parse(b,error));
     CHECK(!index.hasCycle());
     CHECK(index.sharedTargets()==0);
