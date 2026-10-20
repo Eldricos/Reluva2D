@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "backends/sdl3/sdl_system.h"
 #include "engines/stafu/runtime_ui.h"
+#include "engines/stafu/screen_manager.h"
 #include "engines/stafu/computer_browser.h"
 #include "engines/stafu/computer_string_index.h"
 #include <imgui.h>
@@ -28,6 +29,7 @@ Error runComputerUi(System& system,const stafu::ComputerNavigationIndex& graph,
     auto* sdl=dynamic_cast<SdlSystem*>(&system);
     if(!sdl)return Error::fail("STAFU requires the SDL3 graphical backend.");
     stafu::ComputerBrowser browser(graph);
+    stafu::ScreenManager screens;
     SDL_Renderer* renderer=sdl->renderer();
     sdl->setWindowTitle("STAFU - Ship's Computer");
     bool running=true;
@@ -61,36 +63,57 @@ Error runComputerUi(System& system,const stafu::ComputerNavigationIndex& graph,
             ImGuiWindowFlags_NoSavedSettings);
         if(ImGui::Button("Return to Launcher"))running=false;
         ImGui::SameLine();
-        ImGui::BeginDisabled(browser.depth()<2);
-        if(ImGui::Button("Back"))browser.back();
-        ImGui::EndDisabled();
-        ImGui::SameLine();
-        if(ImGui::Button("Home"))browser.home();
+        ImGui::TextDisabled("STAFU - Runtime Prototype");
         ImGui::Separator();
-        const auto& node=graph.nodes()[browser.current()];
-        const auto& entry=strings.entries()[browser.current()];
-        const float width=ImGui::GetContentRegionAvail().x;
-        ImGui::BeginChild("Topics",ImVec2(width*0.32f,0),ImGuiChildFlags_Borders);
-        ImGui::TextUnformatted("Ship's Computer");
-        ImGui::Separator();
-        for(size_t i=0;i<node.children.size();++i) {
-            const auto label=textField(strings.entries()[node.children[i]].fields[0]);
-            ImGui::PushID(static_cast<int>(i));
-            if(ImGui::Selectable(label.empty()?"(untitled)":label.c_str()))
-                browser.select(i+1);
-            ImGui::PopID();
+        if(screens.current()==stafu::Screen::MainMenu) {
+            ImGui::TextUnformatted("Star Trek: The Next Generation - A Final Unity");
+            ImGui::Spacing();
+            if(ImGui::Button("Ship's Computer"))
+                screens.show(stafu::Screen::Computer);
+            if(ImGui::Button("Bridge (placeholder)"))
+                screens.show(stafu::Screen::BridgePlaceholder);
+            ImGui::TextDisabled("Gameplay, save/load and original presentation are not implemented.");
+        } else if(screens.current()==stafu::Screen::BridgePlaceholder) {
+            if(ImGui::Button("Main Menu"))screens.show(stafu::Screen::MainMenu);
+            ImGui::Separator();
+            ImGui::TextUnformatted("Bridge - placeholder screen");
+            ImGui::TextWrapped("No bridge controls or gameplay systems are implemented yet.");
+            if(ImGui::Button("Open Ship's Computer"))
+                screens.show(stafu::Screen::Computer);
+        } else {
+            if(ImGui::Button("Main Menu"))screens.show(stafu::Screen::MainMenu);
+            ImGui::SameLine();
+            ImGui::BeginDisabled(browser.depth()<2);
+            if(ImGui::Button("Back"))browser.back();
+            ImGui::EndDisabled();
+            ImGui::SameLine();
+            if(ImGui::Button("Home"))browser.home();
+            ImGui::Separator();
+            const auto& node=graph.nodes()[browser.current()];
+            const auto& entry=strings.entries()[browser.current()];
+            const float width=ImGui::GetContentRegionAvail().x;
+            ImGui::BeginChild("Topics",ImVec2(width*0.32f,0),ImGuiChildFlags_Borders);
+            ImGui::TextUnformatted("Ship's Computer");
+            ImGui::Separator();
+            for(size_t i=0;i<node.children.size();++i) {
+                const auto label=textField(strings.entries()[node.children[i]].fields[0]);
+                ImGui::PushID(static_cast<int>(i));
+                if(ImGui::Selectable(label.empty()?"(untitled)":label.c_str()))
+                    browser.select(i+1);
+                ImGui::PopID();
+            }
+            ImGui::EndChild();
+            ImGui::SameLine();
+            ImGui::BeginChild("Article",ImVec2(0,0),ImGuiChildFlags_Borders);
+            const auto title=textField(entry.fields[1]);
+            const auto fallback=textField(entry.fields[0]);
+            ImGui::TextWrapped("%s",title.empty()?fallback.c_str():title.c_str());
+            ImGui::Separator();
+            const auto article=textField(entry.fields[2]);
+            if(article.empty())ImGui::TextDisabled("No article text.");
+            else ImGui::TextUnformatted(article.c_str());
+            ImGui::EndChild();
         }
-        ImGui::EndChild();
-        ImGui::SameLine();
-        ImGui::BeginChild("Article",ImVec2(0,0),ImGuiChildFlags_Borders);
-        const auto title=textField(entry.fields[1]);
-        const auto fallback=textField(entry.fields[0]);
-        ImGui::TextWrapped("%s",title.empty()?fallback.c_str():title.c_str());
-        ImGui::Separator();
-        const auto article=textField(entry.fields[2]);
-        if(article.empty())ImGui::TextDisabled("No article text.");
-        else ImGui::TextUnformatted(article.c_str());
-        ImGui::EndChild();
         ImGui::End();
         ImGui::Render();
         const auto& io=ImGui::GetIO();
