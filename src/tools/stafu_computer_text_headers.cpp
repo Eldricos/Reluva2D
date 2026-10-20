@@ -10,7 +10,7 @@
 #include <utility>
 #include <vector>
 namespace {
-bool accepted(uint8_t c) { return (c>=32&&c<=126)||c==0x0d||c==0x09; }
+bool accepted(uint8_t c) { return (c>=32&&c<=126)||c==0x0d||c==0x0a||c==0x09; }
 void dump(const std::vector<uint8_t>& bytes,size_t center) {
     const size_t lo=center>32?center-32:0;
     const size_t hi=center<bytes.size()?center+std::min<size_t>(48,bytes.size()-center):bytes.size();
