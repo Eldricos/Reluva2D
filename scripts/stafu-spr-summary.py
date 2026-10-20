@@ -13,7 +13,9 @@ PATTERN = re.compile(
 
 def summarize(folder):
     totals = {}
-    for path in sorted(pathlib.Path(folder).glob("*.SPR.txt")):
+    for path in sorted(pathlib.Path(folder).iterdir()):
+        if not path.is_file() or not path.name.lower().endswith(".spr.txt"):
+            continue
         for line in path.read_text(encoding="utf-8-sig").splitlines():
             match = PATTERN.match(line)
             if not match:
