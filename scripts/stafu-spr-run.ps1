@@ -19,8 +19,11 @@ if (-not $SkipTests) {
     ctest --test-dir $BuildDir -C Debug --output-on-failure
     if ($LASTEXITCODE -ne 0) { throw "CTest failed: $LASTEXITCODE" }
 }
-$tool = Join-Path $BuildDir "Debug\reluva-tool.exe"
-if (-not (Test-Path $tool)) { throw "Tool not found: $tool" }
+$tool = Join-Path $BuildDir "reluva-tool.exe"
+if (-not (Test-Path $tool)) {
+    $tool = Join-Path $BuildDir "Debug\reluva-tool.exe"
+}
+if (-not (Test-Path $tool)) { throw "Tool not found in $BuildDir or its Debug subdirectory" }
 New-Item -ItemType Directory -Path $OutputDir -Force | Out-Null
 $names = @("BRDGPICA.SPR", "BRDGRIKR.SPR", "BRDGTROI.SPR", "BRDGWORF.SPR", "BRDGDATA.SPR", "brdgtitl.spr", "brdgdoor.spr", "viewscr.spr")
 $summary = @()
