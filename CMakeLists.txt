@@ -81,7 +81,8 @@ add_library(reluva_engines STATIC
     src/engines/stafu/resource_manager.cpp
     src/engines/stafu/computer_database_index.cpp
     src/engines/stafu/computer_string_index.cpp
-    src/engines/stafu/computer_hierarchy_candidate.cpp)
+    src/engines/stafu/computer_hierarchy_candidate.cpp
+    src/engines/stafu/computer_navigation_index.cpp)
 target_link_libraries(reluva_engines PUBLIC reluva_common PRIVATE reluva_warnings)
 
 # --- executable: SDL3 backend + ImGui launcher --------------------------------
@@ -134,6 +135,7 @@ add_executable(reluva-tool
     src/tools/stafu_computer_hierarchy.cpp
     src/tools/stafu_computer_boundaries.cpp
     src/tools/stafu_computer_structure.cpp
+    src/tools/stafu_computer_navigation.cpp
     src/tools/stafu_install_analyze.cpp
     src/tools/stafu_install_manifest.cpp
     src/tools/stafu_install_extract.cpp
@@ -199,6 +201,10 @@ if(RELUVA_BUILD_TESTS)
     add_executable(reluva_stafu_computer_hierarchy_tests tests/test_stafu_computer_hierarchy.cpp)
     target_link_libraries(reluva_stafu_computer_hierarchy_tests PRIVATE reluva_engines reluva_warnings)
     add_test(NAME stafu_computer_hierarchy COMMAND reluva_stafu_computer_hierarchy_tests)
+
+    add_executable(reluva_stafu_computer_navigation_tests tests/test_stafu_computer_navigation.cpp)
+    target_link_libraries(reluva_stafu_computer_navigation_tests PRIVATE reluva_engines reluva_warnings)
+    add_test(NAME stafu_computer_navigation COMMAND reluva_stafu_computer_navigation_tests)
 
     add_executable(reluva_stafu_meta_tests tests/test_stafu_meta.cpp)
     target_link_libraries(reluva_stafu_meta_tests PRIVATE reluva_engines reluva_warnings)
