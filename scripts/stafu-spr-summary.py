@@ -74,6 +74,27 @@ def summarize(folder):
         report = pathlib.Path(folder) / "headers.json"
         report.write_text(json.dumps(header_groups, indent=2, sort_keys=True) + "\n", encoding="utf-8")
         print("Repeated-header correlation report:", report)
+    prefix_pattern = re.compile(
+        r"^  prefixGroup=(\S+) count=(\d+) minCommon=(\d+) maxCommon=(\d+) "
+        r"same8=(\d+) same16=(\d+) same32=(\d+) sameFirst2=(\d+) sameFirst4=(\d+) "
+        r"lengthsDiv4=(\d+) lengthsDiv8=(\d+) lengthsDiv16=(\d+)$")
+    prefix_groups = []
+    fields = ("count", "minCommon", "maxCommon", "same8", "same16", "same32",
+              "sameFirst2", "sameFirst4", "lengthsDiv4", "lengthsDiv8", "lengthsDiv16")
+    for path in sorted(pathlib.Path(folder).iterdir()):
+        if not path.is_file() or not path.name.lower().endswith(".spr.txt"):
+            continue
+        for line in path.read_text(encoding="utf-8-sig").splitlines():
+            match = prefix_pattern.match(line)
+            if match:
+                key, *values = match.groups()
+                entry = {"resource": path.name[:-4], "header": key}
+                entry.update({name: int(value) for name, value in zip(fields, values)})
+                prefix_groups.append(entry)
+    if prefix_groups:
+        report = pathlib.Path(folder) / "prefixes.json"
+        report.write_text(json.dumps(prefix_groups, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        print("Prefix and block survey report:", report)
     return totals
 
 if __name__ == "__main__":
