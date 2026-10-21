@@ -95,6 +95,30 @@ def summarize(folder):
         report = pathlib.Path(folder) / "prefixes.json"
         report.write_text(json.dumps(prefix_groups, indent=2, sort_keys=True) + "\n", encoding="utf-8")
         print("Prefix and block survey report:", report)
+    pair_pattern = re.compile(
+        r"^  framePair record=(\d+) from=(\d+) to=(\d+) fromTag=(\S+) toTag=(\S+) "
+        r"sameHeader=(\d+) lenA=(\d+) lenB=(\d+) common=(\d+) prefix=(\d+) "
+        r"suffix=(\d+) equalAtOffset=(\d+) emitBetween=(\d+) kramBetween=(\d+) otherBetween=(\d+)$")
+    pairs = []
+    names = ("record", "from", "to", "fromTag", "toTag", "sameHeader",
+             "lenA", "lenB", "common", "prefix", "suffix", "equalAtOffset",
+             "emitBetween", "kramBetween", "otherBetween")
+    for path in sorted(pathlib.Path(folder).iterdir()):
+        if not path.is_file() or not path.name.lower().endswith(".spr.txt"):
+            continue
+        for line in path.read_text(encoding="utf-8-sig").splitlines():
+            match = pair_pattern.match(line)
+            if match:
+                entry = dict(zip(names, match.groups()))
+                for name in names:
+                    if name not in ("fromTag", "toTag"):
+                        entry[name] = int(entry[name])
+                entry["resource"] = path.name[:-4]
+                pairs.append(entry)
+    if pairs:
+        report = pathlib.Path(folder) / "frame-pairs.json"
+        report.write_text(json.dumps(pairs, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        print("Consecutive payload comparison report:", report)
     return totals
 
 if __name__ == "__main__":
