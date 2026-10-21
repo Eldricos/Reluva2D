@@ -221,7 +221,7 @@ int stafuInspectSprStructure(const char* installed,const char* cd,const char* na
             }
         }
     for(const auto& item:candidateStats)
-        std::printf("  candidate=%s total=%zu valid=%zu exactArea=%zu exactDoubleArea=%zu\\n",
+        std::printf("  candidate=%s total=%zu valid=%zu exactArea=%zu exactDoubleArea=%zu\n",
             item.first.c_str(),item.second.total,item.second.valid,
             item.second.exactArea,item.second.exactDoubleArea);
     std::puts("Exact output length is not evidence of correct pixel decoding.");
