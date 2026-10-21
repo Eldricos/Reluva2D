@@ -52,6 +52,28 @@ def summarize(folder):
         report = pathlib.Path(folder) / "candidates.json"
         report.write_text(json.dumps(candidates, indent=2, sort_keys=True) + "\n", encoding="utf-8")
         print("Compression candidate report:", report)
+    # Preserve per-resource groups: the same header tuple may occur in multiple files.
+    header_groups = []
+    header_pattern = re.compile(
+        r"^  headerGroup=(\S+) count=(\d+) minBytes=(\d+) maxBytes=(\d+) "
+        r"totalBytes=(\d+) samePrefix2=(\d+) samePrefix4=(\d+)$")
+    for path in sorted(pathlib.Path(folder).iterdir()):
+        if not path.is_file() or not path.name.lower().endswith(".spr.txt"):
+            continue
+        for line in path.read_text(encoding="utf-8-sig").splitlines():
+            match = header_pattern.match(line)
+            if match:
+                key, count, minimum, maximum, total, prefix2, prefix4 = match.groups()
+                header_groups.append({
+                    "resource": path.name[:-4], "header": key,
+                    "count": int(count), "minBytes": int(minimum),
+                    "maxBytes": int(maximum), "totalBytes": int(total),
+                    "samePrefix2": int(prefix2), "samePrefix4": int(prefix4)
+                })
+    if header_groups:
+        report = pathlib.Path(folder) / "headers.json"
+        report.write_text(json.dumps(header_groups, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        print("Repeated-header correlation report:", report)
     return totals
 
 if __name__ == "__main__":
