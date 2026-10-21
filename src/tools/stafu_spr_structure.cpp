@@ -266,6 +266,50 @@ int stafuInspectSprStructure(const char* installed,const char* cd,const char* na
     }
     std::printf("  headerSummary groups=%zu repeatedGroups=%zu repeatedPayloads=%zu\n",
         headerGroups.size(),repeated,repeatedPayloads);
+    // Compare bounded byte prefixes within each exact observed header group.
+    // The reference is the first payload in file order, not a consensus prefix.
+    struct PrefixItem { size_t start=0, length=0; };
+    std::map<std::string,std::vector<PrefixItem>> prefixGroups;
+    for(const auto& record:container.records())
+        for(const auto& chunk:record.chunks) {
+            if((chunk.tag!="PMOC"&&chunk.tag!="MOCS")||chunk.size<=24)continue;
+            const size_t p=chunk.offset+8;
+            char key[128];
+            std::snprintf(key,sizeof(key),"%s/0x%08x/%u/%u",
+                chunk.tag.c_str(),word(p+8),word(p),word(p+4));
+            prefixGroups[key].push_back({p+12,size_t(chunk.size-20)});
+        }
+    std::puts("PAYLOAD PREFIX AND BLOCK SURVEY");
+    for(const auto& item:prefixGroups) {
+        if(item.second.size()<2)continue;
+        const auto& reference=item.second.front();
+        size_t commonMin=SIZE_MAX,commonMax=0;
+        size_t same8=0,same16=0,same32=0;
+        size_t word0Same=0,word1Same=0;
+        size_t aligned4=0,aligned8=0,aligned16=0;
+        for(size_t i=1;i<item.second.size();++i) {
+            const auto& current=item.second[i];
+            const size_t available=std::min(reference.length,current.length);
+            size_t common=0;
+            while(common<available&&bytes[reference.start+common]==bytes[current.start+common])
+                ++common;
+            commonMin=std::min(commonMin,common);
+            commonMax=std::max(commonMax,common);
+            if(available>=8&&common>=8)++same8;
+            if(available>=16&&common>=16)++same16;
+            if(available>=32&&common>=32)++same32;
+            if(available>=2&&common>=2)++word0Same;
+            if(available>=4&&common>=4)++word1Same;
+            if(current.length%4==0)++aligned4;
+            if(current.length%8==0)++aligned8;
+            if(current.length%16==0)++aligned16;
+        }
+        std::printf("  prefixGroup=%s count=%zu minCommon=%zu maxCommon=%zu same8=%zu same16=%zu same32=%zu sameFirst2=%zu sameFirst4=%zu lengthsDiv4=%zu lengthsDiv8=%zu lengthsDiv16=%zu\n",
+            item.first.c_str(),item.second.size(),commonMin,commonMax,same8,same16,
+            same32,word0Same,word1Same,aligned4,aligned8,aligned16);
+    }
+    std::puts("Prefix matches use first payload as reference; divisibility counts exclude reference.");
+    std::puts("Alignment and repeated bytes do not establish compression block boundaries.");
     std::puts("Header words and prefixes are raw observations, not proven dimensions or block boundaries.");
     std::puts("Exact output length is not evidence of correct pixel decoding.");
     std::puts("Pair-token counts are hypothetical; no RLE scheme has been established.");
