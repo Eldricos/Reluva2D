@@ -345,6 +345,40 @@ int stafuInspectSprStructure(const char* installed,const char* cd,const char* na
             havePrev=true;
         }
     }
+    // Record-local ordered control/payload timeline. Raw words are not time units.
+    std::puts("SPR SEQUENCE CONTROL CORRELATION");
+    for(size_t ri=0;ri<container.records().size();++ri) {
+        const auto& record=container.records()[ri];
+        size_t images=0,emits=0,marks=0;
+        for(size_t ci=0;ci<record.chunks.size();++ci) {
+            const auto& c=record.chunks[ci];
+            if(c.tag=="EMIT"||c.tag=="KRAM") {
+                if(c.tag=="EMIT")++emits;else ++marks;
+                const size_t payload=c.size-8,offset=c.offset+8;
+                std::printf("  control record=%zu chunk=%zu tag=%s bytes=%zu value0=%u value1=%u\n",
+                    ri,ci,c.tag.c_str(),payload,
+                    payload>=4?word(offset):0,payload>=8?word(offset+4):0);
+            }
+            if((c.tag=="PMOC"||c.tag=="MOCS")&&c.size>24) {
+                const size_t p=c.offset+8;
+                size_t previousEmit=SIZE_MAX,previousMark=SIZE_MAX;
+                size_t emitCount=0,markCount=0;
+                for(size_t k=0;k<ci;++k) {
+                    if(record.chunks[k].tag=="EMIT") {previousEmit=k;++emitCount;}
+                    if(record.chunks[k].tag=="KRAM") {previousMark=k;++markCount;}
+                }
+                std::printf("  sequenceImage record=%zu chunk=%zu ordinal=%zu tag=%s dataBytes=%zu headerA=%u headerB=%u marker=%u precedingEmit=%lld precedingMark=%lld emitsSoFar=%zu marksSoFar=%zu\n",
+                    ri,ci,images++,c.tag.c_str(),size_t(c.size-20),
+                    word(p),word(p+4),word(p+8),
+                    previousEmit==SIZE_MAX?-1LL:static_cast<long long>(previousEmit),
+                    previousMark==SIZE_MAX?-1LL:static_cast<long long>(previousMark),
+                    emitCount,markCount);
+            }
+        }
+        std::printf("  sequenceSummary record=%zu images=%zu emits=%zu marks=%zu chunks=%zu\n",
+            ri,images,emits,marks,record.chunks.size());
+    }
+    std::puts("EMIT/KRAM values and positions are observations only; no time unit or execution semantics inferred.");
     std::puts("Frame pairs are adjacent qualifying chunks within a record; intervening tags are uninterpreted.");
     std::puts("Prefix matches use first payload as reference; divisibility counts exclude reference.");
     std::puts("Alignment and repeated bytes do not establish compression block boundaries.");
