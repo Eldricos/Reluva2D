@@ -211,6 +211,10 @@ if(RELUVA_BUILD_TESTS)
     target_link_libraries(reluva_stafu_computer_navigation_tests PRIVATE reluva_engines reluva_warnings)
     add_test(NAME stafu_computer_navigation COMMAND reluva_stafu_computer_navigation_tests)
 
+    add_executable(reluva_stafu_spr_candidate_tests tests/test_stafu_spr_candidate.cpp)
+    target_link_libraries(reluva_stafu_spr_candidate_tests PRIVATE reluva_engines reluva_warnings)
+    add_test(NAME stafu_spr_candidate COMMAND reluva_stafu_spr_candidate_tests)
+
     add_executable(reluva_stafu_spr_container_tests tests/test_stafu_spr_container.cpp)
     target_link_libraries(reluva_stafu_spr_container_tests PRIVATE reluva_engines reluva_warnings)
     add_test(NAME stafu_spr_container COMMAND reluva_stafu_spr_container_tests)
