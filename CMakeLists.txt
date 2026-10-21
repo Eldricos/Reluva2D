@@ -165,6 +165,9 @@ target_link_libraries(reluva-tool PRIVATE reluva_engines reluva_warnings)
 add_executable(reluva-stafu-inventory src/tools/stafu_inventory_tool.cpp)
 target_link_libraries(reluva-stafu-inventory PRIVATE reluva_engines reluva_warnings)
 
+add_executable(reluva-stafu-spr-browser src/tools/stafu_spr_browser.cpp)
+target_link_libraries(reluva-stafu-spr-browser PRIVATE reluva_engines reluva_warnings)
+
 add_executable(reluva-stafu-detect src/tools/stafu_detect_tool.cpp)
 target_link_libraries(reluva-stafu-detect PRIVATE reluva_engines reluva_warnings)
 
