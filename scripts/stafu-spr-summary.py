@@ -119,6 +119,34 @@ def summarize(folder):
         report = pathlib.Path(folder) / "frame-pairs.json"
         report.write_text(json.dumps(pairs, indent=2, sort_keys=True) + "\n", encoding="utf-8")
         print("Consecutive payload comparison report:", report)
+    sequence_patterns = {
+        "control": re.compile(r"^  control record=(\d+) chunk=(\d+) tag=(\S+) bytes=(\d+) value0=(\d+) value1=(\d+)$"),
+        "image": re.compile(r"^  sequenceImage record=(\d+) chunk=(\d+) ordinal=(\d+) tag=(\S+) dataBytes=(\d+) headerA=(\d+) headerB=(\d+) marker=(\d+) precedingEmit=(-?\d+) precedingMark=(-?\d+) emitsSoFar=(\d+) marksSoFar=(\d+)$"),
+        "summary": re.compile(r"^  sequenceSummary record=(\d+) images=(\d+) emits=(\d+) marks=(\d+) chunks=(\d+)$"),
+    }
+    sequence_fields = {
+        "control": ("record", "chunk", "tag", "bytes", "value0", "value1"),
+        "image": ("record", "chunk", "ordinal", "tag", "dataBytes", "headerA", "headerB", "marker", "precedingEmit", "precedingMark", "emitsSoFar", "marksSoFar"),
+        "summary": ("record", "images", "emits", "marks", "chunks"),
+    }
+    sequence = []
+    for path in sorted(pathlib.Path(folder).iterdir()):
+        if not path.is_file() or not path.name.lower().endswith(".spr.txt"):
+            continue
+        for line in path.read_text(encoding="utf-8-sig").splitlines():
+            for kind, pattern in sequence_patterns.items():
+                match = pattern.match(line)
+                if match:
+                    fields = sequence_fields[kind]
+                    item = {field: value if field == "tag" else int(value)
+                            for field, value in zip(fields, match.groups())}
+                    item.update(resource=path.name[:-4], kind=kind)
+                    sequence.append(item)
+                    break
+    if sequence:
+        report = pathlib.Path(folder) / "sequences.json"
+        report.write_text(json.dumps(sequence, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        print("SPR sequence/control correlation report:", report)
     return totals
 
 if __name__ == "__main__":
