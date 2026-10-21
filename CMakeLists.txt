@@ -226,6 +226,10 @@ if(RELUVA_BUILD_TESTS)
     target_link_libraries(reluva_stafu_spr_sequence_index_tests PRIVATE reluva_engines reluva_warnings)
     add_test(NAME stafu_spr_sequence_index COMMAND reluva_stafu_spr_sequence_index_tests)
 
+    add_executable(reluva_stafu_spr_playback_cursor_tests tests/test_stafu_spr_playback_cursor.cpp)
+    target_link_libraries(reluva_stafu_spr_playback_cursor_tests PRIVATE reluva_engines reluva_warnings)
+    add_test(NAME stafu_spr_playback_cursor COMMAND reluva_stafu_spr_playback_cursor_tests)
+
     add_executable(reluva_stafu_screen_manager_tests tests/test_stafu_screen_manager.cpp)
     target_link_libraries(reluva_stafu_screen_manager_tests PRIVATE reluva_engines reluva_warnings)
     add_test(NAME stafu_screen_manager COMMAND reluva_stafu_screen_manager_tests)
