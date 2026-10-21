@@ -34,6 +34,24 @@ def summarize(folder):
             entry["highBit"] += int(high)
             entry["pairCountZero"] += int(pairzero)
             entry["pairTokens"] += int(pairs)
+    candidates = {}
+    candidate_pattern = re.compile(r"^  candidate=(\S+) total=(\d+) valid=(\d+) exactArea=(\d+) exactDoubleArea=(\d+)$")
+    for path in sorted(pathlib.Path(folder).iterdir()):
+        if not path.is_file() or not path.name.lower().endswith(".spr.txt"):
+            continue
+        for line in path.read_text(encoding="utf-8-sig").splitlines():
+            match = candidate_pattern.match(line)
+            if not match:
+                continue
+            name, total, valid, area, double = match.groups()
+            entry = candidates.setdefault(name, dict(total=0, valid=0, exactArea=0, exactDoubleArea=0))
+            for key, value in zip(("total", "valid", "exactArea", "exactDoubleArea"),
+                                  (total, valid, area, double)):
+                entry[key] += int(value)
+    if candidates:
+        report = pathlib.Path(folder) / "candidates.json"
+        report.write_text(json.dumps(candidates, indent=2, sort_keys=True) + "\\n", encoding="utf-8")
+        print("Compression candidate report:", report)
     return totals
 
 if __name__ == "__main__":
