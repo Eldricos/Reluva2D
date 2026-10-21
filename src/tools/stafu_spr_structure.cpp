@@ -308,6 +308,44 @@ int stafuInspectSprStructure(const char* installed,const char* cd,const char* na
             item.first.c_str(),item.second.size(),commonMin,commonMax,same8,same16,
             same32,word0Same,word1Same,aligned4,aligned8,aligned16);
     }
+    // Consecutive image-like chunks within each TSIL record, in stored order.
+    // Other tags are counted between them, but no timing/control meaning is assumed.
+    std::puts("CONSECUTIVE PAYLOAD COMPARISON");
+    for(size_t ri=0;ri<container.records().size();++ri) {
+        const auto& record=container.records()[ri];
+        struct Previous { size_t start=0,length=0,chunkIndex=0; std::string tag; uint32_t a=0,b=0,marker=0; };
+        Previous prev;
+        bool havePrev=false;
+        for(size_t ci=0;ci<record.chunks.size();++ci) {
+            const auto& chunk=record.chunks[ci];
+            if((chunk.tag!="PMOC"&&chunk.tag!="MOCS")||chunk.size<=24)continue;
+            const size_t p=chunk.offset+8,start=p+12,n=chunk.size-20;
+            const uint32_t a=word(p),b=word(p+4),marker=word(p+8);
+            if(havePrev) {
+                const size_t shared=std::min(prev.length,n);
+                size_t prefix=0,suffix=0,equalAtOffset=0;
+                while(prefix<shared&&bytes[prev.start+prefix]==bytes[start+prefix])++prefix;
+                while(suffix<shared-prefix&&
+                    bytes[prev.start+prev.length-1-suffix]==bytes[start+n-1-suffix])++suffix;
+                for(size_t k=0;k<shared;++k)
+                    if(bytes[prev.start+k]==bytes[start+k])++equalAtOffset;
+                size_t emit=0,kram=0,other=0;
+                for(size_t k=prev.chunkIndex+1;k<ci;++k) {
+                    const auto& tag=record.chunks[k].tag;
+                    if(tag=="EMIT")++emit;
+                    else if(tag=="KRAM")++kram;
+                    else ++other;
+                }
+                std::printf("  framePair record=%zu from=%zu to=%zu fromTag=%s toTag=%s sameHeader=%u lenA=%zu lenB=%zu common=%zu prefix=%zu suffix=%zu equalAtOffset=%zu emitBetween=%zu kramBetween=%zu otherBetween=%zu\n",
+                    ri,prev.chunkIndex,ci,prev.tag.c_str(),chunk.tag.c_str(),
+                    unsigned(prev.tag==chunk.tag&&prev.a==a&&prev.b==b&&prev.marker==marker),
+                    prev.length,n,shared,prefix,suffix,equalAtOffset,emit,kram,other);
+            }
+            prev={start,n,ci,chunk.tag,a,b,marker};
+            havePrev=true;
+        }
+    }
+    std::puts("Frame pairs are adjacent qualifying chunks within a record; intervening tags are uninterpreted.");
     std::puts("Prefix matches use first payload as reference; divisibility counts exclude reference.");
     std::puts("Alignment and repeated bytes do not establish compression block boundaries.");
     std::puts("Header words and prefixes are raw observations, not proven dimensions or block boundaries.");
