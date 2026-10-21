@@ -50,7 +50,7 @@ def summarize(folder):
                 entry[key] += int(value)
     if candidates:
         report = pathlib.Path(folder) / "candidates.json"
-        report.write_text(json.dumps(candidates, indent=2, sort_keys=True) + "\\n", encoding="utf-8")
+        report.write_text(json.dumps(candidates, indent=2, sort_keys=True) + "\n", encoding="utf-8")
         print("Compression candidate report:", report)
     return totals
 
