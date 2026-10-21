@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "engines/stafu/resource_manager.h"
 #include "engines/stafu/spr_container.h"
+#include "engines/stafu/spr_candidate.h"
 #include <cstdio>
 #include <algorithm>
 #include <cstdint>
@@ -192,6 +193,38 @@ int stafuInspectSprStructure(const char* installed,const char* cd,const char* na
             st.runs3,st.longest,st.zeroBytes,st.ffBytes,st.highBit,
             st.distinctSum,st.pairZero,st.pairTokens);
     }
+    // Bounded hypothesis evaluation; no decoded pixel buffers or inferred semantics.
+    struct CandidateStats { size_t total=0, valid=0, exactArea=0, exactDoubleArea=0; };
+    std::map<std::string,CandidateStats> candidateStats;
+    const char* candidateNames[]={"pair-count-value","packbits","high-bit-runs"};
+    std::puts("COMPRESSION CANDIDATE SURVEY (hypotheses only)");
+    for(const auto& record:container.records())
+        for(const auto& chunk:record.chunks) {
+            if((chunk.tag!="PMOC"&&chunk.tag!="MOCS")||chunk.size<=24)continue;
+            const size_t p=chunk.offset+8;
+            const uint32_t a=word(p),b=word(p+4),marker=word(p+8);
+            const uint64_t area=uint64_t(a)*b;
+            const size_t start=p+12,n=chunk.size-20;
+            char family[80];
+            std::snprintf(family,sizeof(family),"%s/0x%08x",chunk.tag.c_str(),marker);
+            // A deliberately conservative cap prevents expansion bombs.
+            constexpr uint64_t cap=64ULL*1024*1024;
+            for(int k=0;k<3;++k) {
+                auto& st=candidateStats[std::string(family)+"/"+candidateNames[k]];
+                ++st.total;
+                const auto result=reluva::stafu::evaluateSprCandidate(
+                    bytes.data()+start,n,cap,static_cast<reluva::stafu::SprCandidate>(k));
+                if(!result.valid)continue;
+                ++st.valid;
+                if(area&&result.output==area)++st.exactArea;
+                if(area&&area<=cap/2&&result.output==area*2)++st.exactDoubleArea;
+            }
+        }
+    for(const auto& item:candidateStats)
+        std::printf("  candidate=%s total=%zu valid=%zu exactArea=%zu exactDoubleArea=%zu\\n",
+            item.first.c_str(),item.second.total,item.second.valid,
+            item.second.exactArea,item.second.exactDoubleArea);
+    std::puts("Exact output length is not evidence of correct pixel decoding.");
     std::puts("Pair-token counts are hypothetical; no RLE scheme has been established.");
     std::puts("Raw observations only: field semantics and compression remain unknown.");
     std::puts("Correlations are hypotheses; no payloads decoded or addresses dereferenced.");
