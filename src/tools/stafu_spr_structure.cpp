@@ -224,6 +224,49 @@ int stafuInspectSprStructure(const char* installed,const char* cd,const char* na
         std::printf("  candidate=%s total=%zu valid=%zu exactArea=%zu exactDoubleArea=%zu\n",
             item.first.c_str(),item.second.total,item.second.valid,
             item.second.exactArea,item.second.exactDoubleArea);
+    // Group by observed header words, without assigning image semantics.
+    struct HeaderGroup {
+        size_t count=0, minBytes=SIZE_MAX, maxBytes=0;
+        size_t prefix2Matches=0, prefix4Matches=0;
+        std::string first2,first4;
+        uint64_t totalBytes=0;
+    };
+    std::map<std::string,HeaderGroup> headerGroups;
+    std::puts("PAYLOAD HEADER CORRELATION");
+    for(const auto& record:container.records())
+        for(const auto& chunk:record.chunks) {
+            if((chunk.tag!="PMOC"&&chunk.tag!="MOCS")||chunk.size<=24)continue;
+            const size_t p=chunk.offset+8;
+            const uint32_t a=word(p),b=word(p+4),marker=word(p+8);
+            const size_t n=chunk.size-20,start=p+12;
+            char key[128];
+            std::snprintf(key,sizeof(key),"%s/0x%08x/%u/%u",chunk.tag.c_str(),marker,a,b);
+            auto& g=headerGroups[key];
+            const std::string first2(reinterpret_cast<const char*>(bytes.data()+start),
+                                     std::min(n,size_t(2)));
+            const std::string first4(reinterpret_cast<const char*>(bytes.data()+start),
+                                     std::min(n,size_t(4)));
+            if(g.count) {
+                if(first2==g.first2)++g.prefix2Matches;
+                if(first4==g.first4)++g.prefix4Matches;
+            } else {
+                g.first2=first2;g.first4=first4;
+            }
+            ++g.count;g.minBytes=std::min(g.minBytes,n);
+            g.maxBytes=std::max(g.maxBytes,n);g.totalBytes+=n;
+        }
+    size_t repeated=0, repeatedPayloads=0;
+    for(const auto& item:headerGroups) {
+        const auto& g=item.second;
+        if(g.count<2)continue;
+        ++repeated;repeatedPayloads+=g.count;
+        std::printf("  headerGroup=%s count=%zu minBytes=%zu maxBytes=%zu totalBytes=%llu samePrefix2=%zu samePrefix4=%zu\n",
+            item.first.c_str(),g.count,g.minBytes,g.maxBytes,
+            static_cast<unsigned long long>(g.totalBytes),g.prefix2Matches,g.prefix4Matches);
+    }
+    std::printf("  headerSummary groups=%zu repeatedGroups=%zu repeatedPayloads=%zu\n",
+        headerGroups.size(),repeated,repeatedPayloads);
+    std::puts("Header words and prefixes are raw observations, not proven dimensions or block boundaries.");
     std::puts("Exact output length is not evidence of correct pixel decoding.");
     std::puts("Pair-token counts are hypothetical; no RLE scheme has been established.");
     std::puts("Raw observations only: field semantics and compression remain unknown.");
