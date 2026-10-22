@@ -10,6 +10,7 @@
 #include "engines/stafu/spr_shift_verify.h"
 #include "engines/stafu/spr_match_boundary.h"
 #include "engines/stafu/spr_bit_reader.h"
+#include "engines/stafu/spr_pattern_survey.h"
 #include <algorithm>
 #include <array>
 #include <iomanip>
@@ -299,6 +300,35 @@ void inspectBitTokens(const std::vector<uint8_t>& bytes,
     }
     std::cout<<"Values are unsigned candidates, not decoded symbols or pixels.\n";
 }
+void inspectPatterns(const std::vector<uint8_t>& bytes,
+                     const reluva::stafu::SprSequenceIndex::Event& event) {
+    reluva::stafu::SprImagePayloadAccessor::View view;
+    if(!reluva::stafu::SprImagePayloadAccessor::get(bytes,event,view)) {
+        std::cout<<"No valid image payload for this event.\n";return;
+    }
+    std::string line;
+    std::cout<<"Starting bit offset (MSB-first, b to cancel) > "<<std::flush;
+    if(!std::getline(std::cin,line)||line=="b")return;
+    size_t start=0;
+    if(!number(line,start)||start>view.size*8) {
+        std::cout<<"Invalid offset.\n";return;
+    }
+    const auto repeat=reluva::stafu::longestSprRepeat(view.data,view.size,start);
+    std::cout<<"Repeated-period candidate periodBits="<<repeat.period
+             <<" consecutiveCopies="<<repeat.repeats
+             <<" (search <=64-bit periods, <=512-bit window)\n";
+    std::cout<<"width phase tokens distinct adjacentEqual mostFrequent\n";
+    for(unsigned width=3;width<=16;++width) {
+        for(unsigned phase=0;phase<width;++phase) {
+            const auto r=reluva::stafu::surveySprPattern(
+                view.data,view.size,start,width,phase);
+            if(!r.tokens)continue;
+            std::cout<<r.width<<" "<<r.phase<<" "<<r.tokens<<" "
+                     <<r.distinct<<" "<<r.adjacentEqual<<" "<<r.mostFrequent<<"\n";
+        }
+    }
+    std::cout<<"Each phase is an exploratory offset relative to the supplied bit position; no token format inferred.\n";
+}
 void stepRecord(const reluva::stafu::SprSequenceIndex& index,size_t selected,
                 const std::vector<uint8_t>& bytes,const char* resource) {
     reluva::stafu::SprPlaybackCursor cursor;
@@ -308,7 +338,7 @@ void stepRecord(const reluva::stafu::SprSequenceIndex& index,size_t selected,
     for(;;) {
         if(const auto* event=cursor.current())showEvent(*event,cursor.position());
         else std::cout<<"[End of record]\\n";
-        std::cout<<"n=next, r=restart, l=list all, p=payload, s=bit survey, c=cross compare, h=shift survey, v=verify shift, m=MOCS pairs, t=bit tokens, b=records, q=quit > "<<std::flush;
+        std::cout<<"n=next, r=restart, l=list all, p=payload, s=bit survey, c=cross compare, h=shift survey, v=verify shift, m=MOCS pairs, t=bit tokens, f=pattern frequencies, b=records, q=quit > "<<std::flush;
         if(!std::getline(std::cin,input)||input=="q"||input=="quit")return;
         if(input=="b"||input=="back")return;
         if(input=="r"||input=="restart"){cursor.restart();continue;}
@@ -340,6 +370,11 @@ void stepRecord(const reluva::stafu::SprSequenceIndex& index,size_t selected,
         }
         if(input=="t"||input=="tokens"){
             if(const auto* event=cursor.current())inspectBitTokens(bytes,*event);
+            else std::cout<<"End of record; no current payload.\n";
+            continue;
+        }
+        if(input=="f"||input=="patterns"){
+            if(const auto* event=cursor.current())inspectPatterns(bytes,*event);
             else std::cout<<"End of record; no current payload.\n";
             continue;
         }
