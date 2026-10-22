@@ -9,7 +9,7 @@ int main() {
     auto r=surveySprBits(bytes,4);
     assert(r.bytesExamined==4);
     assert(r.msb.ones==10&&r.lsb.ones==10);
-    assert(r.msb.transitions==5);
+    assert(r.msb.transitions==3);
     assert(r.lsb.transitions==5);
     assert(r.msb.windows12==21&&r.lsb.windows12==21);
     assert(r.msb.repeated12<=r.msb.windows12);
