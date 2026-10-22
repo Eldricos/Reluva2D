@@ -2,6 +2,7 @@
 // Interactive read-only SPR resource and sequence browser.
 #include "engines/stafu/resource_manager.h"
 #include "engines/stafu/spr_sequence_index.h"
+#include "engines/stafu/spr_playback_cursor.h"
 #include <charconv>
 #include <iostream>
 #include <string>
@@ -19,19 +20,39 @@ constexpr const char* resources[]={
     "BRDGDATA.SPR","BRDGPICA.SPR","BRDGRIKR.SPR","BRDGTROI.SPR",
     "BRDGWORF.SPR","brdgdoor.spr","brdgtitl.spr","viewscr.spr"
 };
+void showEvent(const reluva::stafu::SprSequenceIndex::Event& e,size_t i) {
+    std::cout<<"  ["<<i<<"] "<<e.tag<<" offset="<<e.chunkOffset
+             <<" size="<<e.chunkSize<<" payload="<<e.payloadSize;
+    if(e.hasRawControlValue)std::cout<<" rawEMIT="<<e.rawControlValue;
+    if(e.hasImageHeader)
+        std::cout<<" header=("<<e.headerA<<","<<e.headerB<<",0x"
+                 <<std::hex<<e.marker<<std::dec<<") imageBytes="<<e.imageDataSize
+                 <<" imageOffset="<<e.imageDataOffset;
+    std::cout<<"\\n";
+}
 void show(const reluva::stafu::SprSequenceIndex::Record& record) {
     std::cout<<"Record offsets ["<<record.start<<", "<<record.end<<") - "
-             <<record.events.size()<<" chunks\n";
-    for(size_t i=0;i<record.events.size();++i) {
-        const auto& e=record.events[i];
-        std::cout<<"  ["<<i<<"] "<<e.tag<<" offset="<<e.chunkOffset
-                 <<" size="<<e.chunkSize<<" payload="<<e.payloadSize;
-        if(e.hasRawControlValue)std::cout<<" rawEMIT="<<e.rawControlValue;
-        if(e.hasImageHeader)
-            std::cout<<" header=("<<e.headerA<<","<<e.headerB<<",0x"
-                     <<std::hex<<e.marker<<std::dec<<") imageBytes="<<e.imageDataSize
-                     <<" imageOffset="<<e.imageDataOffset;
-        std::cout<<"\n";
+             <<record.events.size()<<" chunks\\n";
+    for(size_t i=0;i<record.events.size();++i)showEvent(record.events[i],i);
+}
+void stepRecord(const reluva::stafu::SprSequenceIndex& index,size_t selected) {
+    reluva::stafu::SprPlaybackCursor cursor;
+    if(!cursor.bind(index,selected))return;
+    std::string input;
+    std::cout<<"Stepping record "<<selected+1<<" (raw chunk order, no timing).\\n";
+    for(;;) {
+        if(const auto* event=cursor.current())showEvent(*event,cursor.position());
+        else std::cout<<"[End of record]\\n";
+        std::cout<<"n=next, r=restart, l=list all, b=records, q=quit > "<<std::flush;
+        if(!std::getline(std::cin,input)||input=="q"||input=="quit")return;
+        if(input=="b"||input=="back")return;
+        if(input=="r"||input=="restart"){cursor.restart();continue;}
+        if(input=="l"||input=="list"){show(index.records()[selected]);continue;}
+        if(input=="n"||input=="next"||input.empty()) {
+            if(!cursor.advance())std::cout<<"Already at end. Use r to restart.\\n";
+            continue;
+        }
+        std::cout<<"Unknown command.\\n";
     }
 }
 }
@@ -75,7 +96,7 @@ int main(int argc,char** argv) {
             if(!number(input,selected)||selected<1||selected>index.records().size()) {
                 std::cout<<"Invalid record.\n";continue;
             }
-            show(index.records()[selected-1]);
+            stepRecord(index,selected-1);
         }
     }
 }
