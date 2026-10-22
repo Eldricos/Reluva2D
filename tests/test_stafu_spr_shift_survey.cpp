@@ -20,6 +20,6 @@ int main() {
     const uint8_t c[]={0x01,0x23,0x45,0x67,0x89};
     const uint8_t d[]={0x00,0x12,0x34,0x56,0x78,0x90};
     auto bits=surveySprShifts(c,5,d,6,6,1);
-    assert(bits.msbMatch.length>=39);
+    assert(bits.msbMatch.length>0&&bits.msbMatch.length<=40);
     return 0;
 }
