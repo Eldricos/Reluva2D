@@ -9,6 +9,7 @@
 #include "engines/stafu/spr_shift_survey.h"
 #include "engines/stafu/spr_shift_verify.h"
 #include "engines/stafu/spr_match_boundary.h"
+#include "engines/stafu/spr_bit_reader.h"
 #include <algorithm>
 #include <array>
 #include <iomanip>
@@ -259,6 +260,45 @@ void inspectMocsRecord(const std::vector<uint8_t>& bytes,
     std::cout<<"Compared "<<pairs<<" consecutive MOCS payload pairs within this record.\n";
     std::cout<<"Match boundaries do not establish insertion/deletion or compression semantics.\n";
 }
+void inspectBitTokens(const std::vector<uint8_t>& bytes,
+                      const reluva::stafu::SprSequenceIndex::Event& event) {
+    reluva::stafu::SprImagePayloadAccessor::View view;
+    if(!reluva::stafu::SprImagePayloadAccessor::get(bytes,event,view)) {
+        std::cout<<"No valid image payload for this event.\n";return;
+    }
+    std::string line;
+    std::cout<<"Bit offset (0-based, MSB-first, or b to cancel) > "<<std::flush;
+    if(!std::getline(std::cin,line)||line=="b")return;
+    size_t offset=0;
+    if(!number(line,offset)||offset>view.size*8) {
+        std::cout<<"Invalid bit offset.\n";return;
+    }
+    std::cout<<"Token width (1..32 bits) > "<<std::flush;
+    if(!std::getline(std::cin,line)||line=="b")return;
+    size_t width=0;
+    if(!number(line,width)||width<1||width>32) {
+        std::cout<<"Invalid token width.\n";return;
+    }
+    const size_t available=view.size*8-offset;
+    const size_t count=std::min(size_t(16),available/width);
+    std::cout<<"MSB-first opaque tokens bitOffset="<<offset
+             <<" width="<<width<<" count="<<count<<"\n";
+    for(size_t i=0;i<count;++i) {
+        const size_t pos=offset+i*width;
+        uint32_t value=0;
+        if(!reluva::stafu::readSprBits(view.data,view.size,pos,
+                                      static_cast<unsigned>(width),value))break;
+        std::cout<<"  bit="<<pos<<" value="<<value<<" hex=0x"
+                 <<std::hex<<value<<std::dec<<" bits=";
+        for(size_t j=0;j<width;++j) {
+            uint32_t bit=0;
+            reluva::stafu::readSprBits(view.data,view.size,pos+j,1,bit);
+            std::cout<<bit;
+        }
+        std::cout<<"\n";
+    }
+    std::cout<<"Values are unsigned candidates, not decoded symbols or pixels.\n";
+}
 void stepRecord(const reluva::stafu::SprSequenceIndex& index,size_t selected,
                 const std::vector<uint8_t>& bytes,const char* resource) {
     reluva::stafu::SprPlaybackCursor cursor;
@@ -268,7 +308,7 @@ void stepRecord(const reluva::stafu::SprSequenceIndex& index,size_t selected,
     for(;;) {
         if(const auto* event=cursor.current())showEvent(*event,cursor.position());
         else std::cout<<"[End of record]\\n";
-        std::cout<<"n=next, r=restart, l=list all, p=payload, s=bit survey, c=cross compare, h=shift survey, v=verify shift, m=MOCS pairs, b=records, q=quit > "<<std::flush;
+        std::cout<<"n=next, r=restart, l=list all, p=payload, s=bit survey, c=cross compare, h=shift survey, v=verify shift, m=MOCS pairs, t=bit tokens, b=records, q=quit > "<<std::flush;
         if(!std::getline(std::cin,input)||input=="q"||input=="quit")return;
         if(input=="b"||input=="back")return;
         if(input=="r"||input=="restart"){cursor.restart();continue;}
@@ -295,6 +335,11 @@ void stepRecord(const reluva::stafu::SprSequenceIndex& index,size_t selected,
         }
         if(input=="v"||input=="verify"){
             if(cursor.current())inspectVerifiedShift(bytes,index,selected,cursor.position(),resource);
+            else std::cout<<"End of record; no current payload.\n";
+            continue;
+        }
+        if(input=="t"||input=="tokens"){
+            if(const auto* event=cursor.current())inspectBitTokens(bytes,*event);
             else std::cout<<"End of record; no current payload.\n";
             continue;
         }
