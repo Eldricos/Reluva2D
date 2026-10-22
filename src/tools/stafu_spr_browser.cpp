@@ -9,6 +9,7 @@
 #include "engines/stafu/spr_shift_survey.h"
 #include "engines/stafu/spr_shift_verify.h"
 #include "engines/stafu/spr_match_boundary.h"
+#include "engines/stafu/spr_boundary_report.h"
 #include "engines/stafu/spr_bit_reader.h"
 #include "engines/stafu/spr_pattern_survey.h"
 #include <algorithm>
@@ -225,7 +226,7 @@ void inspectMocsRecord(const std::vector<uint8_t>& bytes,
     reluva::stafu::SprImagePayloadAccessor::View previous,current;
     size_t prior=0;
     bool havePrevious=false;
-    size_t pairs=0;
+    size_t pairs=0, longPairs=0, suffixPairs=0;
     std::cout<<"MOCS pair survey resource="<<resource<<" record="<<record+1
              <<" examinedBytesLimit=4096 maxShiftBytes=256\n";
     for(size_t i=0;i<events.size();++i) {
@@ -248,6 +249,28 @@ void inspectMocsRecord(const std::vector<uint8_t>& bytes,
                      <<" verified="<<(verified.valid?"yes":"NO")
                      <<" byteMatch="<<result.byteMatch.length<<"\n";
             if(verified.valid&&m.length>=64) {
+                const auto boundary=reluva::stafu::describeSprBoundary(
+                    previous.data,previous.size,current.data,current.size,verified);
+                if(boundary.valid) {
+                    ++longPairs;
+                    if(boundary.reachesEndA||boundary.reachesEndB)++suffixPairs;
+                    std::cout<<"    verified boundary A=["<<boundary.startA<<","
+                             <<boundary.endA<<") B=["<<boundary.startB<<","
+                             <<boundary.endB<<")\n"
+                             <<"    unmatched leadingBits="<<boundary.leadingA<<","
+                             <<boundary.leadingB<<" trailingBits="<<boundary.trailingA
+                             <<","<<boundary.trailingB
+                             <<" endsAtPayload="<<(boundary.reachesEndA?"yes":"no")
+                             <<","<<(boundary.reachesEndB?"yes":"no")<<"\n";
+                    std::cout<<"    priorBits="
+                             <<(boundary.hasPriorBits?
+                                (boundary.priorBitsEqual?"equal":"different"):"unavailable")
+                             <<" nextBits="
+                             <<(boundary.hasNextBits?
+                                (boundary.nextBitsEqual?"equal":"different"):"unavailable")
+                             <<"\n";
+                }
+
                 const size_t endA=m.startA+m.length,endB=m.startB+m.length;
                 std::cout<<"    A begin "<<reluva::stafu::sprBitWindow(previous.data,previous.size,m.startA,0)
                          <<" end "<<reluva::stafu::sprBitWindow(previous.data,previous.size,endA,0)<<"\n";
@@ -259,6 +282,7 @@ void inspectMocsRecord(const std::vector<uint8_t>& bytes,
         previous=current;prior=i;havePrevious=true;
     }
     std::cout<<"Compared "<<pairs<<" consecutive MOCS payload pairs within this record.\n";
+    std::cout<<"Long verified pairs="<<longPairs<<" with match reaching at least one payload end="<<suffixPairs<<"\n";
     std::cout<<"Match boundaries do not establish insertion/deletion or compression semantics.\n";
 }
 void inspectBitTokens(const std::vector<uint8_t>& bytes,
