@@ -4,6 +4,7 @@
 #include "engines/stafu/spr_sequence_index.h"
 #include "engines/stafu/spr_playback_cursor.h"
 #include "engines/stafu/spr_image_payload.h"
+#include "engines/stafu/spr_bit_survey.h"
 #include <algorithm>
 #include <array>
 #include <iomanip>
@@ -62,8 +63,32 @@ void inspectPayload(const std::vector<uint8_t>& bytes,
     std::cout<<std::setfill(' ')<<"\n";
     std::cout<<"Byte frequencies and prefixes are observations, not decoded pixels.\n";
 }
+void inspectBits(const std::vector<uint8_t>& bytes,
+                 const reluva::stafu::SprSequenceIndex::Event& event,
+                 const char* resource,size_t record) {
+    reluva::stafu::SprImagePayloadAccessor::View view;
+    if(!reluva::stafu::SprImagePayloadAccessor::get(bytes,event,view)) {
+        std::cout<<"No valid image payload for this event.\\n";return;
+    }
+    const auto result=reluva::stafu::surveySprBits(view.data,view.size);
+    std::cout<<"Bit survey resource="<<resource<<" record="<<record+1
+             <<" tag="<<event.tag<<" headerA="<<view.headerA
+             <<" headerB="<<view.headerB<<" marker=0x"<<std::hex<<view.marker
+             <<std::dec<<" payloadBytes="<<view.size
+             <<" examinedBytes="<<result.bytesExamined<<"\\n";
+    auto print=[&](const char* name,const reluva::stafu::SprBitSurvey::Orientation& o) {
+        std::cout<<"  "<<name<<" ones="<<o.ones<<" transitions="<<o.transitions
+                 <<" repeated12="<<o.repeated12<<"/"<<o.windows12
+                 <<" aligned8RepeatsByPhase=";
+        for(size_t i=0;i<8;++i)std::cout<<(i?",":"")<<o.alignedEightRepeats[i];
+        std::cout<<"\\n";
+    };
+    print("MSB-first",result.msb);
+    print("LSB-first",result.lsb);
+    std::cout<<"Overlapping windows and repeated tokens are statistical observations, not a decoder.\\n";
+}
 void stepRecord(const reluva::stafu::SprSequenceIndex& index,size_t selected,
-                const std::vector<uint8_t>& bytes) {
+                const std::vector<uint8_t>& bytes,const char* resource) {
     reluva::stafu::SprPlaybackCursor cursor;
     if(!cursor.bind(index,selected))return;
     std::string input;
@@ -71,7 +96,7 @@ void stepRecord(const reluva::stafu::SprSequenceIndex& index,size_t selected,
     for(;;) {
         if(const auto* event=cursor.current())showEvent(*event,cursor.position());
         else std::cout<<"[End of record]\\n";
-        std::cout<<"n=next, r=restart, l=list all, p=payload, b=records, q=quit > "<<std::flush;
+        std::cout<<"n=next, r=restart, l=list all, p=payload, s=bit survey, b=records, q=quit > "<<std::flush;
         if(!std::getline(std::cin,input)||input=="q"||input=="quit")return;
         if(input=="b"||input=="back")return;
         if(input=="r"||input=="restart"){cursor.restart();continue;}
@@ -79,6 +104,11 @@ void stepRecord(const reluva::stafu::SprSequenceIndex& index,size_t selected,
         if(input=="p"||input=="payload"){
             if(const auto* event=cursor.current())inspectPayload(bytes,*event);
             else std::cout<<"End of record; no current payload.\n";
+            continue;
+        }
+        if(input=="s"||input=="survey"){
+            if(const auto* event=cursor.current())inspectBits(bytes,*event,resource,selected);
+            else std::cout<<"End of record; no current payload.\\n";
             continue;
         }
         if(input=="n"||input=="next"||input.empty()) {
@@ -129,7 +159,7 @@ int main(int argc,char** argv) {
             if(!number(input,selected)||selected<1||selected>index.records().size()) {
                 std::cout<<"Invalid record.\n";continue;
             }
-            stepRecord(index,selected-1,bytes);
+            stepRecord(index,selected-1,bytes,resources[choice-1]);
         }
     }
 }
