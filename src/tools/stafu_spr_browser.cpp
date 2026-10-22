@@ -179,7 +179,7 @@ void inspectVerifiedShift(const std::vector<uint8_t>& bytes,
              <<" previousEvent="<<prior<<" currentEvent="<<eventNumber<<"\n";
     auto hexExcerpt=[](const char* label,const uint8_t* data,size_t length,size_t start,size_t end) {
         const size_t lo=start>8?start-8:0;
-        const size_t hi=std::min(length,end>length-8?length:end+8);
+        const size_t hi=std::min(length,end>=length||length-end<8?length:end+8);
         std::cout<<"    "<<label<<" hex ["<<lo<<","<<hi<<"):";
         for(size_t i=lo;i<hi;++i)
             std::cout<<" "<<std::hex<<std::setw(2)<<std::setfill('0')
