@@ -7,7 +7,8 @@ int main() {
     const uint8_t a[]={0x11,0x22,0x33,0x44};
     const uint8_t b[]={0xff,0x22,0x33,0x44};
     const auto same=compareSprSuffix(a,4,b,4,true,4,false);
-    assert(same.rawSuffixBits==24&&same.suffixBits==24);
+    // The preceding 0x11 and 0xff bytes also share their final bit.
+    assert(same.rawSuffixBits==25&&same.suffixBits==25);
     const uint8_t c[]={0x11,0x22,0x33,0x45};
     assert(compareSprSuffix(a,4,c,4,true,4,false).rawSuffixBits==0);
     const uint8_t d[]={0x80};
