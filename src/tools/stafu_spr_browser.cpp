@@ -6,6 +6,7 @@
 #include "engines/stafu/spr_image_payload.h"
 #include "engines/stafu/spr_bit_survey.h"
 #include "engines/stafu/spr_cross_bit_compare.h"
+#include "engines/stafu/spr_shift_survey.h"
 #include <algorithm>
 #include <array>
 #include <iomanip>
@@ -124,6 +125,37 @@ void inspectCross(const std::vector<uint8_t>& bytes,
     print("MSB",r.msb);print("LSB",r.lsb);
     std::cout<<"Baseline is a deterministic byte shuffle, not statistical significance or proof of token boundaries.\\n";
 }
+void inspectShift(const std::vector<uint8_t>& bytes,
+                  const reluva::stafu::SprSequenceIndex& index,
+                  size_t record,size_t eventNumber,const char* resource) {
+    const auto& events=index.records()[record].events;
+    reluva::stafu::SprImagePayloadAccessor::View current,previous;
+    if(!reluva::stafu::SprImagePayloadAccessor::get(bytes,events[eventNumber],current)) {
+        std::cout<<"Current event has no valid image payload.\n";return;
+    }
+    size_t prior=eventNumber;
+    bool found=false;
+    while(prior>0) {
+        --prior;
+        if(reluva::stafu::SprImagePayloadAccessor::get(bytes,events[prior],previous)) {
+            found=true;break;
+        }
+    }
+    if(!found) {std::cout<<"No preceding image event in this record.\n";return;}
+    const auto r=reluva::stafu::surveySprShifts(previous.data,previous.size,current.data,current.size);
+    std::cout<<"Shift survey resource="<<resource<<" record="<<record+1
+             <<" previousEvent="<<prior<<" currentEvent="<<eventNumber
+             <<" previousTag="<<events[prior].tag<<" currentTag="<<events[eventNumber].tag
+             <<" examinedBytes="<<r.bytesA<<","<<r.bytesB<<" maxShiftBytes=256\n";
+    auto print=[](const char* label,const reluva::stafu::SprShiftMatch& m,const char* unit) {
+        std::cout<<"  "<<label<<" startA="<<m.startA<<" startB="<<m.startB
+                 <<" length="<<m.length<<" "<<unit<<"\n";
+    };
+    print("byte",r.byteMatch,"bytes");
+    print("MSB",r.msbMatch,"bits");
+    print("LSB",r.lsbMatch,"bits");
+    std::cout<<"Longest shifted matches are observations, not proof of encoding or frame reuse.\n";
+}
 void stepRecord(const reluva::stafu::SprSequenceIndex& index,size_t selected,
                 const std::vector<uint8_t>& bytes,const char* resource) {
     reluva::stafu::SprPlaybackCursor cursor;
@@ -133,7 +165,7 @@ void stepRecord(const reluva::stafu::SprSequenceIndex& index,size_t selected,
     for(;;) {
         if(const auto* event=cursor.current())showEvent(*event,cursor.position());
         else std::cout<<"[End of record]\\n";
-        std::cout<<"n=next, r=restart, l=list all, p=payload, s=bit survey, c=cross compare, b=records, q=quit > "<<std::flush;
+        std::cout<<"n=next, r=restart, l=list all, p=payload, s=bit survey, c=cross compare, h=shift survey, b=records, q=quit > "<<std::flush;
         if(!std::getline(std::cin,input)||input=="q"||input=="quit")return;
         if(input=="b"||input=="back")return;
         if(input=="r"||input=="restart"){cursor.restart();continue;}
@@ -151,6 +183,11 @@ void stepRecord(const reluva::stafu::SprSequenceIndex& index,size_t selected,
         if(input=="c"||input=="compare"){
             if(cursor.current())inspectCross(bytes,index,selected,cursor.position(),resource);
             else std::cout<<"End of record; no current payload.\\n";
+            continue;
+        }
+        if(input=="h"||input=="shift"){
+            if(cursor.current())inspectShift(bytes,index,selected,cursor.position(),resource);
+            else std::cout<<"End of record; no current payload.\n";
             continue;
         }
         if(input=="n"||input=="next"||input.empty()) {
