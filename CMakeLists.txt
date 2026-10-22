@@ -226,6 +226,10 @@ if(RELUVA_BUILD_TESTS)
     target_link_libraries(reluva_stafu_spr_sequence_index_tests PRIVATE reluva_engines reluva_warnings)
     add_test(NAME stafu_spr_sequence_index COMMAND reluva_stafu_spr_sequence_index_tests)
 
+    add_executable(reluva_stafu_spr_match_boundary_tests tests/test_stafu_spr_match_boundary.cpp)
+    target_link_libraries(reluva_stafu_spr_match_boundary_tests PRIVATE reluva_engines reluva_warnings)
+    add_test(NAME stafu_spr_match_boundary COMMAND reluva_stafu_spr_match_boundary_tests)
+
     add_executable(reluva_stafu_spr_shift_verify_tests tests/test_stafu_spr_shift_verify.cpp)
     target_link_libraries(reluva_stafu_spr_shift_verify_tests PRIVATE reluva_engines reluva_warnings)
     add_test(NAME stafu_spr_shift_verify COMMAND reluva_stafu_spr_shift_verify_tests)
