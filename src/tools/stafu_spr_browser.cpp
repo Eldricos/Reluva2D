@@ -3,6 +3,10 @@
 #include "engines/stafu/resource_manager.h"
 #include "engines/stafu/spr_sequence_index.h"
 #include "engines/stafu/spr_playback_cursor.h"
+#include "engines/stafu/spr_image_payload.h"
+#include <algorithm>
+#include <array>
+#include <iomanip>
 #include <charconv>
 #include <iostream>
 #include <string>
@@ -35,7 +39,31 @@ void show(const reluva::stafu::SprSequenceIndex::Record& record) {
              <<record.events.size()<<" chunks\\n";
     for(size_t i=0;i<record.events.size();++i)showEvent(record.events[i],i);
 }
-void stepRecord(const reluva::stafu::SprSequenceIndex& index,size_t selected) {
+void inspectPayload(const std::vector<uint8_t>& bytes,
+                    const reluva::stafu::SprSequenceIndex::Event& event) {
+    reluva::stafu::SprImagePayloadAccessor::View view;
+    if(!reluva::stafu::SprImagePayloadAccessor::get(bytes,event,view)) {
+        std::cout<<"No valid image payload for this event.\n";
+        return;
+    }
+    std::array<size_t,256> frequencies{};
+    for(size_t i=0;i<view.size;++i)++frequencies[view.data[i]];
+    size_t unique=0,zero=frequencies[0],ff=frequencies[255];
+    for(size_t count:frequencies)if(count)++unique;
+    std::cout<<"Opaque image bytes: offset="<<view.offset<<" length="<<view.size
+             <<" uniqueByteValues="<<unique<<" zeros="<<zero<<" ff="<<ff<<"\n";
+    const size_t shown=std::min(view.size,size_t(64));
+    std::cout<<"First "<<shown<<" bytes (hex):";
+    for(size_t i=0;i<shown;++i) {
+        if(i%16==0)std::cout<<"\n  ";
+        std::cout<<std::hex<<std::setw(2)<<std::setfill('0')
+                 <<unsigned(view.data[i])<<" "<<std::dec;
+    }
+    std::cout<<std::setfill(' ')<<"\n";
+    std::cout<<"Byte frequencies and prefixes are observations, not decoded pixels.\n";
+}
+void stepRecord(const reluva::stafu::SprSequenceIndex& index,size_t selected,
+                const std::vector<uint8_t>& bytes) {
     reluva::stafu::SprPlaybackCursor cursor;
     if(!cursor.bind(index,selected))return;
     std::string input;
@@ -43,11 +71,16 @@ void stepRecord(const reluva::stafu::SprSequenceIndex& index,size_t selected) {
     for(;;) {
         if(const auto* event=cursor.current())showEvent(*event,cursor.position());
         else std::cout<<"[End of record]\\n";
-        std::cout<<"n=next, r=restart, l=list all, b=records, q=quit > "<<std::flush;
+        std::cout<<"n=next, r=restart, l=list all, p=payload, b=records, q=quit > "<<std::flush;
         if(!std::getline(std::cin,input)||input=="q"||input=="quit")return;
         if(input=="b"||input=="back")return;
         if(input=="r"||input=="restart"){cursor.restart();continue;}
         if(input=="l"||input=="list"){show(index.records()[selected]);continue;}
+        if(input=="p"||input=="payload"){
+            if(const auto* event=cursor.current())inspectPayload(bytes,*event);
+            else std::cout<<"End of record; no current payload.\n";
+            continue;
+        }
         if(input=="n"||input=="next"||input.empty()) {
             if(!cursor.advance())std::cout<<"Already at end. Use r to restart.\\n";
             continue;
@@ -96,7 +129,7 @@ int main(int argc,char** argv) {
             if(!number(input,selected)||selected<1||selected>index.records().size()) {
                 std::cout<<"Invalid record.\n";continue;
             }
-            stepRecord(index,selected-1);
+            stepRecord(index,selected-1,bytes);
         }
     }
 }
