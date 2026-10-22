@@ -8,6 +8,7 @@
 #include "engines/stafu/spr_cross_bit_compare.h"
 #include "engines/stafu/spr_shift_survey.h"
 #include "engines/stafu/spr_shift_verify.h"
+#include "engines/stafu/spr_match_boundary.h"
 #include <algorithm>
 #include <array>
 #include <iomanip>
@@ -215,6 +216,49 @@ void inspectVerifiedShift(const std::vector<uint8_t>& bytes,
     report("LSB",survey.lsbMatch,2);
     std::cout<<"Verification checks reported matches against original bytes; it does not decode images.\n";
 }
+void inspectMocsRecord(const std::vector<uint8_t>& bytes,
+                       const reluva::stafu::SprSequenceIndex& index,
+                       size_t record,const char* resource) {
+    const auto& events=index.records()[record].events;
+    reluva::stafu::SprImagePayloadAccessor::View previous,current;
+    size_t prior=0;
+    bool havePrevious=false;
+    size_t pairs=0;
+    std::cout<<"MOCS pair survey resource="<<resource<<" record="<<record+1
+             <<" examinedBytesLimit=4096 maxShiftBytes=256\n";
+    for(size_t i=0;i<events.size();++i) {
+        if(events[i].tag!="MOCS"||
+           !reluva::stafu::SprImagePayloadAccessor::get(bytes,events[i],current))
+            continue;
+        if(havePrevious) {
+            const auto result=reluva::stafu::surveySprShifts(
+                previous.data,previous.size,current.data,current.size);
+            const auto& m=result.msbMatch;
+            const auto verified=reluva::stafu::verifySprMatch(
+                previous.data,previous.size,current.data,current.size,
+                m,1,result.bytesA,result.bytesB);
+            const auto displacement=static_cast<long long>(m.startB)-static_cast<long long>(m.startA);
+            std::cout<<"  events "<<prior<<" -> "<<i
+                     <<" bytes="<<previous.size<<","<<current.size
+                     <<" MSB start="<<m.startA<<","<<m.startB
+                     <<" shiftBits="<<displacement
+                     <<" lengthBits="<<m.length
+                     <<" verified="<<(verified.valid?"yes":"NO")
+                     <<" byteMatch="<<result.byteMatch.length<<"\n";
+            if(verified.valid&&m.length>=64) {
+                const size_t endA=m.startA+m.length,endB=m.startB+m.length;
+                std::cout<<"    A begin "<<reluva::stafu::sprBitWindow(previous.data,previous.size,m.startA,0)
+                         <<" end "<<reluva::stafu::sprBitWindow(previous.data,previous.size,endA,0)<<"\n";
+                std::cout<<"    B begin "<<reluva::stafu::sprBitWindow(current.data,current.size,m.startB,0)
+                         <<" end "<<reluva::stafu::sprBitWindow(current.data,current.size,endB,0)<<"\n";
+            }
+            ++pairs;
+        }
+        previous=current;prior=i;havePrevious=true;
+    }
+    std::cout<<"Compared "<<pairs<<" consecutive MOCS payload pairs within this record.\n";
+    std::cout<<"Match boundaries do not establish insertion/deletion or compression semantics.\n";
+}
 void stepRecord(const reluva::stafu::SprSequenceIndex& index,size_t selected,
                 const std::vector<uint8_t>& bytes,const char* resource) {
     reluva::stafu::SprPlaybackCursor cursor;
@@ -224,7 +268,7 @@ void stepRecord(const reluva::stafu::SprSequenceIndex& index,size_t selected,
     for(;;) {
         if(const auto* event=cursor.current())showEvent(*event,cursor.position());
         else std::cout<<"[End of record]\\n";
-        std::cout<<"n=next, r=restart, l=list all, p=payload, s=bit survey, c=cross compare, h=shift survey, v=verify shift, b=records, q=quit > "<<std::flush;
+        std::cout<<"n=next, r=restart, l=list all, p=payload, s=bit survey, c=cross compare, h=shift survey, v=verify shift, m=MOCS pairs, b=records, q=quit > "<<std::flush;
         if(!std::getline(std::cin,input)||input=="q"||input=="quit")return;
         if(input=="b"||input=="back")return;
         if(input=="r"||input=="restart"){cursor.restart();continue;}
@@ -252,6 +296,10 @@ void stepRecord(const reluva::stafu::SprSequenceIndex& index,size_t selected,
         if(input=="v"||input=="verify"){
             if(cursor.current())inspectVerifiedShift(bytes,index,selected,cursor.position(),resource);
             else std::cout<<"End of record; no current payload.\n";
+            continue;
+        }
+        if(input=="m"||input=="mocs"){
+            inspectMocsRecord(bytes,index,selected,resource);
             continue;
         }
         if(input=="n"||input=="next"||input.empty()) {
