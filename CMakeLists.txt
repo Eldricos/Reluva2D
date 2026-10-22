@@ -226,6 +226,10 @@ if(RELUVA_BUILD_TESTS)
     target_link_libraries(reluva_stafu_spr_sequence_index_tests PRIVATE reluva_engines reluva_warnings)
     add_test(NAME stafu_spr_sequence_index COMMAND reluva_stafu_spr_sequence_index_tests)
 
+    add_executable(reluva_stafu_spr_bit_survey_tests tests/test_stafu_spr_bit_survey.cpp)
+    target_link_libraries(reluva_stafu_spr_bit_survey_tests PRIVATE reluva_engines reluva_warnings)
+    add_test(NAME stafu_spr_bit_survey COMMAND reluva_stafu_spr_bit_survey_tests)
+
     add_executable(reluva_stafu_spr_image_payload_tests tests/test_stafu_spr_image_payload.cpp)
     target_link_libraries(reluva_stafu_spr_image_payload_tests PRIVATE reluva_engines reluva_warnings)
     add_test(NAME stafu_spr_image_payload COMMAND reluva_stafu_spr_image_payload_tests)
