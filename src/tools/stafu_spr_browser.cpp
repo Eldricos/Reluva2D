@@ -7,6 +7,7 @@
 #include "engines/stafu/spr_bit_survey.h"
 #include "engines/stafu/spr_cross_bit_compare.h"
 #include "engines/stafu/spr_shift_survey.h"
+#include "engines/stafu/spr_shift_verify.h"
 #include <algorithm>
 #include <array>
 #include <iomanip>
@@ -156,6 +157,64 @@ void inspectShift(const std::vector<uint8_t>& bytes,
     print("LSB",r.lsbMatch,"bits");
     std::cout<<"Longest shifted matches are observations, not proof of encoding or frame reuse.\n";
 }
+void inspectVerifiedShift(const std::vector<uint8_t>& bytes,
+                          const reluva::stafu::SprSequenceIndex& index,
+                          size_t record,size_t eventNumber,const char* resource) {
+    const auto& events=index.records()[record].events;
+    reluva::stafu::SprImagePayloadAccessor::View current,previous;
+    if(!reluva::stafu::SprImagePayloadAccessor::get(bytes,events[eventNumber],current)) {
+        std::cout<<"Current event has no image payload.\n";return;
+    }
+    size_t prior=eventNumber;
+    bool found=false;
+    while(prior>0) {
+        --prior;
+        if(reluva::stafu::SprImagePayloadAccessor::get(bytes,events[prior],previous)) {
+            found=true;break;
+        }
+    }
+    if(!found) {std::cout<<"No preceding image payload.\n";return;}
+    const auto survey=reluva::stafu::surveySprShifts(previous.data,previous.size,current.data,current.size);
+    std::cout<<"Verified shift resource="<<resource<<" record="<<record+1
+             <<" previousEvent="<<prior<<" currentEvent="<<eventNumber<<"\n";
+    auto hexExcerpt=[](const char* label,const uint8_t* data,size_t length,size_t start,size_t end) {
+        const size_t lo=start>8?start-8:0;
+        const size_t hi=std::min(length,end>length-8?length:end+8);
+        std::cout<<"    "<<label<<" hex ["<<lo<<","<<hi<<"):";
+        for(size_t i=lo;i<hi;++i)
+            std::cout<<" "<<std::hex<<std::setw(2)<<std::setfill('0')
+                     <<unsigned(data[i])<<std::dec;
+        std::cout<<std::setfill(' ')<<"\n";
+    };
+    auto report=[&](const char* label,reluva::stafu::SprShiftMatch match,unsigned order) {
+        const auto v=reluva::stafu::verifySprMatch(
+            previous.data,previous.size,current.data,current.size,match,order,
+            survey.bytesA,survey.bytesB);
+        std::cout<<"  "<<label<<" verified="<<(v.valid?"yes":"NO")
+                 <<" startA="<<match.startA<<" startB="<<match.startB
+                 <<" surveyedLength="<<match.length
+                 <<" extendedLength="<<v.extendedLength
+                 <<" surveyBoundaryA="<<(v.truncatedA?"yes":"no")
+                 <<" surveyBoundaryB="<<(v.truncatedB?"yes":"no")<<"\n";
+        if(!v.valid)return;
+        const size_t unit=order==0?1:8;
+        const size_t startA=match.startA/unit,startB=match.startB/unit;
+        const size_t endA=(match.startA+v.extendedLength+unit-1)/unit;
+        const size_t endB=(match.startB+v.extendedLength+unit-1)/unit;
+        std::cout<<"    displacement="<<(match.startB>=match.startA?"+":"-")
+                 <<(match.startB>=match.startA?match.startB-match.startA:match.startA-match.startB)
+                 <<(order==0?" bytes":" bits")<<"\n";
+        // Show short excerpts around the start and end, without dumping game assets.
+        hexExcerpt("A start",previous.data,previous.size,startA,startA);
+        hexExcerpt("B start",current.data,current.size,startB,startB);
+        hexExcerpt("A end",previous.data,previous.size,endA,endA);
+        hexExcerpt("B end",current.data,current.size,endB,endB);
+    };
+    report("byte",survey.byteMatch,0);
+    report("MSB",survey.msbMatch,1);
+    report("LSB",survey.lsbMatch,2);
+    std::cout<<"Verification checks reported matches against original bytes; it does not decode images.\n";
+}
 void stepRecord(const reluva::stafu::SprSequenceIndex& index,size_t selected,
                 const std::vector<uint8_t>& bytes,const char* resource) {
     reluva::stafu::SprPlaybackCursor cursor;
@@ -165,7 +224,7 @@ void stepRecord(const reluva::stafu::SprSequenceIndex& index,size_t selected,
     for(;;) {
         if(const auto* event=cursor.current())showEvent(*event,cursor.position());
         else std::cout<<"[End of record]\\n";
-        std::cout<<"n=next, r=restart, l=list all, p=payload, s=bit survey, c=cross compare, h=shift survey, b=records, q=quit > "<<std::flush;
+        std::cout<<"n=next, r=restart, l=list all, p=payload, s=bit survey, c=cross compare, h=shift survey, v=verify shift, b=records, q=quit > "<<std::flush;
         if(!std::getline(std::cin,input)||input=="q"||input=="quit")return;
         if(input=="b"||input=="back")return;
         if(input=="r"||input=="restart"){cursor.restart();continue;}
@@ -187,6 +246,11 @@ void stepRecord(const reluva::stafu::SprSequenceIndex& index,size_t selected,
         }
         if(input=="h"||input=="shift"){
             if(cursor.current())inspectShift(bytes,index,selected,cursor.position(),resource);
+            else std::cout<<"End of record; no current payload.\n";
+            continue;
+        }
+        if(input=="v"||input=="verify"){
+            if(cursor.current())inspectVerifiedShift(bytes,index,selected,cursor.position(),resource);
             else std::cout<<"End of record; no current payload.\n";
             continue;
         }
