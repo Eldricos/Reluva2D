@@ -14,7 +14,7 @@ int main() {
     assert(surveySprPattern(nullptr,4,0,8,0).tokens==0);
     assert(surveySprPattern(bytes,4,100,8,0).tokens==0);
     const auto repeat=longestSprRepeat(bytes,4,0,8,32);
-    assert(repeat.period==8&&repeat.repeats==4);
+    assert(repeat.period==2&&repeat.repeats==16);
     assert(longestSprRepeat(bytes,4,32).repeats==0);
     return 0;
 }
