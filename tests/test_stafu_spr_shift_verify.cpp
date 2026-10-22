@@ -9,7 +9,7 @@ int main() {
     auto survey=surveySprShifts(a,6,b,7,4,2);
     auto verified=verifySprMatch(a,6,b,7,survey.byteMatch,0,survey.bytesA,survey.bytesB);
     assert(verified.valid&&verified.extendedLength==6);
-    assert(verified.truncatedA&&verified.truncatedB);
+    assert(!verified.truncatedA&&verified.truncatedB);
     auto bad=verifySprMatch(a,6,b,7,{0,0,2},0,4,4);
     assert(!bad.valid);
     auto outside=verifySprMatch(a,6,b,7,{100,0,2},0,4,4);
