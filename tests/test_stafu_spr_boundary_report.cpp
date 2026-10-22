@@ -4,7 +4,7 @@
 #include <cstdint>
 int main() {
     using namespace reluva::stafu;
-    const uint8_t a[]={0x0f,0xaa,0xf0};
+    const uint8_t a[]={0x0e,0xaa,0xf0};
     const uint8_t b[]={0xff,0xaa,0xf0};
     const SprVerifiedMatch m{true,8,8,16,16,false,false};
     const auto r=describeSprBoundary(a,3,b,3,m);
