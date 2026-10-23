@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "engines/stafu/spr_pair_relation.h"
 #include "engines/stafu/spr_sequence_suffix.h"
+#include "engines/stafu/spr_suffix_segment.h"
 #include <cassert>
 #include <cstdint>
 int main() {
@@ -46,6 +47,15 @@ int main() {
     assert(!compareSprSequenceSuffix(pairGroup,0).valid);
     const std::vector<SprSequencePayload> singleGroup{{a,4}};
     assert(!compareSprSequenceSuffix(singleGroup).valid);
+    const auto oneSegment=segmentSprSuffix(group,16);
+    assert(oneSegment.size()==1&&oneSegment[0].first==0&&
+           oneSegment[0].last==2&&oneSegment[0].commonBits>=24);
+    const uint8_t unrelated[]={0xaa,0xbb,0xcc,0xdd};
+    const std::vector<SprSequencePayload> splitGroup{
+        {e,4},{f,4},{unrelated,4},{g,4}};
+    const auto split=segmentSprSuffix(splitGroup,24);
+    assert(split.size()>=2&&split[0].first==0&&split[0].last==1);
+    assert(segmentSprSuffix({}).empty());
     assert(!compareSprPair(nullptr,4,a,4).valid);
     assert(!compareSprPair(a,0,a,4).valid);
 }
