@@ -97,7 +97,7 @@ int main(int argc,char** argv) {
                         // resource-local comparator; do not claim independence.
                         if(havePriorControl) {
                             const auto mismatch=reluva::stafu::inspectSprSuffixControl(
-                                priorControl.data(),priorControl.size,current.data,current.size);
+                                priorControl.data(),priorControl.size(),current.data,current.size);
                             if(mismatch.matchedBits>=minLongBits) {
                                 ++mismatchedLong;
                                 if(mismatch.trimA||mismatch.trimB) {
