@@ -3,6 +3,7 @@
 #include "engines/stafu/spr_sequence_suffix.h"
 #include "engines/stafu/spr_suffix_segment.h"
 #include "engines/stafu/spr_structural_pair.h"
+#include "engines/stafu/spr_change_region.h"
 #include <cassert>
 #include <cstdint>
 int main() {
@@ -66,6 +67,13 @@ int main() {
     assert(structural.longestRunA==3&&structural.longestRunB==2);
     assert(!surveySprStructuralPair(repeatsA,5,repeatsB,5,4,5).valid);
     assert(!surveySprStructuralPair(nullptr,5,repeatsB,5).valid);
+    const auto change=describeSprChangeRegion(a,4,b,4);
+    assert(change.valid&&change.prefixBits==0&&change.suffixBits>=24);
+    assert(change.unmatchedA<=change.suffixStartA);
+    assert(!describeSprChangeRegion(nullptr,4,b,4).valid);
+    const auto equalChange=describeSprChangeRegion(a,4,a,4);
+    assert(equalChange.valid&&equalChange.overlapsPrefix);
+    assert(equalChange.unmatchedA==0&&equalChange.unmatchedB==0);
     assert(!compareSprPair(nullptr,4,a,4).valid);
     assert(!compareSprPair(a,0,a,4).valid);
 }
