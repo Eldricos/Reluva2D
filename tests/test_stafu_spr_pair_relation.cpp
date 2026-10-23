@@ -32,15 +32,20 @@ int main() {
     const std::vector<SprSequencePayload> group={{e,4},{f,4},{g,4}};
     const auto common=compareSprSequenceSuffix(group);
     assert(common.valid&&common.sharedBits>=24&&common.starts.size()==3);
-    const uint8_t shifted[]={0xff,0x10,0x12,0x34,0x56};
-    const auto aligned=compareSprSequenceSuffix({{e,4},{f,4},{shifted,5}});
+    const uint8_t shiftedBytes[]={0xff,0x10,0x12,0x34,0x56};
+    const std::vector<SprSequencePayload> shiftedGroup{{e,4},{f,4},{shiftedBytes,5}};
+    const auto aligned=compareSprSequenceSuffix(shiftedGroup);
     assert(aligned.valid&&aligned.sharedBits>=24&&
            aligned.starts[2]>=aligned.starts[0]+8);
-    const auto identical=compareSprSequenceSuffix({{a,4},{a,4},{a,4}});
+    const std::vector<SprSequencePayload> identicalGroup{{a,4},{a,4},{a,4}};
+    const auto identical=compareSprSequenceSuffix(identicalGroup);
     assert(identical.valid&&identical.sharedBits==32);
-    assert(!compareSprSequenceSuffix({{nullptr,4},{a,4}}).valid);
-    assert(!compareSprSequenceSuffix({{a,4},{b,4}},0).valid);
-    assert(!compareSprSequenceSuffix({{a,4}}).valid);
+    const std::vector<SprSequencePayload> invalidGroup{{nullptr,4},{a,4}};
+    assert(!compareSprSequenceSuffix(invalidGroup).valid);
+    const std::vector<SprSequencePayload> pairGroup{{a,4},{b,4}};
+    assert(!compareSprSequenceSuffix(pairGroup,0).valid);
+    const std::vector<SprSequencePayload> singleGroup{{a,4}};
+    assert(!compareSprSequenceSuffix(singleGroup).valid);
     assert(!compareSprPair(nullptr,4,a,4).valid);
     assert(!compareSprPair(a,0,a,4).valid);
 }
