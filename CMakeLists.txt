@@ -167,6 +167,8 @@ target_link_libraries(reluva-stafu-inventory PRIVATE reluva_engines reluva_warni
 
 add_executable(reluva-stafu-spr-browser src/tools/stafu_spr_browser.cpp)
 add_executable(reluva-stafu-spr-suffix src/tools/stafu_spr_suffix.cpp)
+add_executable(reluva-stafu-spr-run-experiment src/tools/stafu_spr_run_experiment.cpp)
+target_link_libraries(reluva-stafu-spr-run-experiment PRIVATE reluva_engines reluva_warnings)
 target_link_libraries(reluva-stafu-spr-suffix PRIVATE reluva_engines reluva_warnings)
 target_link_libraries(reluva-stafu-spr-browser PRIVATE reluva_engines reluva_warnings)
 
@@ -227,6 +229,10 @@ if(RELUVA_BUILD_TESTS)
     add_executable(reluva_stafu_spr_sequence_index_tests tests/test_stafu_spr_sequence_index.cpp)
     target_link_libraries(reluva_stafu_spr_sequence_index_tests PRIVATE reluva_engines reluva_warnings)
     add_test(NAME stafu_spr_sequence_index COMMAND reluva_stafu_spr_sequence_index_tests)
+
+    add_executable(reluva_stafu_spr_run_experiment_tests tests/test_stafu_spr_run_experiment.cpp)
+    target_link_libraries(reluva_stafu_spr_run_experiment_tests PRIVATE reluva_engines reluva_warnings)
+    add_test(NAME stafu_spr_run_experiment COMMAND reluva_stafu_spr_run_experiment_tests)
 
     add_executable(reluva_stafu_spr_suffix_control_tests tests/test_stafu_spr_suffix_control.cpp)
     target_link_libraries(reluva_stafu_spr_suffix_control_tests PRIVATE reluva_engines reluva_warnings)
