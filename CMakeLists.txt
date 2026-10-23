@@ -175,6 +175,8 @@ add_executable(reluva-stafu-spr-structure-pairs src/tools/stafu_spr_structure_pa
 add_executable(reluva-stafu-spr-changes src/tools/stafu_spr_changes.cpp)
 add_executable(reluva-stafu-spr-headers src/tools/stafu_spr_headers.cpp)
 add_executable(reluva-stafu-spr-short-bodies src/tools/stafu_spr_short_bodies.cpp)
+add_executable(reluva-stafu-spr-offsets src/tools/stafu_spr_offsets.cpp)
+target_link_libraries(reluva-stafu-spr-offsets PRIVATE reluva_engines reluva_warnings)
 target_link_libraries(reluva-stafu-spr-short-bodies PRIVATE reluva_engines reluva_warnings)
 target_link_libraries(reluva-stafu-spr-headers PRIVATE reluva_engines reluva_warnings)
 target_link_libraries(reluva-stafu-spr-changes PRIVATE reluva_engines reluva_warnings)
