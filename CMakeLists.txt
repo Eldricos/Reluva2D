@@ -168,6 +168,8 @@ target_link_libraries(reluva-stafu-inventory PRIVATE reluva_engines reluva_warni
 add_executable(reluva-stafu-spr-browser src/tools/stafu_spr_browser.cpp)
 add_executable(reluva-stafu-spr-suffix src/tools/stafu_spr_suffix.cpp)
 add_executable(reluva-stafu-spr-relations src/tools/stafu_spr_relations.cpp)
+add_executable(reluva-stafu-spr-triples src/tools/stafu_spr_triples.cpp)
+target_link_libraries(reluva-stafu-spr-triples PRIVATE reluva_engines reluva_warnings)
 target_link_libraries(reluva-stafu-spr-relations PRIVATE reluva_engines reluva_warnings)
 add_executable(reluva-stafu-spr-run-experiment src/tools/stafu_spr_run_experiment.cpp)
 target_link_libraries(reluva-stafu-spr-run-experiment PRIVATE reluva_engines reluva_warnings)
