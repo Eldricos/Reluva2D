@@ -4,6 +4,8 @@
 #include "engines/stafu/spr_sequence_index.h"
 #include "engines/stafu/spr_image_payload.h"
 #include "engines/stafu/spr_run_experiment.h"
+#include "engines/stafu/spr_suffix_control.h"
+#include <limits>
 #include <cstdint>
 #include <iostream>
 #include <string>
@@ -41,6 +43,7 @@ int main(int argc,char** argv) {
                 std::cout<<"PAYLOAD "<<name<<" record="<<ri+1<<" event="<<ei
                          <<" tag="<<events[ei].tag<<" bytes="<<view.size
                          <<" headerA="<<view.headerA<<" headerB="<<view.headerB<<"\n";
+                const auto shuffled=reluva::stafu::shuffledSprBytes(view.data,view.size,0x9e3779b9u);
                 for(size_t start:{size_t(0),size_t(32),size_t(64)})
                     for(unsigned variant=0;variant<=5;++variant) {
                         const bool gamma=variant==0;
@@ -49,6 +52,13 @@ int main(int argc,char** argv) {
                             gamma?reluva::stafu::SprRunCode::Gamma:
                                   reluva::stafu::SprRunCode::Rice,
                             gamma?0:variant-1);
+                        const auto control=reluva::stafu::trySprRunDecode(
+                            shuffled.data(),shuffled.size(),start,
+                            gamma?reluva::stafu::SprRunCode::Gamma:
+                                  reluva::stafu::SprRunCode::Rice,
+                            gamma?0:variant-1);
+                        const uint64_t product=uint64_t(view.headerA)*view.headerB;
+                        const bool productMatch=product==result.outputSymbols;
                         std::cout<<"  start="<<start<<" code="<<(gamma?"gamma":"rice")
                                  <<" k="<<(gamma?0:variant-1)
                                  <<" valid="<<(result.valid?"yes":"no")
@@ -56,11 +66,18 @@ int main(int argc,char** argv) {
                                  <<" runs="<<result.runs
                                  <<" symbols="<<result.outputSymbols
                                  <<" bitsConsumed="<<result.bitsConsumed
-                                 <<" trailingBits="<<result.trailingBits<<"\n";
+                                 <<" trailingBits="<<result.trailingBits
+                                 <<" stop="<<static_cast<unsigned>(result.stop)
+                                 <<" terminalZero="<<(result.terminalZero?"yes":"no")
+                                 <<" headerProduct="<<product
+                                 <<" productMatch="<<(productMatch?"yes":"no")
+                                 <<" shuffledComplete="<<(control.complete?"yes":"no")
+                                 <<" shuffledZero="<<(control.terminalZero?"yes":"no")<<"\n";
                     }
             }
         }
     }
+    std::cout<<"Stop codes: 0 invalid, 1 end, 2 incomplete, 3 run limit, 4 output limit, 5 malformed.\n";
     std::cout<<"Header fields are not proven dimensions; matching a product is not validation.\n";
     return 0;
 }
