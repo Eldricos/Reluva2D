@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "engines/stafu/spr_pair_relation.h"
+#include "engines/stafu/spr_sequence_suffix.h"
 #include <cassert>
 #include <cstdint>
 int main() {
@@ -25,6 +26,21 @@ int main() {
     const auto changed=compareSprPair(a,4,d,4);
     assert(changed.prefixBytes==2&&changed.suffixBytes==1);
     assert(changed.middleA==1&&changed.middleB==1);
+    const uint8_t e[]={0x10,0x12,0x34,0x56};
+    const uint8_t f[]={0x20,0x12,0x34,0x56};
+    const uint8_t g[]={0x30,0x12,0x34,0x56};
+    const std::vector<SprSequencePayload> group={{e,4},{f,4},{g,4}};
+    const auto common=compareSprSequenceSuffix(group);
+    assert(common.valid&&common.sharedBits>=24&&common.starts.size()==3);
+    const uint8_t shifted[]={0xff,0x10,0x12,0x34,0x56};
+    const auto aligned=compareSprSequenceSuffix({{e,4},{f,4},{shifted,5}});
+    assert(aligned.valid&&aligned.sharedBits>=24&&
+           aligned.starts[2]>=aligned.starts[0]+8);
+    const auto identical=compareSprSequenceSuffix({{a,4},{a,4},{a,4}});
+    assert(identical.valid&&identical.sharedBits==32);
+    assert(!compareSprSequenceSuffix({{nullptr,4},{a,4}}).valid);
+    assert(!compareSprSequenceSuffix({{a,4},{b,4}},0).valid);
+    assert(!compareSprSequenceSuffix({{a,4}}).valid);
     assert(!compareSprPair(nullptr,4,a,4).valid);
     assert(!compareSprPair(a,0,a,4).valid);
 }
