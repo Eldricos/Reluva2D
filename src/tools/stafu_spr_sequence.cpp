@@ -4,6 +4,7 @@
 #include "engines/stafu/spr_sequence_index.h"
 #include "engines/stafu/spr_image_payload.h"
 #include "engines/stafu/spr_sequence_suffix.h"
+#include "engines/stafu/spr_suffix_segment.h"
 #include "engines/stafu/spr_suffix_control.h"
 #include <iostream>
 #include <string>
@@ -61,6 +62,43 @@ int main(int argc,char** argv) {
                  <<" payloads="<<inputs.size()
                  <<" commonBits="<<real.sharedBits
                  <<" shuffledCommonBits="<<baseline.sharedBits<<"\n";
+        const auto segments=reluva::stafu::segmentSprSuffix(inputs);
+        std::cout<<"SEGMENTS "<<target.name<<" record="<<target.record
+                 <<" count="<<segments.size()<<" thresholdBits=128\n";
+        for(const auto& seg:segments) {
+            const auto& first=events[eventIds[seg.first]];
+            const auto& last=events[eventIds[seg.last]];
+            size_t controls=0,emit=0,kram=0;
+            for(size_t ei=eventIds[seg.first];ei<=eventIds[seg.last];++ei) {
+                if(events[ei].tag=="EMIT")++emit;
+                if(events[ei].tag=="KRAM")++kram;
+                if(events[ei].tag!="PMOC"&&events[ei].tag!="MOCS")++controls;
+            }
+            const bool sameHeader=first.headerA==last.headerA&&
+                first.headerB==last.headerB&&first.marker==last.marker;
+            std::cout<<"  SEGMENT events="<<eventIds[seg.first]<<".."
+                     <<eventIds[seg.last]<<" payloads="<<seg.last-seg.first+1
+                     <<" sharedBits="<<seg.commonBits
+                     <<" tags="<<first.tag<<".."<<last.tag
+                     <<" endpointHeadersEqual="<<(sameHeader?"yes":"no")
+                     <<" interveningControls="<<controls
+                     <<" EMIT="<<emit<<" KRAM="<<kram<<"\n";
+            if(seg.last+1<inputs.size()) {
+                const auto& left=events[eventIds[seg.last]];
+                const auto& right=events[eventIds[seg.last+1]];
+                const auto pair=reluva::stafu::compareSprSequenceSuffix(
+                    {{inputs[seg.last].data,inputs[seg.last].size},
+                     {inputs[seg.last+1].data,inputs[seg.last+1].size}});
+                std::cout<<"    BREAK events="<<eventIds[seg.last]<<"->"
+                         <<eventIds[seg.last+1]
+                         <<" pairBits="<<pair.sharedBits
+                         <<" tagChange="<<(left.tag!=right.tag?"yes":"no")
+                         <<" headerChange="<<((left.headerA!=right.headerA||
+                            left.headerB!=right.headerB||
+                            left.marker!=right.marker)?"yes":"no")
+                         <<"\n";
+            }
+        }
         for(size_t i=0;i<inputs.size();++i)
             std::cout<<"  event="<<eventIds[i]<<" tag="<<events[eventIds[i]].tag
                      <<" bytes="<<inputs[i].size
