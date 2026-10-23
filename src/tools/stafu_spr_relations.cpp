@@ -15,6 +15,7 @@ constexpr const char* resources[]={
 };
 struct Counts {
     size_t pairs=0,headerEqual=0,exact=0,longSuffix=0,zeroTrimLong=0,fullSmaller=0;
+    size_t smallMiddle=0,bitOverlap=0;
 };
 void tally(Counts& c,const reluva::stafu::SprPairRelation& r,bool headers) {
     ++c.pairs;
@@ -25,12 +26,16 @@ void tally(Counts& c,const reluva::stafu::SprPairRelation& r,bool headers) {
         if(r.trimmedZero)++c.zeroTrimLong;
     }
     if(r.fullSmallerSuffix)++c.fullSmaller;
+    if(r.middleA<=32&&r.middleB<=32)++c.smallMiddle;
+    if(r.suffixOverlapsPrefix)++c.bitOverlap;
 }
 void summary(const char* label,const Counts& c) {
     std::cout<<"SUMMARY "<<label<<" pairs="<<c.pairs<<" sameHeader="<<c.headerEqual
              <<" exact="<<c.exact<<" suffix128="<<c.longSuffix
              <<" zeroTrimSuffix128="<<c.zeroTrimLong
-             <<" fullSmallerSuffix="<<c.fullSmaller<<"\n";
+             <<" fullSmallerSuffix="<<c.fullSmaller
+             <<" middleBothAtMost32="<<c.smallMiddle
+             <<" bitSuffixOverlapsPrefix="<<c.bitOverlap<<"\n";
 }
 }
 int main(int argc,char** argv) {
@@ -83,6 +88,9 @@ int main(int argc,char** argv) {
                              <<" exact="<<(r.exact?"yes":"no")
                              <<" prefixBytes="<<r.prefixBytes
                              <<" suffixBytes="<<r.suffixBytes
+                             <<" middleBytes="<<r.middleA<<","<<r.middleB
+                             <<" bitSuffixStarts="<<r.suffixStartBitA<<","<<r.suffixStartBitB
+                             <<" bitSuffixOverlapsPrefix="<<(r.suffixOverlapsPrefix?"yes":"no")
                              <<" msbSuffixBits="<<r.sharedSuffixBits
                              <<" trims="<<r.trimA<<","<<r.trimB
                              <<" trimZero="<<(r.trimmedZero?"yes":"no")
@@ -97,6 +105,8 @@ int main(int argc,char** argv) {
     summary("PMOC->MOCS",pmocMocs);summary("MOCS->MOCS",mocsMocs);
     summary("MOCS->PMOC",mocsPmoc);
     std::cout<<"Substantial pairs only (both >=64 bytes). MSB suffix scan capped at 4096 bytes.\n";
+    std::cout<<"middleBytes is the unmatched byte region after disjoint prefix/suffix removal.\n";
+    std::cout<<"Bit suffix boundaries use the capped 4096-byte end-anchored comparison.\n";
     std::cout<<"A shared suffix or equal header is not proof of complete or delta frames.\n";
     return unavailable?1:0;
 }
