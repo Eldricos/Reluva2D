@@ -12,7 +12,7 @@ int main() {
     assert(r.middleA==1&&r.middleB==1);
     assert(r.suffixStartBitA<=8&&r.suffixStartBitB<=8);
     const auto same=compareSprPair(a,4,a,4);
-    assert(same.valid&&same.exact&&same.prefixBytes==4&&same.suffixBytes==4);
+    assert(same.valid&&same.exact&&same.prefixBytes==4&&same.suffixBytes==0);
     assert(same.fullSmallerSuffix);
     assert(same.middleA==0&&same.middleB==0&&same.suffixBytes==0);
     assert(same.suffixOverlapsPrefix);
