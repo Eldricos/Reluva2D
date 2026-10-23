@@ -2,6 +2,7 @@
 #include "engines/stafu/spr_pair_relation.h"
 #include "engines/stafu/spr_sequence_suffix.h"
 #include "engines/stafu/spr_suffix_segment.h"
+#include "engines/stafu/spr_structural_pair.h"
 #include <cassert>
 #include <cstdint>
 int main() {
@@ -56,6 +57,15 @@ int main() {
     const auto split=segmentSprSuffix(splitGroup,24);
     assert(split.size()>=2&&split[0].first==0&&split[0].last==1);
     assert(segmentSprSuffix({}).empty());
+    const uint8_t repeatsA[]={1,1,1,2,3};
+    const uint8_t repeatsB[]={1,1,4,2,3};
+    const auto structural=surveySprStructuralPair(repeatsA,5,repeatsB,5);
+    assert(structural.valid&&structural.commonPrefix==2);
+    assert(structural.alignedEqual==4&&structural.alignedCompared==5);
+    assert(structural.repeatAdjacentA==2&&structural.repeatAdjacentB==1);
+    assert(structural.longestRunA==3&&structural.longestRunB==2);
+    assert(!surveySprStructuralPair(repeatsA,5,repeatsB,5,4,5).valid);
+    assert(!surveySprStructuralPair(nullptr,5,repeatsB,5).valid);
     assert(!compareSprPair(nullptr,4,a,4).valid);
     assert(!compareSprPair(a,0,a,4).valid);
 }
