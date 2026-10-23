@@ -24,7 +24,8 @@ int main() {
     const uint8_t nonzeroTail[]={0xb0}; // 1 | 011 (gamma 3) | 0000: incomplete code
     const auto tail=trySprRunDecode(nonzeroTail,1,0,SprRunCode::Gamma);
     assert(tail.valid&&tail.terminalZero);
-    assert(!trySprRunDecode(gamma,1,0,SprRunCode::Gamma,0,5).valid);
+    const auto capped=trySprRunDecode(gamma,1,0,SprRunCode::Gamma,0,5);
+    assert(capped.valid&&!capped.complete&&capped.stop==SprRunStop::OutputLimit);
     assert(!trySprRunDecode(nullptr,1,0,SprRunCode::Gamma).valid);
     assert(!trySprRunDecode(gamma,1,9,SprRunCode::Gamma).valid);
     assert(!trySprRunDecode(gamma,1,0,SprRunCode::Rice,9).valid);
