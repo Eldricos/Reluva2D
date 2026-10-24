@@ -5,6 +5,8 @@
 #include "engines/stafu/spr_gif_rgba.h"
 #include <SDL3/SDL.h>
 #include <imgui.h>
+#include <algorithm>
+#include <cstddef>
 #include <string>
 #include <vector>
 
