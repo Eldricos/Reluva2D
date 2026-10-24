@@ -6,7 +6,7 @@ int main(){
  const uint8_t a[]={1,1,2,2,1,1,2,2,0,0};
  const uint8_t b[]={1,2,2,2,1,1,2,2,0,3};
  const auto rows=scoreRmRows(a,sizeof(a),4,0);
- assert(rows.rows==2&&rows.adjacentCompared==6&&rows.adjacentEqual==2);
+ assert(rows.rows==2&&rows.adjacentCompared==6&&rows.adjacentEqual==4);
  assert(rows.verticalCompared==4&&rows.verticalEqual==4);
  assert(scoreRmRows(nullptr,0,4,0).rows==0);
  assert(scoreRmRows(a,sizeof(a),0,0).rows==0);
