@@ -7,8 +7,9 @@ class System;
 namespace stafu {
 class ComputerNavigationIndex;
 class ComputerStringIndex;
+class ResourceManager;
 // Platform adapter: engine stays independent of SDL and ImGui.
-using ComputerUiRunner = std::function<Error(System&,const ComputerNavigationIndex&,const ComputerStringIndex&)>;
+using ComputerUiRunner = std::function<Error(System&,const ComputerNavigationIndex&,const ComputerStringIndex&,const ResourceManager&)>;
 void setComputerUiRunner(ComputerUiRunner runner);
 }
 }
