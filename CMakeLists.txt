@@ -180,6 +180,8 @@ add_executable(reluva-stafu-spr-translations src/tools/stafu_spr_translations.cp
 add_executable(reluva-stafu-spr-event-structure src/tools/stafu_spr_event_structure.cpp)
 add_executable(reluva-stafu-spr-event-bytes src/tools/stafu_spr_event_bytes.cpp)
 add_executable(reluva-stafu-spr-dnar src/tools/stafu_spr_dnar.cpp)
+add_executable(reluva-stafu-spr-dnar-survey src/tools/stafu_spr_dnar_survey.cpp)
+target_link_libraries(reluva-stafu-spr-dnar-survey PRIVATE reluva_engines reluva_warnings)
 target_link_libraries(reluva-stafu-spr-dnar PRIVATE reluva_engines reluva_warnings)
 target_link_libraries(reluva-stafu-spr-event-bytes PRIVATE reluva_engines reluva_warnings)
 target_link_libraries(reluva-stafu-spr-event-structure PRIVATE reluva_engines reluva_warnings)
