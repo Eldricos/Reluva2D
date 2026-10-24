@@ -18,7 +18,7 @@ int main(){
  assert(!decodeSprGifRgba(badIndex.data(),badIndex.size()).valid);
  auto noPalette=gif;noPalette[10]=0;
  assert(!decodeSprGifRgba(noPalette.data(),noPalette.size()).valid);
- auto interlace=gif;interlace[29]=0x40;
+ auto interlace=gif;interlace[28]=0x40;
  assert(!decodeSprGifRgba(interlace.data(),interlace.size()).valid);
  auto missingEnd=gif;missingEnd.pop_back();
  assert(!decodeSprGifRgba(missingEnd.data(),missingEnd.size()).valid);
