@@ -19,7 +19,7 @@ struct RmRasterCandidate {
 inline RmRasterCandidate inspectRmRaster(const uint8_t* data,size_t size,size_t offset,
                                          size_t width=640,size_t height=480) {
  RmRasterCandidate r;r.offset=offset;r.width=width;r.height=height;
- if(!data||!width||!height||width>size||height>(size-offset)/width||offset>size)return r;
+ if(!data||!width||!height||offset>size||width>size-offset||height>(size-offset)/width)return r;
  r.fits=true;
  const size_t end=offset+width*height;
  std::array<bool,256> used{},outside{};
