@@ -78,7 +78,7 @@ public:
             return Error::fail("STAFU computer database has inconsistent records.");
         if (!stafu::computerRunner)
             return Error::fail("STAFU graphical runtime is unavailable.");
-        return stafu::computerRunner(system_, graph, strings);
+        return stafu::computerRunner(system_, graph, strings, resources);
     }
 
 private:
