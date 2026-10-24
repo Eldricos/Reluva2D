@@ -178,6 +178,8 @@ add_executable(reluva-stafu-spr-short-bodies src/tools/stafu_spr_short_bodies.cp
 add_executable(reluva-stafu-spr-offsets src/tools/stafu_spr_offsets.cpp)
 add_executable(reluva-stafu-spr-translations src/tools/stafu_spr_translations.cpp)
 add_executable(reluva-stafu-spr-event-structure src/tools/stafu_spr_event_structure.cpp)
+add_executable(reluva-stafu-spr-event-bytes src/tools/stafu_spr_event_bytes.cpp)
+target_link_libraries(reluva-stafu-spr-event-bytes PRIVATE reluva_engines reluva_warnings)
 target_link_libraries(reluva-stafu-spr-event-structure PRIVATE reluva_engines reluva_warnings)
 target_link_libraries(reluva-stafu-spr-translations PRIVATE reluva_engines reluva_warnings)
 target_link_libraries(reluva-stafu-spr-offsets PRIVATE reluva_engines reluva_warnings)
