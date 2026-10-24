@@ -5,7 +5,7 @@
 #include "engines/stafu/computer_browser.h"
 #include "engines/stafu/computer_string_index.h"
 #include "engines/stafu/resource_manager.h"
-#include "engines/stafu/spr_gif_rgba.h"
+#include "launcher/stafu_bridge_scene.h"
 #include <imgui.h>
 #include <imgui_impl_sdl3.h>
 #include <imgui_impl_sdlrenderer3.h>
@@ -35,30 +35,7 @@ Error runComputerUi(System& system,const stafu::ComputerNavigationIndex& graph,
     stafu::ComputerBrowser browser(graph);
     stafu::ScreenManager screens;
     SDL_Renderer* renderer=sdl->renderer();
-    // Load optional original bridge graphics once. Failed reads/decodes retain the placeholder.
-    struct BridgeTexture {
-        const char* name;
-        SDL_Texture* texture = nullptr;
-        std::string error;
-    };
-    BridgeTexture bridgeTextures[] = {{"BRIDGE.IMG"}, {"DBRIDGE.IMG"}};
-    for(auto& item : bridgeTextures) {
-        std::vector<uint8_t> source;
-        if(!resources.read(item.name, source, item.error))continue;
-        const auto decoded=stafu::decodeSprGifRgba(source.data(),source.size());
-        if(!decoded.valid){item.error=decoded.error;continue;}
-        item.texture=SDL_CreateTexture(renderer,SDL_PIXELFORMAT_RGBA32,
-            SDL_TEXTUREACCESS_STATIC,decoded.width,decoded.height);
-        if(!item.texture){item.error=SDL_GetError();continue;}
-        if(!SDL_UpdateTexture(item.texture,nullptr,decoded.pixels.data(),
-                              int(decoded.width)*4)) {
-            item.error=SDL_GetError();
-            SDL_DestroyTexture(item.texture);
-            item.texture=nullptr;
-            continue;
-        }
-        SDL_SetTextureScaleMode(item.texture,SDL_SCALEMODE_NEAREST);
-    }
+    StafuBridgeScene bridgeScene(renderer,resources);
     sdl->setWindowTitle("STAFU - Ship's Computer");
     bool running=true;
     while(running) {
@@ -104,20 +81,7 @@ Error runComputerUi(System& system,const stafu::ComputerNavigationIndex& graph,
         } else if(screens.current()==stafu::Screen::BridgePlaceholder) {
             if(ImGui::Button("Main Menu"))screens.show(stafu::Screen::MainMenu);
             ImGui::Separator();
-            ImGui::TextUnformatted("Bridge - original resource preview");
-            ImGui::TextWrapped("These are 44 x 15 game graphics, not a complete bridge scene.");
-            for(const auto& item : bridgeTextures) {
-                ImGui::TextUnformatted(item.name);
-                if(item.texture) {
-                    float w=0.0f,h=0.0f;
-                    SDL_GetTextureSize(item.texture,&w,&h);
-                    ImGui::Image(reinterpret_cast<ImTextureID>(item.texture),
-                                 ImVec2(w*4.0f,h*4.0f));
-                } else {
-                    ImGui::TextDisabled("Unavailable: %s",item.error.c_str());
-                }
-            }
-            ImGui::TextWrapped("Bridge controls and gameplay are not implemented yet.");
+            bridgeScene.draw();
             if(ImGui::Button("Open Ship's Computer"))
                 screens.show(stafu::Screen::Computer);
         } else {
@@ -163,7 +127,6 @@ Error runComputerUi(System& system,const stafu::ComputerNavigationIndex& graph,
         ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(),renderer);
         SDL_RenderPresent(renderer);
     }
-    for(auto& item : bridgeTextures)if(item.texture)SDL_DestroyTexture(item.texture);
     SDL_SetRenderScale(renderer,1.0f,1.0f);
     return Error::success();
 }
