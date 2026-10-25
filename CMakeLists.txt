@@ -278,6 +278,10 @@ if(RELUVA_BUILD_TESTS)
     target_link_libraries(reluva_stafu_spr_sequence_index_tests PRIVATE reluva_engines reluva_warnings)
     add_test(NAME stafu_spr_sequence_index COMMAND reluva_stafu_spr_sequence_index_tests)
 
+    add_executable(reluva_stafu_rm_grayscale_tests tests/test_stafu_rm_grayscale.cpp)
+    target_link_libraries(reluva_stafu_rm_grayscale_tests PRIVATE reluva_engines reluva_warnings)
+    add_test(NAME stafu_rm_grayscale COMMAND reluva_stafu_rm_grayscale_tests)
+
     add_executable(reluva_stafu_rm_raster_tests tests/test_stafu_rm_raster.cpp)
     target_link_libraries(reluva_stafu_rm_raster_tests PRIVATE reluva_engines reluva_warnings)
     add_test(NAME stafu_rm_raster COMMAND reluva_stafu_rm_raster_tests)
