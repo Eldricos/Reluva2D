@@ -5,6 +5,7 @@
 #include "engines/stafu/spr_gif_rgba.h"
 #include "engines/stafu/rm_grayscale.h"
 #include "engines/stafu/rm_section_align.h"
+#include "engines/stafu/rm_section_assembly.h"
 #include "engines/stafu/rm_candidate_palette.h"
 #include "engines/stafu/rm_standard_palette.h"
 #include <SDL3/SDL.h>
@@ -137,8 +138,13 @@ private:
             }
         }
         std::vector<uint8_t> shifted;
-        if(!stafu::alignRmRgba(source.data(),source.size(),
-                                640,480,rmShift_[index],rmVertical_[index],shifted))return;
+        if(rmAssemblyMode_ && rmShift_[index]==256) {
+            if(!stafu::assembleRmSectionsRgba(source.data(),source.size(),
+                                              640,480,384,rmVertical_[index],rmRightVertical_[index],shifted))return;
+        } else {
+            if(!stafu::alignRmRgba(source.data(),source.size(),
+                                    640,480,rmShift_[index],rmVertical_[index],shifted))return;
+        }
         if(!SDL_UpdateTexture(item.texture,nullptr,shifted.data(),640*4))
             item.error=SDL_GetError();
     }
@@ -198,6 +204,25 @@ private:
             updateRmShift(static_cast<size_t>(rmSelected_));
         }
         ImGui::Separator();
+        if(ImGui::Checkbox("Experimental split-section assembly",&rmAssemblyMode_)) {
+            updateRmShift(0);updateRmShift(1);
+        }
+        if(rmAssemblyMode_) {
+            ImGui::TextWrapped("Split model: raw columns 384-639 become display left; "
+                               "raw columns 0-383 become display right. Independent vertical offsets; "
+                               "horizontal shift must be +256.");
+            if(rmShift_[rmSelected_]!=256) {
+                ImGui::TextDisabled("Horizontal shift is not +256: displaying baseline rotation instead.");
+            } else if(ImGui::SliderInt("Right section vertical shift",&rmRightVertical_[rmSelected_],-16,16)) {
+                updateRmShift(static_cast<size_t>(rmSelected_));
+            }
+            if(ImGui::Button("Reset right section vertical")) {
+                rmRightVertical_[rmSelected_]=0;
+                updateRmShift(static_cast<size_t>(rmSelected_));
+            }
+            ImGui::TextDisabled("At right shift 0, split assembly matches the existing +256 rotation with left vertical shift.");
+        }
+        ImGui::Separator();
         const auto& item=rmImages_[rmSelected_];
         if(!item.texture){ImGui::TextDisabled("Resource unavailable: %s",item.error.c_str());return;}
         // Scrollable viewport preserves the full 640x480 image at native pixel size.
@@ -211,6 +236,8 @@ private:
     std::vector<uint8_t> rmOriginal_[2];
     int rmShift_[2]={256,256};
     int rmVertical_[2]={1,1};
+    int rmRightVertical_[2]={0,0};
+    bool rmAssemblyMode_=false;
     stafu::RmCandidatePalette palettes_[3];
     std::string paletteErrors_[3];
     std::vector<uint8_t> standardPalette_;
