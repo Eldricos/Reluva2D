@@ -6,6 +6,7 @@
 #include "engines/stafu/rm_grayscale.h"
 #include "engines/stafu/rm_section_align.h"
 #include "engines/stafu/rm_section_assembly.h"
+#include "engines/stafu/rm_working_geometry.h"
 #include "engines/stafu/rm_candidate_palette.h"
 #include "engines/stafu/rm_standard_palette.h"
 #include <SDL3/SDL.h>
@@ -138,7 +139,9 @@ private:
             }
         }
         std::vector<uint8_t> shifted;
-        if(rmAssemblyMode_ && rmShift_[index]==256) {
+        if(!rmGeometryDebug_) {
+            if(!stafu::decodeRmWorkingGeometryRgba(source.data(),source.size(),shifted))return;
+        } else if(rmAssemblyMode_ && rmShift_[index]==256) {
             if(!stafu::assembleRmSectionsRgba(source.data(),source.size(),
                                               640,480,384,rmVertical_[index],rmRightVertical_[index],shifted))return;
         } else {
@@ -149,8 +152,8 @@ private:
             item.error=SDL_GetError();
     }
     void drawRm() {
-        ImGui::TextWrapped("EXPERIMENTAL: 640 x 480 bytes starting at offset 0, mapped to grayscale. "
-                           "These are NOT verified original colors or confirmed decoded images.");
+        ImGui::TextWrapped("RM working geometry: 640 x 480, rotate right 256, left section down 1. "
+                           "Alignment visually verified; original color palette remains unknown.");
         if(ImGui::RadioButton("BRIDGE.RM",rmSelected_==0))rmSelected_=0;
         ImGui::SameLine();
         if(ImGui::RadioButton("VIEWSCR.RM",rmSelected_==1))rmSelected_=1;
@@ -180,6 +183,10 @@ private:
             updateRmShift(0);
             updateRmShift(1);
         }
+        if(ImGui::Checkbox("Enable geometry debugging controls",&rmGeometryDebug_)) {
+            updateRmShift(0);updateRmShift(1);
+        }
+        if(rmGeometryDebug_) {
         ImGui::TextDisabled("Shift direction: positive moves pixels right; negative moves pixels left.");
         bool changed=ImGui::SliderInt("Horizontal shift (pixels)",&rmShift_[rmSelected_],-639,639);
         if(ImGui::Button("Left 1")){--rmShift_[rmSelected_];changed=true;}
@@ -222,6 +229,9 @@ private:
             }
             ImGui::TextDisabled("At right shift 0, split assembly matches the existing +256 rotation with left vertical shift.");
         }
+        } else {
+            ImGui::TextDisabled("Using verified geometry (+256 horizontal, +1 left vertical, 0 right vertical).");
+        }
         ImGui::Separator();
         const auto& item=rmImages_[rmSelected_];
         if(!item.texture){ImGui::TextDisabled("Resource unavailable: %s",item.error.c_str());return;}
@@ -238,6 +248,7 @@ private:
     int rmVertical_[2]={1,1};
     int rmRightVertical_[2]={0,0};
     bool rmAssemblyMode_=false;
+    bool rmGeometryDebug_=false;
     stafu::RmCandidatePalette palettes_[3];
     std::string paletteErrors_[3];
     std::vector<uint8_t> standardPalette_;
