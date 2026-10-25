@@ -12,7 +12,7 @@ int main(){
  assert(runs[2].offset==4&&runs[2].length==2&&runs[2].value==3);
  const auto region=rmIndexRegion(a,8,2,4);
  assert(region.bytes==4&&region.distinct==2&&region.counts[2]==3&&region.counts[3]==1);
- assert(rmEqualBytes(a,8,b,8,0,0,8)==5);
+ assert(rmEqualBytes(a,8,b,8,0,0,8)==6);
  assert(rmByteRuns(a,8,9,3).empty());
  assert(rmIndexRegion(nullptr,8,0,8).bytes==0);
  assert(rmEqualBytes(a,8,b,8,9,0,4)==0);
