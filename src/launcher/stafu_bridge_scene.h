@@ -109,24 +109,23 @@ private:
     void updateRmShift(size_t index) {
         auto& item=rmImages_[index];
         if(!item.texture||rmOriginal_[index].empty())return;
-        std::vector<uint8_t> shifted;
-        if(!stafu::alignRmRgba(rmOriginal_[index].data(),rmOriginal_[index].size(),
-                                640,480,rmShift_[index],rmVertical_[index],shifted))return;
+        std::vector<uint8_t> source=rmOriginal_[index];
         if(rmPaletteMode_!=0) {
             const auto& palette=palettes_[rmPaletteMode_-1];
             if(palette.valid) {
-                // Apply color to valid pixels only; alignment's black edge fill stays black.
-                // Alpha remains opaque, and the source grayscale data is never modified.
-                for(size_t p=0;p<shifted.size();p+=4){
-                    const size_t color=static_cast<size_t>(shifted[p])*3;
+                for(size_t p=0;p<source.size();p+=4){
+                    const size_t color=static_cast<size_t>(source[p])*3;
                     if(color/3<palette.entries){
-                        shifted[p]=palette.rgb[color];
-                        shifted[p+1]=palette.rgb[color+1];
-                        shifted[p+2]=palette.rgb[color+2];
+                        source[p]=palette.rgb[color];
+                        source[p+1]=palette.rgb[color+1];
+                        source[p+2]=palette.rgb[color+2];
                     }
                 }
             }
         }
+        std::vector<uint8_t> shifted;
+        if(!stafu::alignRmRgba(source.data(),source.size(),
+                                640,480,rmShift_[index],rmVertical_[index],shifted))return;
         if(!SDL_UpdateTexture(item.texture,nullptr,shifted.data(),640*4))
             item.error=SDL_GetError();
     }
