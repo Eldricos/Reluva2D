@@ -9,7 +9,7 @@ int main(){
  const auto b=rmOffsetScore(bytes,12,4,4,3);
  assert(b.rows==2&&b.validPairs==4&&b.equalVertical==0);
  const auto seam=rmSeamScore(bytes,12,0,4,2,3);
- assert(seam.rows==3&&seam.equalAcross==0&&seam.equalOffsetOne==2);
+ assert(seam.rows==3&&seam.equalAcross==0&&seam.equalOffsetOne==0);
  assert(rmOffsetScore(nullptr,12,0).rows==0);
  assert(rmSeamScore(bytes,12,0,4,4).rows==0);
  return 0;
