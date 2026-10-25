@@ -23,6 +23,7 @@ public:
         load(1,"DBRIDGE.IMG",resources);
         loadPalette(0,"BRIDGE.IMG",resources);
         loadPalette(1,"DBRIDGE.IMG",resources);
+        loadPalette(2,"color.img",resources);
         loadStandardPalette(resources);
         loadRm(0,"BRIDGE.RM",resources);
         loadRm(1,"VIEWSCR.RM",resources);
@@ -122,8 +123,8 @@ private:
             for(size_t i=0;i<indices.size();++i)indices[i]=source[i*4];
             std::vector<uint8_t> mapped;
             if(stafu::mapStandardPal(indices.data(),indices.size(),standardPalette_.data(),standardPalette_.size(),mapped))source=std::move(mapped);
-        }else if(rmPaletteMode_==1||rmPaletteMode_==2) {
-            const auto& palette=palettes_[rmPaletteMode_-1];
+        }else if(rmPaletteMode_==1||rmPaletteMode_==2||rmPaletteMode_==4) {
+            const auto& palette=palettes_[rmPaletteMode_==4?2:rmPaletteMode_-1];
             if(palette.valid) {
                 for(size_t p=0;p<source.size();p+=4){
                     const size_t color=static_cast<size_t>(source[p])*3;
@@ -162,10 +163,13 @@ private:
         if(ImGui::RadioButton("standard.pal (128 colors; unsupported indices magenta)",rmPaletteMode_==3)){
             rmPaletteMode_=3;paletteChanged=true;
         }
+        if(ImGui::RadioButton("color.img GIF palette (experimental)",rmPaletteMode_==4)){
+            rmPaletteMode_=4;paletteChanged=true;
+        }
         if(rmPaletteMode_==3&&standardPalette_.empty())
             ImGui::TextDisabled("standard.pal unavailable: %s",standardPaletteError_.c_str());
-        if((rmPaletteMode_==1||rmPaletteMode_==2)&&!palettes_[rmPaletteMode_-1].valid)
-            ImGui::TextDisabled("Palette unavailable: %s",paletteErrors_[rmPaletteMode_-1].c_str());
+        if((rmPaletteMode_==1||rmPaletteMode_==2||rmPaletteMode_==4)&&!palettes_[rmPaletteMode_==4?2:rmPaletteMode_-1].valid)
+            ImGui::TextDisabled("Palette unavailable: %s",paletteErrors_[rmPaletteMode_==4?2:rmPaletteMode_-1].c_str());
         if(paletteChanged){
             updateRmShift(0);
             updateRmShift(1);
@@ -207,8 +211,8 @@ private:
     std::vector<uint8_t> rmOriginal_[2];
     int rmShift_[2]={256,256};
     int rmVertical_[2]={1,1};
-    stafu::RmCandidatePalette palettes_[2];
-    std::string paletteErrors_[2];
+    stafu::RmCandidatePalette palettes_[3];
+    std::string paletteErrors_[3];
     std::vector<uint8_t> standardPalette_;
     std::string standardPaletteError_;
     int rmPaletteMode_=0;
