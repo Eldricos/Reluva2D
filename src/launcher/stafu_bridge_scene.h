@@ -6,6 +6,7 @@
 #include "engines/stafu/rm_grayscale.h"
 #include "engines/stafu/rm_section_align.h"
 #include "engines/stafu/rm_candidate_palette.h"
+#include "engines/stafu/rm_standard_palette.h"
 #include <SDL3/SDL.h>
 #include <imgui.h>
 #include <algorithm>
@@ -22,6 +23,7 @@ public:
         load(1,"DBRIDGE.IMG",resources);
         loadPalette(0,"BRIDGE.IMG",resources);
         loadPalette(1,"DBRIDGE.IMG",resources);
+        loadStandardPalette(resources);
         loadRm(0,"BRIDGE.RM",resources);
         loadRm(1,"VIEWSCR.RM",resources);
     }
@@ -88,6 +90,11 @@ private:
         palettes_[index]=stafu::extractRmGifPalette(bytes.data(),bytes.size());
         if(!palettes_[index].valid)paletteErrors_[index]=palettes_[index].error;
     }
+    void loadStandardPalette(const stafu::ResourceManager& resources) {
+        if(!resources.read("standard.pal",standardPalette_,standardPaletteError_,4096))return;
+        if(standardPalette_.size()!=384){standardPaletteError_="Expected 384 bytes";standardPalette_.clear();return;}
+        for(const auto value:standardPalette_)if(value>63){standardPaletteError_="Not a VGA6 table";standardPalette_.clear();return;}
+    }
     void loadRm(size_t index,const char* name,const stafu::ResourceManager& resources) {
         auto& item=rmImages_[index];
         std::vector<uint8_t> bytes;
@@ -110,7 +117,12 @@ private:
         auto& item=rmImages_[index];
         if(!item.texture||rmOriginal_[index].empty())return;
         std::vector<uint8_t> source=rmOriginal_[index];
-        if(rmPaletteMode_!=0) {
+        if(rmPaletteMode_==3&&!standardPalette_.empty()) {
+            std::vector<uint8_t> indices(source.size()/4);
+            for(size_t i=0;i<indices.size();++i)indices[i]=source[i*4];
+            std::vector<uint8_t> mapped;
+            if(stafu::mapStandardPal(indices.data(),indices.size(),standardPalette_.data(),standardPalette_.size(),mapped))source=std::move(mapped);
+        }else if(rmPaletteMode_==1||rmPaletteMode_==2) {
             const auto& palette=palettes_[rmPaletteMode_-1];
             if(palette.valid) {
                 for(size_t p=0;p<source.size();p+=4){
@@ -147,7 +159,12 @@ private:
         if(ImGui::RadioButton("DBRIDGE.IMG palette",rmPaletteMode_==2)){
             rmPaletteMode_=2;paletteChanged=true;
         }
-        if(rmPaletteMode_!=0&&!palettes_[rmPaletteMode_-1].valid)
+        if(ImGui::RadioButton("standard.pal (128 colors; unsupported indices magenta)",rmPaletteMode_==3)){
+            rmPaletteMode_=3;paletteChanged=true;
+        }
+        if(rmPaletteMode_==3&&standardPalette_.empty())
+            ImGui::TextDisabled("standard.pal unavailable: %s",standardPaletteError_.c_str());
+        if((rmPaletteMode_==1||rmPaletteMode_==2)&&!palettes_[rmPaletteMode_-1].valid)
             ImGui::TextDisabled("Palette unavailable: %s",paletteErrors_[rmPaletteMode_-1].c_str());
         if(paletteChanged){
             updateRmShift(0);
@@ -192,6 +209,8 @@ private:
     int rmVertical_[2]={1,1};
     stafu::RmCandidatePalette palettes_[2];
     std::string paletteErrors_[2];
+    std::vector<uint8_t> standardPalette_;
+    std::string standardPaletteError_;
     int rmPaletteMode_=0;
     bool showRm_=false;
     int rmSelected_=0;
