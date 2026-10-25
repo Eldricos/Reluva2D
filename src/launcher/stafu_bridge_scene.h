@@ -4,7 +4,7 @@
 #include "engines/stafu/resource_manager.h"
 #include "engines/stafu/spr_gif_rgba.h"
 #include "engines/stafu/rm_grayscale.h"
-#include "engines/stafu/rm_horizontal_shift.h"
+#include "engines/stafu/rm_section_align.h"
 #include <SDL3/SDL.h>
 #include <imgui.h>
 #include <algorithm>
@@ -94,13 +94,14 @@ private:
             item.texture=nullptr;return;
         }
         SDL_SetTextureScaleMode(item.texture,SDL_SCALEMODE_NEAREST);
+        updateRmShift(index);
     }
     void updateRmShift(size_t index) {
         auto& item=rmImages_[index];
         if(!item.texture||rmOriginal_[index].empty())return;
         std::vector<uint8_t> shifted;
-        if(!stafu::shiftRmRgbaRows(rmOriginal_[index].data(),rmOriginal_[index].size(),
-                                   640,480,rmShift_[index],shifted))return;
+        if(!stafu::alignRmRgba(rmOriginal_[index].data(),rmOriginal_[index].size(),
+                                640,480,rmShift_[index],rmVertical_[index],shifted))return;
         if(!SDL_UpdateTexture(item.texture,nullptr,shifted.data(),640*4))
             item.error=SDL_GetError();
     }
@@ -122,6 +123,17 @@ private:
             rmShift_[rmSelected_]=std::clamp(rmShift_[rmSelected_],-639,639);
             updateRmShift(static_cast<size_t>(rmSelected_));
         }
+        ImGui::TextDisabled("Vertical shift applies only to the wrapped LEFT section; positive moves it down.");
+        bool verticalChanged=ImGui::SliderInt("Left section vertical shift",&rmVertical_[rmSelected_],-16,16);
+        if(ImGui::Button("Left section Up 1")){--rmVertical_[rmSelected_];verticalChanged=true;}
+        ImGui::SameLine();
+        if(ImGui::Button("Left section Down 1")){++rmVertical_[rmSelected_];verticalChanged=true;}
+        ImGui::SameLine();
+        if(ImGui::Button("Reset vertical")){rmVertical_[rmSelected_]=0;verticalChanged=true;}
+        if(verticalChanged){
+            rmVertical_[rmSelected_]=std::clamp(rmVertical_[rmSelected_],-16,16);
+            updateRmShift(static_cast<size_t>(rmSelected_));
+        }
         ImGui::Separator();
         const auto& item=rmImages_[rmSelected_];
         if(!item.texture){ImGui::TextDisabled("Resource unavailable: %s",item.error.c_str());return;}
@@ -134,7 +146,8 @@ private:
     Image images_[2];
     Image rmImages_[2];
     std::vector<uint8_t> rmOriginal_[2];
-    int rmShift_[2]={0,0};
+    int rmShift_[2]={256,256};
+    int rmVertical_[2]={0,0};
     bool showRm_=false;
     int rmSelected_=0;
     int selected_=0;
