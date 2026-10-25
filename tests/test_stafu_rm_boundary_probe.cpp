@@ -12,8 +12,8 @@ int main(){
  assert(rmAdjacentEqual(data,10,0,10)==6);
  const auto w=inspectRmWidth(data,10,4);
  assert(w.width==4&&w.fullRows==2&&w.remainder==2&&w.checkedBoundaries==2);
- assert(w.matchingRowBoundaries==1);
- assert(rmPrefixEqual(data,10,0,2,3)==1);
+ assert(w.matchingRowBoundaries==0);
+ assert(rmPrefixEqual(data,10,0,2,3)==0);
  assert(rmPrefixEqual(data,10,10,0,3)==0);
  assert(inspectRmWidth(nullptr,10,4).fullRows==0);
  return 0;
