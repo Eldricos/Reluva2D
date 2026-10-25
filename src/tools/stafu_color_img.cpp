@@ -49,7 +49,7 @@ int main(int argc,char** argv){
     <<reluva::stafu::countVga6TripletWindows(bytes.data(),bytes.size())<<"\n";
    const auto hits=reluva::stafu::scanVgaPaletteWindows(bytes.data(),bytes.size());
    std::cout<<"COLOR_IMG heuristicVga6Candidates="<<hits.size()<<"\n";
-   for(size_t i=0;i<std::min<size_t>(hits.size(),8);++i)std::cout<<" VGA6_OFFSET "<<hits[i]<<"\n";
+   for(size_t i=0;i<std::min<size_t>(hits.size(),8);++i)std::cout<<" VGA6_OFFSET "<<hits[i].offset<<" distinct="<<hits[i].distinct<<" max="<<unsigned(hits[i].maximum)<<"\n";
   }
  }
  std::cout<<"NOTE: Byte statistics and candidate offsets do not prove palette ownership or IMG structure.\n";
