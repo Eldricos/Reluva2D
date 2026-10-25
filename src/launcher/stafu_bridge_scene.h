@@ -4,6 +4,7 @@
 #include "engines/stafu/resource_manager.h"
 #include "engines/stafu/spr_gif_rgba.h"
 #include "engines/stafu/rm_grayscale.h"
+#include "engines/stafu/rm_horizontal_shift.h"
 #include <SDL3/SDL.h>
 #include <imgui.h>
 #include <algorithm>
@@ -83,6 +84,7 @@ private:
         if(!resources.read(name,bytes,item.error))return;
         const auto decoded=stafu::decodeRmGrayscale(bytes.data(),bytes.size());
         if(!decoded.valid){item.error=decoded.error;return;}
+        rmOriginal_[index]=decoded.rgba;
         item.texture=SDL_CreateTexture(renderer_,SDL_PIXELFORMAT_RGBA32,
                                        SDL_TEXTUREACCESS_STATIC,int(decoded.width),int(decoded.height));
         if(!item.texture){item.error=SDL_GetError();return;}
@@ -93,12 +95,33 @@ private:
         }
         SDL_SetTextureScaleMode(item.texture,SDL_SCALEMODE_NEAREST);
     }
+    void updateRmShift(size_t index) {
+        auto& item=rmImages_[index];
+        if(!item.texture||rmOriginal_[index].empty())return;
+        std::vector<uint8_t> shifted;
+        if(!stafu::shiftRmRgbaRows(rmOriginal_[index].data(),rmOriginal_[index].size(),
+                                   640,480,rmShift_[index],shifted))return;
+        if(!SDL_UpdateTexture(item.texture,nullptr,shifted.data(),640*4))
+            item.error=SDL_GetError();
+    }
     void drawRm() {
         ImGui::TextWrapped("EXPERIMENTAL: 640 x 480 bytes starting at offset 0, mapped to grayscale. "
                            "These are NOT verified original colors or confirmed decoded images.");
         if(ImGui::RadioButton("BRIDGE.RM",rmSelected_==0))rmSelected_=0;
         ImGui::SameLine();
         if(ImGui::RadioButton("VIEWSCR.RM",rmSelected_==1))rmSelected_=1;
+        ImGui::TextDisabled("Shift direction: positive moves pixels right; negative moves pixels left.");
+        bool changed=ImGui::SliderInt("Horizontal shift (pixels)",&rmShift_[rmSelected_],-639,639);
+        if(ImGui::Button("Left 1")){--rmShift_[rmSelected_];changed=true;}
+        ImGui::SameLine();
+        if(ImGui::Button("Right 1")){++rmShift_[rmSelected_];changed=true;}
+        ImGui::SameLine();
+        if(ImGui::Button("Reset shift")){rmShift_[rmSelected_]=0;changed=true;}
+        if(changed) {
+            // Preserve a bounded display range, including button presses at slider limits.
+            rmShift_[rmSelected_]=std::clamp(rmShift_[rmSelected_],-639,639);
+            updateRmShift(static_cast<size_t>(rmSelected_));
+        }
         ImGui::Separator();
         const auto& item=rmImages_[rmSelected_];
         if(!item.texture){ImGui::TextDisabled("Resource unavailable: %s",item.error.c_str());return;}
@@ -110,6 +133,8 @@ private:
     SDL_Renderer* renderer_;
     Image images_[2];
     Image rmImages_[2];
+    std::vector<uint8_t> rmOriginal_[2];
+    int rmShift_[2]={0,0};
     bool showRm_=false;
     int rmSelected_=0;
     int selected_=0;
