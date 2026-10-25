@@ -300,6 +300,10 @@ if(RELUVA_BUILD_TESTS)
     target_link_libraries(reluva_stafu_spr_sequence_index_tests PRIVATE reluva_engines reluva_warnings)
     add_test(NAME stafu_spr_sequence_index COMMAND reluva_stafu_spr_sequence_index_tests)
 
+    add_executable(reluva_stafu_rm_section_assembly_tests tests/test_stafu_rm_section_assembly.cpp)
+    target_link_libraries(reluva_stafu_rm_section_assembly_tests PRIVATE reluva_engines reluva_warnings)
+    add_test(NAME stafu_rm_section_assembly COMMAND reluva_stafu_rm_section_assembly_tests)
+
     add_executable(reluva_stafu_rm_seam_probe_tests tests/test_stafu_rm_seam_probe.cpp)
     target_link_libraries(reluva_stafu_rm_seam_probe_tests PRIVATE reluva_engines reluva_warnings)
     add_test(NAME stafu_rm_seam_probe COMMAND reluva_stafu_rm_seam_probe_tests)
