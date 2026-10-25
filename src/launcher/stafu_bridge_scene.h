@@ -5,6 +5,7 @@
 #include "engines/stafu/spr_gif_rgba.h"
 #include "engines/stafu/rm_grayscale.h"
 #include "engines/stafu/rm_section_align.h"
+#include "engines/stafu/rm_candidate_palette.h"
 #include <SDL3/SDL.h>
 #include <imgui.h>
 #include <algorithm>
@@ -19,6 +20,8 @@ public:
         : renderer_(renderer) {
         load(0,"BRIDGE.IMG",resources);
         load(1,"DBRIDGE.IMG",resources);
+        loadPalette(0,"BRIDGE.IMG",resources);
+        loadPalette(1,"DBRIDGE.IMG",resources);
         loadRm(0,"BRIDGE.RM",resources);
         loadRm(1,"VIEWSCR.RM",resources);
     }
@@ -78,6 +81,13 @@ private:
         }
         SDL_SetTextureScaleMode(item.texture,SDL_SCALEMODE_NEAREST);
     }
+    void loadPalette(size_t index,const char* name,const stafu::ResourceManager& resources) {
+        std::vector<uint8_t> bytes;
+        std::string error;
+        if(!resources.read(name,bytes,error)){paletteErrors_[index]=error;return;}
+        palettes_[index]=stafu::extractRmGifPalette(bytes.data(),bytes.size());
+        if(!palettes_[index].valid)paletteErrors_[index]=palettes_[index].error;
+    }
     void loadRm(size_t index,const char* name,const stafu::ResourceManager& resources) {
         auto& item=rmImages_[index];
         std::vector<uint8_t> bytes;
@@ -102,6 +112,21 @@ private:
         std::vector<uint8_t> shifted;
         if(!stafu::alignRmRgba(rmOriginal_[index].data(),rmOriginal_[index].size(),
                                 640,480,rmShift_[index],rmVertical_[index],shifted))return;
+        if(rmPaletteMode_!=0) {
+            const auto& palette=palettes_[rmPaletteMode_-1];
+            if(palette.valid) {
+                // Apply color to valid pixels only; alignment's black edge fill stays black.
+                // Alpha remains opaque, and the source grayscale data is never modified.
+                for(size_t p=0;p<shifted.size();p+=4){
+                    const size_t color=static_cast<size_t>(shifted[p])*3;
+                    if(color/3<palette.entries){
+                        shifted[p]=palette.rgb[color];
+                        shifted[p+1]=palette.rgb[color+1];
+                        shifted[p+2]=palette.rgb[color+2];
+                    }
+                }
+            }
+        }
         if(!SDL_UpdateTexture(item.texture,nullptr,shifted.data(),640*4))
             item.error=SDL_GetError();
     }
@@ -111,6 +136,24 @@ private:
         if(ImGui::RadioButton("BRIDGE.RM",rmSelected_==0))rmSelected_=0;
         ImGui::SameLine();
         if(ImGui::RadioButton("VIEWSCR.RM",rmSelected_==1))rmSelected_=1;
+        ImGui::TextDisabled("Palette preview is experimental; IMG palettes are not verified as RM palettes.");
+        bool paletteChanged=false;
+        if(ImGui::RadioButton("Grayscale (verified baseline)",rmPaletteMode_==0)){
+            rmPaletteMode_=0;paletteChanged=true;
+        }
+        if(ImGui::RadioButton("BRIDGE.IMG palette",rmPaletteMode_==1)){
+            rmPaletteMode_=1;paletteChanged=true;
+        }
+        ImGui::SameLine();
+        if(ImGui::RadioButton("DBRIDGE.IMG palette",rmPaletteMode_==2)){
+            rmPaletteMode_=2;paletteChanged=true;
+        }
+        if(rmPaletteMode_!=0&&!palettes_[rmPaletteMode_-1].valid)
+            ImGui::TextDisabled("Palette unavailable: %s",paletteErrors_[rmPaletteMode_-1].c_str());
+        if(paletteChanged){
+            updateRmShift(0);
+            updateRmShift(1);
+        }
         ImGui::TextDisabled("Shift direction: positive moves pixels right; negative moves pixels left.");
         bool changed=ImGui::SliderInt("Horizontal shift (pixels)",&rmShift_[rmSelected_],-639,639);
         if(ImGui::Button("Left 1")){--rmShift_[rmSelected_];changed=true;}
@@ -147,7 +190,10 @@ private:
     Image rmImages_[2];
     std::vector<uint8_t> rmOriginal_[2];
     int rmShift_[2]={256,256};
-    int rmVertical_[2]={0,0};
+    int rmVertical_[2]={1,1};
+    stafu::RmCandidatePalette palettes_[2];
+    std::string paletteErrors_[2];
+    int rmPaletteMode_=0;
     bool showRm_=false;
     int rmSelected_=0;
     int selected_=0;
