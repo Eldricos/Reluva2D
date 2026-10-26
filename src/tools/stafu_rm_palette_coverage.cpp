@@ -111,6 +111,17 @@ int main(int argc,char** argv){
            <<" verticalBitTransitions="<<bits.verticalBitTransitions
            <<" verticalMaskedEqual="<<bits.verticalMaskedEqual
            <<" verticalFlagOnlyTransitions="<<bits.verticalFlagOnlyTransitions<<"\n";
+  const auto grid=reluva::stafu::rmRegionGrid(bytes.data(),bytes.size());
+  if(!grid.valid){std::cerr<<name<<": invalid RM region grid\n";return 1;}
+  for(size_t gy=0;gy<4;++gy)for(size_t gx=0;gx<4;++gx){
+   const auto& c=grid.cells[gy*4+gx];
+   std::cout<<"RM_REGION "<<name<<" col="<<gx<<" row="<<gy
+            <<" x="<<c.x0<<" y="<<c.y0<<" width="<<c.width<<" height="<<c.height
+            <<" low="<<c.low<<" high="<<c.high
+            <<" highPercent="<<(100.0*double(c.high)/double(c.low+c.high))
+            <<" distinctLow="<<c.distinctLow<<" distinctHigh="<<c.distinctHigh
+            <<" topIndex="<<c.topIndex<<" topCount="<<c.topCount<<"\n";
+  }
   rmFiles.emplace_back(name,std::move(bytes));
   std::cout<<"RESOURCE "<<name<<" pixels="<<r.pixels
            <<" index0to127="<<r.lowerPixels<<" distinct="<<r.lowerDistinct
