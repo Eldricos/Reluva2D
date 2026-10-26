@@ -139,7 +139,7 @@ int main(int argc,char** argv){
    const auto& after=scan.rows[y];
    std::cout<<"RM_SCANLINE_JUMP "<<name<<" y="<<y
             <<" previousHigh="<<before.high<<" currentHigh="<<after.high
-            <<" delta="<<(long long(after.high)-long long(before.high))
+            <<" delta="<<(static_cast<long long>(after.high)-static_cast<long long>(before.high))
             <<" transitions="<<after.transitions
             <<" topIndex="<<after.dominantIndex
             <<" topCount="<<after.dominantCount
