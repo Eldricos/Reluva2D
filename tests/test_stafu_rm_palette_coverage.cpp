@@ -138,5 +138,14 @@ int main(){
  assert(!rmSharedRaster(sharedA,7,sharedB,8,0,1,0,4,2).valid);
  assert(!rmSharedRaster(sharedA,8,sharedB,8,1,0,0,4,2).valid);
  assert(!rmSharedRaster(nullptr,8,sharedB,8,0,1,0,4,2).valid);
+ const uint8_t diffA[]={1,2,3,4, 5,6,7,8};
+ const uint8_t diffB[]={1,130,131,9, 133,134,7,8};
+ const auto diff=rmDifferenceRegion(diffA,8,diffB,8,0,1,0,4,2);
+ assert(diff.valid&&diff.exact==3&&diff.flagOnly==4&&diff.other==1);
+ assert(diff.longestFlagRun==2&&diff.longestFlagX==1&&diff.longestFlagY==0);
+ assert(diff.bandExact[0]==1&&diff.bandFlagOnly[1]==2);
+ assert(!rmDifferenceRegion(diffA,7,diffB,8,0,1,0,4,2).valid);
+ assert(!rmDifferenceRegion(diffA,8,diffB,8,1,0,0,4,2).valid);
+ assert(!rmDifferenceRegion(nullptr,8,diffB,8,0,1,0,4,2).valid);
  return 0;
 }
