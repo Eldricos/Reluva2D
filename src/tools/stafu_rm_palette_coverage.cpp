@@ -236,6 +236,18 @@ int main(int argc,char** argv){
     std::cout<<"RM_SHARED_ROW "<<region.label<<" y="<<ranked[k]
              <<" exact="<<s.rowMatches[ranked[k]]<<" of=640\n";
   }
+  for(const auto& region:regions){
+   const auto d=reluva::stafu::rmDifferenceRegion(a.data(),a.size(),b.data(),b.size(),region.first,region.last);
+   if(!d.valid){std::cerr<<"invalid RM difference region\n";return 1;}
+   std::cout<<"RM_DIFF_REGION "<<region.label<<" exact="<<d.exact
+            <<" flagOnly="<<d.flagOnly<<" other="<<d.other
+            <<" longestFlagRun="<<d.longestFlagRun
+            <<" x="<<d.longestFlagX<<" y="<<d.longestFlagY<<"\n";
+   for(size_t k=0;k<4;++k)
+    std::cout<<"RM_DIFF_BAND "<<region.label<<" band="<<k
+             <<" exact="<<d.bandExact[k]<<" flagOnly="<<d.bandFlagOnly[k]
+             <<" other="<<d.bandOther[k]<<"\n";
+  }
   const size_t n=std::min<size_t>(384,std::min(a.size(),b.size()));
   std::cout<<"RM_COMPARE_FIRST384 equal="
            <<reluva::stafu::rmEqualRegion(a.data(),a.size(),b.data(),b.size(),0,n)
