@@ -49,5 +49,14 @@ int main(){
  assert(tail.sameBytesAsStandard==383&&tail.sameEntriesAsStandard==127);
  assert(!rmTrailingPalette(rm,sizeof(rm)-1,standard,sizeof(standard),6).present);
  assert(!rmTrailingPalette(nullptr,sizeof(rm),standard,sizeof(standard),6).present);
+ uint8_t boundaryData[2+12]={0,0,1,1,1,2,2,2,3,3,3,3,4,4};
+ const auto boundary=rmBoundary(boundaryData,sizeof(boundaryData),2,4,3);
+ assert(boundary.valid&&boundary.coverage.pixels==12);
+ assert(boundary.adjacentEqual==6);
+ assert(!rmBoundary(boundaryData,sizeof(boundaryData),3,4,3).valid);
+ assert(!rmBoundary(nullptr,sizeof(boundaryData),0,4,3).valid);
+ assert(!rmBoundary(boundaryData,sizeof(boundaryData),0,0,3).valid);
+ assert(rmEqualRegion(boundaryData,sizeof(boundaryData),boundaryData,sizeof(boundaryData),0,14)==14);
+ assert(rmEqualRegion(boundaryData,sizeof(boundaryData),boundaryData,sizeof(boundaryData),10,5)==0);
  return 0;
 }
