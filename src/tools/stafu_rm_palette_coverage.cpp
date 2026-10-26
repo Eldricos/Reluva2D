@@ -270,6 +270,31 @@ int main(int argc,char** argv){
              <<" bridgeHigh_viewLow="<<pairs.highToLowByBase[base]<<"\n";
    }
   }
+  const auto geom=reluva::stafu::rmZero128Geometry(a.data(),a.size(),b.data(),b.size(),364,479);
+  if(!geom.valid){std::cerr<<"invalid RM 0/128 geometry\n";return 1;}
+  std::cout<<"RM_ZERO128_GEOMETRY total="<<geom.total<<" rows="<<geom.rows
+           <<" bbox="<<geom.minX<<","<<geom.minY<<"-"<<geom.maxX<<","<<geom.maxY
+           <<" longestRun="<<geom.longestRun<<" x="<<geom.longestX
+           <<" y="<<geom.longestY<<"\n";
+  std::vector<size_t> rows;
+  for(size_t y=364;y<=479;++y)if(geom.rowCounts[y])rows.push_back(y);
+  std::sort(rows.begin(),rows.end(),[&](size_t x,size_t y){
+   return geom.rowCounts[x]!=geom.rowCounts[y]?geom.rowCounts[x]>geom.rowCounts[y]:x<y;
+  });
+  for(size_t k=0;k<std::min<size_t>(12,rows.size());++k){
+   const size_t y=rows[k];
+   std::cout<<"RM_ZERO128_ROW y="<<y<<" count="<<geom.rowCounts[y]
+            <<" firstX="<<geom.rowFirstX[y]<<" lastX="<<geom.rowLastX[y]<<"\n";
+  }
+  for(const auto& entry:rmFiles){
+   const auto& bytes=entry.second;
+   if(bytes.size()>=384)
+    std::cout<<"RM_ZERO128_PALETTE "<<entry.first
+             <<" leadingIndex0Vga6="<<unsigned(bytes[0])<<","
+             <<unsigned(bytes[1])<<","<<unsigned(bytes[2])
+             <<" leadingIndex128=outside128EntryHeader"
+             <<" index128Rgb=unresolved\n";
+  }
   const size_t n=std::min<size_t>(384,std::min(a.size(),b.size()));
   std::cout<<"RM_COMPARE_FIRST384 equal="
            <<reluva::stafu::rmEqualRegion(a.data(),a.size(),b.data(),b.size(),0,n)
