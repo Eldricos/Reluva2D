@@ -29,6 +29,16 @@ int main(int argc,char** argv){
   const auto overlap=reluva::stafu::rmPaletteOverlap(standard.data(),standard.size(),c.palette.rgb.data(),c.palette.entries*3);
   std::cout<<"PALETTE "<<c.name<<" entries="<<c.palette.entries
            <<" standard128Equal="<<overlap.equal<<" different="<<overlap.different<<"\n";
+  const auto offsets=reluva::stafu::rmPaletteOffsets(
+   standard.data(),standard.size(),c.palette.rgb.data(),c.palette.entries*3);
+  if(!offsets.valid){std::cerr<<"Invalid palette data for "<<c.name<<"\n";return 1;}
+  std::cout<<"PALETTE_OFFSET "<<c.name<<"\n"
+           <<"  DIRECT matches="<<offsets.directMatches<<"\n"
+           <<"  BEST_OFFSET offset="<<offsets.bestOffset
+           <<" matches="<<offsets.bestMatches<<" compared="<<offsets.bestCompared
+           <<" percent="<<(100.0*offsets.bestMatches/offsets.bestCompared)<<"\n"
+           <<"  RGB_MEMBERSHIP matches="<<offsets.rgbMembership<<" of=128\n";
+
  }
  for(const char* name:{"BRIDGE.RM","VIEWSCR.RM"}){
   std::vector<uint8_t> bytes;
