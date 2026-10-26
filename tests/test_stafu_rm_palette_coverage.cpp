@@ -76,5 +76,17 @@ int main(){
  assert(leading.standardByteMatches==383&&leading.standardEntryMatches==127);
  assert(!rmLeadingPalette(first,383,ref,sizeof(ref)).present);
  assert(!rmLeadingPalette(nullptr,384,ref,sizeof(ref)).present);
+ const uint8_t flags[]={0,128,1,129,128,128,129,1};
+ const auto bits=rmHighBitAnalysis(flags,sizeof(flags),0,4,2);
+ assert(bits.valid&&bits.lowPixels==4&&bits.highPixels==4);
+ assert(bits.rowsMixed==2&&bits.rowsLowOnly==0&&bits.rowsHighOnly==0);
+ assert(bits.pairedIndices==2&&bits.lowOnlyIndices==0&&bits.highOnlyIndices==0);
+ assert(bits.horizontalPairs==6&&bits.horizontalBitTransitions==5);
+ assert(bits.horizontalMaskedEqual==2&&bits.horizontalFlagOnlyTransitions==2);
+ assert(bits.verticalPairs==4&&bits.verticalBitTransitions==2);
+ assert(bits.verticalMaskedEqual==2&&bits.verticalFlagOnlyTransitions==0);
+ assert(!rmHighBitAnalysis(flags,sizeof(flags),1,4,2).valid);
+ assert(!rmHighBitAnalysis(nullptr,sizeof(flags),0,4,2).valid);
+ assert(!rmHighBitAnalysis(flags,sizeof(flags),0,0,2).valid);
  return 0;
 }
