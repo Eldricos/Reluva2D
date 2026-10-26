@@ -381,4 +381,39 @@ inline RmSharedRaster rmSharedRaster(const uint8_t* a,size_t aLength,
  return out;
 }
 
+
+struct RmDifferenceRegion {
+ bool valid=false;
+ size_t exact=0,flagOnly=0,other=0;
+ size_t longestFlagRun=0,longestFlagX=0,longestFlagY=0;
+ std::array<size_t,4> bandFlagOnly{};
+ std::array<size_t,4> bandExact{};
+ std::array<size_t,4> bandOther{};
+};
+inline RmDifferenceRegion rmDifferenceRegion(const uint8_t* a,size_t aLength,
+ const uint8_t* b,size_t bLength,size_t firstY,size_t lastY,
+ size_t offset=384,size_t width=640,size_t height=480){
+ RmDifferenceRegion out;
+ if(!a||!b||!width||!height||firstY>lastY||lastY>=height||
+    width>SIZE_MAX/height)return out;
+ const size_t raster=width*height;
+ if(offset>aLength||raster>aLength-offset||offset>bLength||raster>bLength-offset)return out;
+ out.valid=true;
+ for(size_t y=firstY;y<=lastY;++y){
+  size_t run=0;
+  for(size_t x=0;x<width;++x){
+   const size_t i=offset+y*width+x;
+   const size_t band=x*4/width;
+   if(a[i]==b[i]){++out.exact;++out.bandExact[band];run=0;}
+   else if((a[i]&127u)==(b[i]&127u)){
+    ++out.flagOnly;++out.bandFlagOnly[band];++run;
+    if(run>out.longestFlagRun){
+     out.longestFlagRun=run;out.longestFlagX=x+1-run;out.longestFlagY=y;
+    }
+   }else{++out.other;++out.bandOther[band];run=0;}
+  }
+ }
+ return out;
+}
+
 }
