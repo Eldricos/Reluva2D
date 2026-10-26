@@ -37,5 +37,17 @@ int main(){
  assert(!rmPaletteOffsets(vga,383,shifted,768).valid);
  vga[0]=64;
  assert(!rmPaletteOffsets(vga,384,shifted,768).valid);
+ uint8_t rm[6+384]={};
+ uint8_t standard[384]={};
+ for(size_t i=0;i<384;++i){rm[6+i]=uint8_t(i%64);standard[i]=uint8_t(i%64);}
+ auto tail=rmTrailingPalette(rm,sizeof(rm),standard,sizeof(standard),6);
+ assert(tail.present&&tail.plausibleVga6&&tail.channelsWithinVga6==384);
+ assert(tail.sameBytesAsStandard==384&&tail.sameEntriesAsStandard==128);
+ rm[6+9]=64;
+ tail=rmTrailingPalette(rm,sizeof(rm),standard,sizeof(standard),6);
+ assert(tail.present&&!tail.plausibleVga6&&tail.channelsWithinVga6==383);
+ assert(tail.sameBytesAsStandard==383&&tail.sameEntriesAsStandard==127);
+ assert(!rmTrailingPalette(rm,sizeof(rm)-1,standard,sizeof(standard),6).present);
+ assert(!rmTrailingPalette(nullptr,sizeof(rm),standard,sizeof(standard),6).present);
  return 0;
 }
