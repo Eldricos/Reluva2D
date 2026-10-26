@@ -295,6 +295,23 @@ int main(int argc,char** argv){
              <<" leadingIndex128=outside128EntryHeader"
              <<" index128Rgb=unresolved\n";
   }
+  const size_t selectedRows[]={385,394,395,396,397,398,399,400,401,402,406,407,408};
+  for(const size_t y:selectedRows){
+   const auto spans=reluva::stafu::rmZero128Spans(a.data(),a.size(),b.data(),b.size(),y);
+   if(!spans.valid){std::cerr<<"invalid RM span row\n";return 1;}
+   std::cout<<"RM_ZERO128_SPANS y="<<y<<" pixels="<<spans.pixels
+            <<" spans="<<spans.count;
+   for(size_t k=0;k<spans.count;++k)
+    std::cout<<" "<<spans.starts[k]<<"-"<<spans.ends[k];
+   std::cout<<"\n";
+  }
+  for(size_t i=1;i<sizeof(selectedRows)/sizeof(selectedRows[0]);++i){
+   const auto before=reluva::stafu::rmZero128Spans(a.data(),a.size(),b.data(),b.size(),selectedRows[i-1]);
+   const auto after=reluva::stafu::rmZero128Spans(a.data(),a.size(),b.data(),b.size(),selectedRows[i]);
+   std::cout<<"RM_ZERO128_REPEAT y0="<<selectedRows[i-1]<<" y1="<<selectedRows[i]
+            <<" sharedSpans="<<reluva::stafu::rmZero128SharedSpans(before,after)
+            <<" count0="<<before.count<<" count1="<<after.count<<"\n";
+  }
   const size_t n=std::min<size_t>(384,std::min(a.size(),b.size()));
   std::cout<<"RM_COMPARE_FIRST384 equal="
            <<reluva::stafu::rmEqualRegion(a.data(),a.size(),b.data(),b.size(),0,n)
