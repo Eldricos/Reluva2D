@@ -480,4 +480,44 @@ inline RmZero128Geometry rmZero128Geometry(const uint8_t* bridge,size_t bridgeLe
  return out;
 }
 
+
+struct RmZero128Spans {
+ bool valid=false;
+ size_t count=0,pixels=0;
+ std::array<size_t,640> starts{};
+ std::array<size_t,640> ends{};
+};
+inline RmZero128Spans rmZero128Spans(const uint8_t* bridge,size_t bridgeLength,
+ const uint8_t* view,size_t viewLength,size_t y,
+ size_t offset=384,size_t width=640,size_t height=480){
+ RmZero128Spans out;
+ if(!bridge||!view||!width||width>out.starts.size()||!height||
+    y>=height||width>SIZE_MAX/height)return out;
+ const size_t raster=width*height;
+ if(offset>bridgeLength||raster>bridgeLength-offset||
+    offset>viewLength||raster>viewLength-offset)return out;
+ out.valid=true;
+ bool active=false;
+ for(size_t x=0;x<width;++x){
+  const size_t i=offset+y*width+x;
+  const bool hit=bridge[i]==128u&&view[i]==0u;
+  if(hit){
+   ++out.pixels;
+   if(!active){out.starts[out.count]=x;active=true;}
+  }else if(active){
+   out.ends[out.count]=x-1;++out.count;active=false;
+  }
+ }
+ if(active){out.ends[out.count]=width-1;++out.count;}
+ return out;
+}
+inline size_t rmZero128SharedSpans(const RmZero128Spans& a,const RmZero128Spans& b){
+ if(!a.valid||!b.valid)return 0;
+ size_t common=0;
+ for(size_t i=0;i<a.count;++i)
+  for(size_t j=0;j<b.count;++j)
+   if(a.starts[i]==b.starts[j]&&a.ends[i]==b.ends[j]){++common;break;}
+ return common;
+}
+
 }
