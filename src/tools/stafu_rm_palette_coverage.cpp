@@ -165,6 +165,28 @@ int main(int argc,char** argv){
              <<" topIndex="<<row.dominantIndex<<" topCount="<<row.dominantCount
              <<" high="<<row.high<<"\n";
   }
+  const std::vector<size_t> focus=std::string(name)=="BRIDGE.RM"
+   ?std::vector<size_t>{363,364,365}
+   :std::vector<size_t>{69,70,71,305,306,307,308,309,384,385,386,476,477,478,479};
+  for(size_t y:focus){
+   const auto row=reluva::stafu::rmBoundaryRow(bytes.data(),bytes.size(),y);
+   if(!row.valid){std::cerr<<name<<": invalid boundary row\n";return 1;}
+   std::vector<unsigned> ranked;
+   for(unsigned v=0;v<256;++v)if(row.counts[v])ranked.push_back(v);
+   std::sort(ranked.begin(),ranked.end(),[&](unsigned a,unsigned b){
+    return row.counts[a]!=row.counts[b]?row.counts[a]>row.counts[b]:a<b;
+   });
+   std::cout<<"RM_BOUNDARY_ROW "<<name<<" y="<<y
+            <<" low="<<row.low<<" high="<<row.high<<" runs="<<row.runCount;
+   for(size_t k=0;k<std::min<size_t>(3,ranked.size());++k)
+    std::cout<<" top"<<k<<"="<<ranked[k]<<":"<<row.counts[ranked[k]];
+   for(size_t k=0;k<row.longestRuns.size();++k){
+    const auto& run=row.longestRuns[k];
+    if(run.length)std::cout<<" run"<<k<<"="<<run.x<<"-"<<(run.x+run.length-1)
+                           <<":"<<run.index;
+   }
+   std::cout<<"\n";
+  }
   rmFiles.emplace_back(name,std::move(bytes));
   std::cout<<"RESOURCE "<<name<<" pixels="<<r.pixels
            <<" index0to127="<<r.lowerPixels<<" distinct="<<r.lowerDistinct
