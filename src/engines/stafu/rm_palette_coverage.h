@@ -276,4 +276,39 @@ inline RmRegionGrid rmRegionGrid(const uint8_t* bytes,size_t length,
  return out;
 }
 
+
+struct RmScanline {
+ size_t low=0,high=0,transitions=0,longestConstantRun=0;
+ unsigned dominantIndex=0;
+ size_t dominantCount=0;
+};
+struct RmScanlineSurvey {
+ bool valid=false;
+ size_t height=0;
+ std::array<RmScanline,480> rows{};
+};
+inline RmScanlineSurvey rmScanlines(const uint8_t* bytes,size_t length,
+                                    size_t offset=384,size_t width=640,size_t height=480){
+ RmScanlineSurvey out;
+ if(!bytes||!width||!height||height>out.rows.size()||width>SIZE_MAX/height)return out;
+ const size_t raster=width*height;
+ if(offset>length||raster>length-offset)return out;
+ out.valid=true;out.height=height;
+ for(size_t y=0;y<height;++y){
+  auto& row=out.rows[y];
+  std::array<size_t,256> counts{};
+  size_t run=0;
+  for(size_t x=0;x<width;++x){
+   const uint8_t v=bytes[offset+y*width+x];
+   if(v&128u)++row.high;else ++row.low;
+   if(++counts[v]>row.dominantCount){row.dominantCount=counts[v];row.dominantIndex=v;}
+   if(x==0||v!=bytes[offset+y*width+x-1])run=1;
+   else ++run;
+   if(run>row.longestConstantRun)row.longestConstantRun=run;
+   if(x&&((v^bytes[offset+y*width+x-1])&128u))++row.transitions;
+  }
+ }
+ return out;
+}
+
 }
