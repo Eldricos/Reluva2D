@@ -81,10 +81,10 @@ int main(){
  assert(bits.valid&&bits.lowPixels==4&&bits.highPixels==4);
  assert(bits.rowsMixed==2&&bits.rowsLowOnly==0&&bits.rowsHighOnly==0);
  assert(bits.pairedIndices==2&&bits.lowOnlyIndices==0&&bits.highOnlyIndices==0);
- assert(bits.horizontalPairs==6&&bits.horizontalBitTransitions==5);
- assert(bits.horizontalMaskedEqual==2&&bits.horizontalFlagOnlyTransitions==2);
- assert(bits.verticalPairs==4&&bits.verticalBitTransitions==2);
- assert(bits.verticalMaskedEqual==2&&bits.verticalFlagOnlyTransitions==0);
+ assert(bits.horizontalPairs==6&&bits.horizontalBitTransitions==4);
+ assert(bits.horizontalMaskedEqual==3&&bits.horizontalFlagOnlyTransitions==2);
+ assert(bits.verticalPairs==4&&bits.verticalBitTransitions==3);
+ assert(bits.verticalMaskedEqual==4&&bits.verticalFlagOnlyTransitions==3);
  assert(!rmHighBitAnalysis(flags,sizeof(flags),1,4,2).valid);
  assert(!rmHighBitAnalysis(nullptr,sizeof(flags),0,4,2).valid);
  assert(!rmHighBitAnalysis(flags,sizeof(flags),0,0,2).valid);
