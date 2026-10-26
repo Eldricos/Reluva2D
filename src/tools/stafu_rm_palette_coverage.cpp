@@ -3,6 +3,8 @@
 #include "engines/stafu/rm_palette_coverage.h"
 #include "engines/stafu/rm_candidate_palette.h"
 #include <algorithm>
+#include <filesystem>
+#include <cctype>
 #include <iostream>
 #include <iomanip>
 #include <sstream>
@@ -12,6 +14,53 @@ int main(int argc,char** argv){
  if(argc!=3){std::cerr<<"Usage: reluva-stafu-rm-palette-coverage <installed-folder> <cd-folder>\n";return 2;}
  reluva::stafu::ResourceManager resources;std::string error;
  if(!resources.open(argv[1],argv[2],error)){std::cerr<<error<<"\n";return 1;}
+
+ // Milestone 95: inventory palette-related resource names, without assuming ownership.
+ // Main archive inventory is complete when STTNG.ZIP opens; loose-file scan is top-level only.
+ auto paletteName=[](std::string name){
+  std::transform(name.begin(),name.end(),name.begin(),[](unsigned char ch){
+   return static_cast<char>(std::tolower(ch));
+  });
+  const std::string extensions[]={".pal",".act",".clut",".rgb",".dac",".cmap"};
+  for(const auto& ext:extensions)
+   if(name.size()>=ext.size()&&name.compare(name.size()-ext.size(),ext.size(),ext)==0)
+    return true;
+  return name.find("palett")!=std::string::npos||
+         name.find("color")!=std::string::npos||
+         name.find("colour")!=std::string::npos;
+ };
+ std::vector<std::string> inventory;
+ reluva::stafu::ZipArchive archive;
+ std::string archiveError;
+ const auto archivePath=std::filesystem::path(argv[2])/"STTNG.ZIP";
+ if(archive.open(archivePath,archiveError)){
+  size_t candidateCount=0;
+  for(const auto& entry:archive.entries())
+   if(paletteName(entry.name)){++candidateCount;inventory.push_back(entry.name);}
+  std::sort(inventory.begin(),inventory.end());
+  std::cout<<"RM_PALETTE_INVENTORY source=mainArchive entries="<<archive.size()
+           <<" candidates="<<candidateCount<<"\n";
+  for(size_t i=0;i<std::min<size_t>(60,inventory.size());++i)
+   std::cout<<"RM_PALETTE_RESOURCE source=mainArchive name="<<inventory[i]<<"\n";
+  if(inventory.size()>60)
+   std::cout<<"RM_PALETTE_RESOURCE_TRUNCATED remaining="<<(inventory.size()-60)<<"\n";
+ }else std::cout<<"RM_PALETTE_INVENTORY source=mainArchive unavailable="<<archiveError<<"\n";
+ inventory.clear();
+ std::error_code scanError;
+ const std::filesystem::path looseRoot(argv[1]);
+ if(std::filesystem::is_directory(looseRoot,scanError)){
+  for(std::filesystem::directory_iterator it(looseRoot,scanError),end;
+      !scanError&&it!=end;it.increment(scanError)){
+   if(!it->is_regular_file(scanError))continue;
+   const auto name=it->path().filename().string();
+   if(paletteName(name))inventory.push_back(name);
+  }
+  std::sort(inventory.begin(),inventory.end());
+  std::cout<<"RM_PALETTE_INVENTORY source=installedTopLevel candidates="
+           <<inventory.size()<<" scanError="<<scanError.message()<<"\n";
+  for(size_t i=0;i<std::min<size_t>(60,inventory.size());++i)
+   std::cout<<"RM_PALETTE_RESOURCE source=installedTopLevel name="<<inventory[i]<<"\n";
+ }else std::cout<<"RM_PALETTE_INVENTORY source=installedTopLevel unavailable=notDirectory\n";
  std::vector<uint8_t> standard;
  if(!resources.read("standard.pal",standard,error,4096)||standard.size()!=384){
   std::cerr<<"standard.pal unavailable or unexpected size: "<<error<<"\n";return 1;
