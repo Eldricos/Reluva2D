@@ -315,6 +315,74 @@ int main(int argc,char** argv){
   }
  }
 
+
+ // Milestone 101: high-index frequency and spatial survey for every archive RM.
+ // Interpret bit 7 numerically only; no palette-bank or transparency assumption.
+ {
+  reluva::stafu::ZipArchive zip;
+  std::string zipError;
+  if(!zip.open(std::filesystem::path(argv[2])/"STTNG.ZIP",zipError)){
+   std::cout<<"RM_UPPER_STATUS archive=unavailable reason="<<zipError<<"\n";
+  }else{
+   for(const char* name:{"bridge.rm","viewscr.rm","transp.rm","holodeck.rm","endgame.rm"}){
+    std::vector<uint8_t> data;
+    std::string readError;
+    if(!zip.read(name,data,readError,2*1024*1024)){
+     std::cout<<"RM_UPPER_RESOURCE name="<<name<<" read=0 reason="<<readError<<"\n";
+     continue;
+    }
+    if(data.size()!=384+640*480){
+     std::cout<<"RM_UPPER_RESOURCE name="<<name<<" read=1 layout=unexpected bytes="
+              <<data.size()<<"\n";
+     continue;
+    }
+    size_t counts[256]={};
+    size_t bands[4][2]={};
+    size_t quarters[4][4]={};
+    for(size_t y=0;y<480;++y){
+     for(size_t x=0;x<640;++x){
+      const unsigned value=data[384+y*640+x];
+      ++counts[value];
+      ++bands[y/120][value>=128?1:0];
+      if(value>=128)++quarters[y/120][x/160];
+     }
+    }
+    size_t distinctHigh=0,paired=0,highTotal=0;
+    std::vector<unsigned> ranked;
+    for(unsigned i=128;i<256;++i){
+     if(!counts[i])continue;
+     ++distinctHigh;
+     highTotal+=counts[i];
+     if(counts[i-128])++paired;
+     ranked.push_back(i);
+    }
+    std::sort(ranked.begin(),ranked.end(),[&](unsigned a,unsigned b){
+     return counts[a]!=counts[b]?counts[a]>counts[b]:a<b;
+    });
+    std::cout<<"RM_UPPER_RESOURCE name="<<name<<" read=1 distinctHigh="
+             <<distinctHigh<<" highPixels="<<highTotal
+             <<" pairedWithUsedLow="<<paired<<" distinctLow=";
+    size_t distinctLow=0;
+    for(unsigned i=0;i<128;++i)if(counts[i])++distinctLow;
+    std::cout<<distinctLow<<"\n";
+    for(size_t i=0;i<std::min<size_t>(16,ranked.size());++i){
+     const unsigned v=ranked[i];
+     std::cout<<"RM_UPPER_TOP name="<<name<<" index="<<v
+              <<" pixels="<<counts[v]<<" lowPartner="<<(v-128)
+              <<" lowPartnerPixels="<<counts[v-128]<<"\n";
+    }
+    for(size_t b=0;b<4;++b){
+     std::cout<<"RM_UPPER_BAND name="<<name<<" y0="<<(b*120)
+              <<" y1="<<(b*120+119)<<" low="<<bands[b][0]
+              <<" high="<<bands[b][1]<<"\n";
+     for(size_t q=0;q<4;++q)
+      std::cout<<"RM_UPPER_GRID name="<<name<<" col="<<q<<" row="<<b
+               <<" high="<<quarters[b][q]<<" pixels="<<(160*120)<<"\n";
+    }
+   }
+  }
+ }
+
  // Milestone 98: independent third-RM comparison, without changing existing
  // two-file differential diagnostics or assuming the third resource is identical.
  {
