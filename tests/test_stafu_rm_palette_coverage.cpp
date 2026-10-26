@@ -19,5 +19,23 @@ int main(){
  a=rmPaletteOverlap(vga,384,gif,384);
  assert(a.equal==127&&a.different==1);
  assert(rmPaletteOverlap(vga,383,gif,384).equal==0);
+
+ uint8_t shifted[768]={};
+ // Unique VGA6 colors: 128 reference entries and a shifted candidate table.
+ for(unsigned i=0;i<128;++i){
+  vga[3*i]=uint8_t(i%64);
+  vga[3*i+1]=uint8_t(i/64);
+  vga[3*i+2]=uint8_t((i*3)%64);
+  const unsigned j=i+64;
+  for(unsigned c=0;c<3;++c)
+   shifted[3*j+c]=uint8_t((unsigned(vga[3*i+c])*255u+31u)/63u);
+ }
+ const auto shiftedResult=rmPaletteOffsets(vga,384,shifted,768);
+ assert(shiftedResult.valid&&shiftedResult.bestOffset==64);
+ assert(shiftedResult.bestMatches==128&&shiftedResult.bestCompared==128);
+ assert(shiftedResult.rgbMembership==128);
+ assert(!rmPaletteOffsets(vga,383,shifted,768).valid);
+ vga[0]=64;
+ assert(!rmPaletteOffsets(vga,384,shifted,768).valid);
  return 0;
 }
