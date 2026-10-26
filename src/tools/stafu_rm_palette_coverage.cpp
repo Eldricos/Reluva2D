@@ -211,6 +211,54 @@ int main(int argc,char** argv){
            <<"  RGB_MEMBERSHIP matches="<<offsets.rgbMembership<<" of=128\n";
 
  }
+
+ // Milestone 98: independent third-RM comparison, without changing existing
+ // two-file differential diagnostics or assuming the third resource is identical.
+ {
+  std::vector<uint8_t> holodeck;
+  std::string readError;
+  if(!resources.read("HOLODECK.RM",holodeck,readError,2*1024*1024)){
+   std::cout<<"RM_THIRD_RESOURCE name=HOLODECK.RM available=0 reason="<<readError<<"\n";
+  }else{
+   const auto coverage=reluva::stafu::rmPaletteCoverage(holodeck.data(),holodeck.size());
+   const auto first=reluva::stafu::rmLeadingPalette(
+     holodeck.data(),holodeck.size(),standard.data(),standard.size());
+   const auto tail=reluva::stafu::rmTrailingPalette(
+     holodeck.data(),holodeck.size(),standard.data(),standard.size());
+   const auto bits=reluva::stafu::rmHighBitAnalysis(holodeck.data(),holodeck.size());
+   const auto at384=reluva::stafu::rmBoundary(holodeck.data(),holodeck.size(),384);
+   std::cout<<"RM_THIRD_RESOURCE name=HOLODECK.RM available=1 bytes="
+            <<holodeck.size()<<" expected307584="<<(holodeck.size()==307584)
+            <<" rasterPixels="<<coverage.pixels<<"\n";
+   std::cout<<"RM_THIRD_HEADER present="<<first.present
+            <<" plausibleVga6="<<first.plausibleVga6
+            <<" channelsWithinVga6="<<first.channelsWithinVga6
+            <<" uniqueColors="<<first.uniqueColors
+            <<" standardEntryMatches="<<first.standardEntryMatches<<"\n";
+   std::cout<<"RM_THIRD_RASTER offset384Valid="<<at384.valid
+            <<" lowPixels="<<bits.lowPixels<<" highPixels="<<bits.highPixels
+            <<" rowsMixed="<<bits.rowsMixed
+            <<" rowsLowOnly="<<bits.rowsLowOnly
+            <<" rowsHighOnly="<<bits.rowsHighOnly<<"\n";
+   std::cout<<"RM_THIRD_TRAILER bytes="<<tail.tailBytes
+            <<" candidate384="<<tail.present<<"\n";
+   for(const char* other:{"BRIDGE.RM","VIEWSCR.RM"}){
+    std::vector<uint8_t> data;
+    std::string otherError;
+    if(!resources.read(other,data,otherError,2*1024*1024)){
+     std::cout<<"RM_THIRD_COMPARE other="<<other<<" unavailable="<<otherError<<"\n";
+     continue;
+    }
+    const size_t entries=std::min<size_t>(128,std::min(holodeck.size(),data.size())/3);
+    size_t matching=0;
+    for(size_t i=0;i<entries;++i)
+     if(std::equal(holodeck.begin()+3*i,holodeck.begin()+3*i+3,data.begin()+3*i))
+      ++matching;
+    std::cout<<"RM_THIRD_COMPARE other="<<other
+             <<" sameIndexHeaderRGB="<<matching<<" compared="<<entries<<"\n";
+   }
+  }
+ }
  std::vector<std::pair<std::string,reluva::stafu::RmTrailingPalette>> tails;
  std::vector<std::pair<std::string,std::vector<uint8_t>>> rmFiles;
  std::vector<std::pair<std::string,reluva::stafu::RmLeadingPalette>> leading;
