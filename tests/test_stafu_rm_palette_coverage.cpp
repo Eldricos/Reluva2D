@@ -78,11 +78,11 @@ int main(){
  assert(!rmLeadingPalette(nullptr,384,ref,sizeof(ref)).present);
  const uint8_t flags[]={0,128,1,129,128,128,129,1};
  const auto bits=rmHighBitAnalysis(flags,sizeof(flags),0,4,2);
- assert(bits.valid&&bits.lowPixels==4&&bits.highPixels==4);
+ assert(bits.valid&&bits.lowPixels==3&&bits.highPixels==5);
  assert(bits.rowsMixed==2&&bits.rowsLowOnly==0&&bits.rowsHighOnly==0);
  assert(bits.pairedIndices==2&&bits.lowOnlyIndices==0&&bits.highOnlyIndices==0);
  assert(bits.horizontalPairs==6&&bits.horizontalBitTransitions==4);
- assert(bits.horizontalMaskedEqual==3&&bits.horizontalFlagOnlyTransitions==2);
+ assert(bits.horizontalMaskedEqual==4&&bits.horizontalFlagOnlyTransitions==3);
  assert(bits.verticalPairs==4&&bits.verticalBitTransitions==3);
  assert(bits.verticalMaskedEqual==4&&bits.verticalFlagOnlyTransitions==3);
  assert(!rmHighBitAnalysis(flags,sizeof(flags),1,4,2).valid);
