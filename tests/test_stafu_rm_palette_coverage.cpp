@@ -147,5 +147,16 @@ int main(){
  assert(!rmDifferenceRegion(diffA,7,diffB,8,0,1,0,4,2).valid);
  assert(!rmDifferenceRegion(diffA,8,diffB,8,1,0,0,4,2).valid);
  assert(!rmDifferenceRegion(nullptr,8,diffB,8,0,1,0,4,2).valid);
+ const uint8_t pairA[]={0,128,1,129,2,130,3,131};
+ const uint8_t pairB[]={128,0,129,1,130,2,3,131};
+ const auto pairs=rmFlagPairs(pairA,8,pairB,8,0,1,0,4,2);
+ assert(pairs.valid&&pairs.lowToHigh==3&&pairs.highToLow==3);
+ assert(pairs.lowToHighByBase[0]==1&&pairs.highToLowByBase[0]==1);
+ assert(pairs.lowToHighByBase[1]==1&&pairs.highToLowByBase[1]==1);
+ assert(pairs.lowToHighByBase[2]==1&&pairs.highToLowByBase[2]==1);
+ assert(pairs.lowToHighByBase[3]==0&&pairs.highToLowByBase[3]==0);
+ assert(!rmFlagPairs(pairA,7,pairB,8,0,1,0,4,2).valid);
+ assert(!rmFlagPairs(pairA,8,pairB,8,1,0,0,4,2).valid);
+ assert(!rmFlagPairs(nullptr,8,pairB,8,0,1,0,4,2).valid);
  return 0;
 }
