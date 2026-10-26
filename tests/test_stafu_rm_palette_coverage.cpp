@@ -58,5 +58,23 @@ int main(){
  assert(!rmBoundary(boundaryData,sizeof(boundaryData),0,0,3).valid);
  assert(rmEqualRegion(boundaryData,sizeof(boundaryData),boundaryData,sizeof(boundaryData),0,14)==14);
  assert(rmEqualRegion(boundaryData,sizeof(boundaryData),boundaryData,sizeof(boundaryData),10,5)==0);
+ uint8_t first[384]={};
+ uint8_t ref[384]={};
+ for(size_t i=0;i<128;++i){
+  first[3*i]=uint8_t(i%64);
+  first[3*i+1]=uint8_t(i/64);
+  first[3*i+2]=0;
+ }
+ for(size_t i=0;i<384;++i)ref[i]=first[i];
+ auto leading=rmLeadingPalette(first,sizeof(first),ref,sizeof(ref));
+ assert(leading.present&&leading.plausibleVga6);
+ assert(leading.channelsWithinVga6==384&&leading.uniqueColors==128);
+ assert(leading.standardByteMatches==384&&leading.standardEntryMatches==128);
+ first[0]=64;
+ leading=rmLeadingPalette(first,sizeof(first),ref,sizeof(ref));
+ assert(!leading.plausibleVga6&&leading.channelsWithinVga6==383);
+ assert(leading.standardByteMatches==383&&leading.standardEntryMatches==127);
+ assert(!rmLeadingPalette(first,383,ref,sizeof(ref)).present);
+ assert(!rmLeadingPalette(nullptr,384,ref,sizeof(ref)).present);
  return 0;
 }
