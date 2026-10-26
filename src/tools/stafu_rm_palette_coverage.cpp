@@ -216,6 +216,26 @@ int main(int argc,char** argv){
  if(rmFiles.size()==2){
   const auto& a=rmFiles[0].second;
   const auto& b=rmFiles[1].second;
+  const struct {const char* label;size_t first,last;} regions[]={
+   {"upper",0,363},{"transition",360,370},{"lower",364,479}
+  };
+  for(const auto& region:regions){
+   const auto s=reluva::stafu::rmSharedRaster(a.data(),a.size(),b.data(),b.size(),region.first,region.last);
+   if(!s.valid){std::cerr<<"invalid RM comparison region\n";return 1;}
+   std::cout<<"RM_SHARED_REGION "<<region.label<<" firstY="<<region.first
+            <<" lastY="<<region.last<<" pixels="<<s.pixels
+            <<" exact="<<s.exact<<" maskedEqual="<<s.maskedEqual
+            <<" identicalRows="<<s.identicalRows
+            <<" longestRun="<<s.longestRun<<" x="<<s.longestX<<" y="<<s.longestY<<"\n";
+   std::vector<size_t> ranked;
+   for(size_t y=region.first;y<=region.last;++y)ranked.push_back(y);
+   std::sort(ranked.begin(),ranked.end(),[&](size_t x,size_t y){
+    return s.rowMatches[x]!=s.rowMatches[y]?s.rowMatches[x]>s.rowMatches[y]:x<y;
+   });
+   for(size_t k=0;k<std::min<size_t>(5,ranked.size());++k)
+    std::cout<<"RM_SHARED_ROW "<<region.label<<" y="<<ranked[k]
+             <<" exact="<<s.rowMatches[ranked[k]]<<" of=640\n";
+  }
   const size_t n=std::min<size_t>(384,std::min(a.size(),b.size()));
   std::cout<<"RM_COMPARE_FIRST384 equal="
            <<reluva::stafu::rmEqualRegion(a.data(),a.size(),b.data(),b.size(),0,n)
