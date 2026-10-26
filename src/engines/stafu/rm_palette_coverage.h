@@ -36,4 +36,52 @@ inline RmPaletteOverlap rmPaletteOverlap(const uint8_t* vga6,size_t length,
  }
  return r;
 }
+
+struct RmPaletteOffsetResult {
+ size_t directMatches=0,bestMatches=0,bestCompared=0,rgbMembership=0;
+ int bestOffset=0;
+ bool valid=false;
+};
+// Compare 128 VGA6 reference colors with an RGB888 candidate palette.
+// Positive offsets mean candidate[index + offset].
+inline RmPaletteOffsetResult rmPaletteOffsets(const uint8_t* vga6,size_t vgaBytes,
+                                              const uint8_t* rgb,size_t rgbBytes){
+ RmPaletteOffsetResult out;
+ if(!vga6||vgaBytes!=384||!rgb||rgbBytes<3||rgbBytes%3||rgbBytes>768)return out;
+ for(size_t i=0;i<384;++i)if(vga6[i]>63)return out;
+ out.valid=true;
+ const int entries=int(rgbBytes/3);
+ const auto equal=[&](int a,int b){
+  for(int c=0;c<3;++c)
+   if((unsigned(vga6[3*a+c])*255u+31u)/63u!=rgb[3*b+c])return false;
+  return true;
+ };
+ for(int i=0;i<128;++i){
+  if(i<entries&&equal(i,i))++out.directMatches;
+  for(int j=0;j<entries;++j)if(equal(i,j)){++out.rgbMembership;break;}
+ }
+ bool haveBest=false;
+ for(int offset=-(128-1);offset<entries;++offset){
+  size_t matches=0,compared=0;
+  for(int i=0;i<128;++i){
+   const int j=i+offset;
+   if(j<0||j>=entries)continue;
+   ++compared;
+   if(equal(i,j))++matches;
+  }
+  if(!compared)continue;
+  // Prefer the greatest absolute evidence; resolve ties by coverage,
+  // then the smallest absolute offset.
+  const int absOffset=offset<0?-offset:offset;
+  const int absBest=out.bestOffset<0?-out.bestOffset:out.bestOffset;
+  if(!haveBest||matches>out.bestMatches||
+     (matches==out.bestMatches&&(compared>out.bestCompared||
+      (compared==out.bestCompared&&absOffset<absBest)))){
+   out.bestOffset=offset;out.bestMatches=matches;out.bestCompared=compared;
+   haveBest=true;
+  }
+ }
+ return out;
+}
+
 }
