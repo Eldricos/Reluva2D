@@ -44,6 +44,7 @@ int main(int argc,char** argv){
  }
  std::vector<std::pair<std::string,reluva::stafu::RmTrailingPalette>> tails;
  std::vector<std::pair<std::string,std::vector<uint8_t>>> rmFiles;
+ std::vector<std::pair<std::string,reluva::stafu::RmLeadingPalette>> leading;
  auto hex64=[](const std::vector<uint8_t>& bytes){
   std::ostringstream out;
   const size_t count=std::min<size_t>(64,bytes.size());
@@ -66,6 +67,14 @@ int main(int argc,char** argv){
            <<" standardByteMatches="<<tail.sameBytesAsStandard
            <<" standardEntryMatches="<<tail.sameEntriesAsStandard<<"\n";
   tails.emplace_back(name,tail);
+  const auto first=reluva::stafu::rmLeadingPalette(bytes.data(),bytes.size(),standard.data(),standard.size());
+  std::cout<<"RM_LEADING_PALETTE "<<name<<" present="<<first.present
+           <<" vga6Channels="<<first.channelsWithinVga6<<" of=384"
+           <<" plausibleVga6="<<first.plausibleVga6
+           <<" uniqueRGBTriplets="<<first.uniqueColors<<" of=128"
+           <<" standardByteMatches="<<first.standardByteMatches
+           <<" standardEntryMatches="<<first.standardEntryMatches<<"\n";
+  leading.emplace_back(name,first);
   std::cout<<"RM_FIRST64 "<<name<<" "<<hex64(bytes)<<"\n";
   for(size_t offset:{size_t(0),size_t(384)}){
    const auto boundary=reluva::stafu::rmBoundary(bytes.data(),bytes.size(),offset);
@@ -99,6 +108,16 @@ int main(int argc,char** argv){
   std::cout<<"\nUPPER_USED";
   for(unsigned i=128;i<256;++i)if(r.counts[i])std::cout<<" "<<i;
   std::cout<<"\n";
+ }
+ if(leading.size()==2&&leading[0].second.present&&leading[1].second.present){
+  const auto& a=leading[0].second.colors;
+  const auto& b=leading[1].second.colors;
+  size_t sameBytes=0,sameEntries=0;
+  for(size_t i=0;i<384;++i)if(a[i]==b[i])++sameBytes;
+  for(size_t i=0;i<128;++i)
+   if(a[3*i]==b[3*i]&&a[3*i+1]==b[3*i+1]&&a[3*i+2]==b[3*i+2])++sameEntries;
+  std::cout<<"RM_LEADING_COMPARE equalBytes="<<sameBytes<<" of=384"
+           <<" equalEntries="<<sameEntries<<" of=128\n";
  }
  if(rmFiles.size()==2){
   const auto& a=rmFiles[0].second;
