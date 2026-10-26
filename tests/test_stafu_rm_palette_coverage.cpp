@@ -158,5 +158,16 @@ int main(){
  assert(!rmFlagPairs(pairA,7,pairB,8,0,1,0,4,2).valid);
  assert(!rmFlagPairs(pairA,8,pairB,8,1,0,0,4,2).valid);
  assert(!rmFlagPairs(nullptr,8,pairB,8,0,1,0,4,2).valid);
+ const uint8_t geomA[]={128,128,5,128, 3,128,128,128};
+ const uint8_t geomB[]={0,0,5,0, 3,0,0,0};
+ const auto geom=rmZero128Geometry(geomA,8,geomB,8,0,1,0,4,2);
+ assert(geom.valid&&geom.total==6&&geom.rows==2);
+ assert(geom.minX==0&&geom.maxX==3&&geom.minY==0&&geom.maxY==1);
+ assert(geom.rowCounts[0]==3&&geom.rowCounts[1]==3);
+ assert(geom.rowFirstX[0]==0&&geom.rowLastX[0]==3);
+ assert(geom.longestRun==3&&geom.longestX==1&&geom.longestY==1);
+ assert(!rmZero128Geometry(geomA,7,geomB,8,0,1,0,4,2).valid);
+ assert(!rmZero128Geometry(geomA,8,geomB,8,1,0,0,4,2).valid);
+ assert(!rmZero128Geometry(nullptr,8,geomB,8,0,1,0,4,2).valid);
  return 0;
 }
