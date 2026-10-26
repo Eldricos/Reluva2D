@@ -257,6 +257,64 @@ int main(int argc,char** argv){
 
  }
 
+
+ // Milestone 100: survey all five verified RM names directly from the CD archive.
+ // This intentionally bypasses installed-file precedence and case-sensitive
+ // ResourceManager lookup; results describe archive bytes only.
+ {
+  reluva::stafu::ZipArchive surveyArchive;
+  std::string surveyError;
+  const char* names[]={"bridge.rm","viewscr.rm","transp.rm","holodeck.rm","endgame.rm"};
+  if(!surveyArchive.open(std::filesystem::path(argv[2])/"STTNG.ZIP",surveyError)){
+   std::cout<<"RM_ALL_STATUS archive=unavailable reason="<<surveyError<<"\n";
+  }else{
+   struct Survey {std::string name;std::vector<uint8_t> bytes;};
+   std::vector<Survey> surveys;
+   for(const char* name:names){
+    std::vector<uint8_t> data;
+    std::string readError;
+    if(!surveyArchive.read(name,data,readError,2*1024*1024)){
+     std::cout<<"RM_ALL_RESOURCE name="<<name<<" read=0 reason="<<readError<<"\n";
+     continue;
+    }
+    const auto head=reluva::stafu::rmLeadingPalette(
+      data.data(),data.size(),standard.data(),standard.size());
+    const auto raster=reluva::stafu::rmPaletteCoverage(data.data(),data.size());
+    const auto bits=reluva::stafu::rmHighBitAnalysis(data.data(),data.size());
+    const auto boundary=reluva::stafu::rmBoundary(data.data(),data.size(),384);
+    const bool layout=data.size()==307584&&head.present&&raster.pixels==307200;
+    std::cout<<"RM_ALL_RESOURCE name="<<name<<" read=1 bytes="<<data.size()
+             <<" expectedLayout="<<layout
+             <<" headerPresent="<<head.present
+             <<" headerVga6="<<head.plausibleVga6
+             <<" headerChannelsWithinVga6="<<head.channelsWithinVga6
+             <<" uniqueHeaderColors="<<head.uniqueColors
+             <<" standardSameIndex="<<head.standardEntryMatches
+             <<" rasterPixels="<<raster.pixels
+             <<" offset384Valid="<<boundary.valid
+             <<" lowPixels="<<bits.lowPixels
+             <<" highPixels="<<bits.highPixels
+             <<" rowsMixed="<<bits.rowsMixed
+             <<" rowsLowOnly="<<bits.rowsLowOnly
+             <<" rowsHighOnly="<<bits.rowsHighOnly<<"\n";
+    surveys.push_back({name,std::move(data)});
+   }
+   for(size_t i=0;i<surveys.size();++i)
+    for(size_t j=i+1;j<surveys.size();++j){
+     const auto& a=surveys[i];const auto& b=surveys[j];
+     const size_t entries=std::min<size_t>(128,std::min(a.bytes.size(),b.bytes.size())/3);
+     size_t equal=0;
+     for(size_t k=0;k<entries;++k)
+      if(std::equal(a.bytes.begin()+3*k,a.bytes.begin()+3*k+3,b.bytes.begin()+3*k))
+       ++equal;
+     std::cout<<"RM_ALL_PAIR first="<<a.name<<" second="<<b.name
+              <<" sameIndexHeaderRGB="<<equal<<" compared="<<entries<<"\n";
+    }
+   std::cout<<"RM_ALL_STATUS archive=available requested=5 read="
+            <<surveys.size()<<"\n";
+  }
+ }
+
  // Milestone 98: independent third-RM comparison, without changing existing
  // two-file differential diagnostics or assuming the third resource is identical.
  {
