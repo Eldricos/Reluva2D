@@ -181,5 +181,15 @@ int main(){
  assert(!rmZero128Spans(geomA,7,geomB,8,0,0,4,2).valid);
  assert(!rmZero128Spans(geomA,8,geomB,8,2,0,4,2).valid);
  assert(!rmZero128Spans(nullptr,8,geomB,8,0,0,4,2).valid);
+ const uint8_t hdrA[384]={0,0,0, 0,0,0, 1,2,3, 1,2,3};
+ const uint8_t hdrB[384]={0,0,0, 4,5,6, 1,2,3, 7,8,9};
+ const auto section=rmHeaderSection(hdrA,sizeof(hdrA),0,4);
+ assert(section.start==0&&section.entries==4&&section.unique==2);
+ assert(section.black==2&&section.adjacentEqual==2);
+ assert(section.minChannel==0&&section.maxChannel==3);
+ assert(rmHeaderSectionMatches(hdrA,sizeof(hdrA),hdrB,sizeof(hdrB),0,4)==2);
+ assert(rmHeaderSection(hdrA,383,0,4).entries==0);
+ assert(rmHeaderSection(hdrA,sizeof(hdrA),127,2).entries==0);
+ assert(rmHeaderSectionMatches(nullptr,384,hdrB,384,0,4)==0);
  return 0;
 }
