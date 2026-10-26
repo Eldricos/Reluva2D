@@ -323,6 +323,45 @@ int main(int argc,char** argv){
    std::cout<<"RM_COMPARE_LAST384 equal="<<same<<" of=384\n";
   }
  }
+
+ // Milestone 93: compare candidate palette ownership hypotheses numerically.
+ // RGB888 candidate tables and VGA6 RM headers are not assumed to share an index map.
+ for(const auto& entry:rmFiles){
+  const auto& bytes=entry.second;
+  if(bytes.size()<384)continue;
+  for(const auto& candidate:candidates){
+   if(!candidate.palette.valid)continue;
+   const auto& pal=candidate.palette;
+   const auto direct=reluva::stafu::rmPaletteOffsets(bytes.data(),384,
+     pal.rgb.data(),pal.entries*3);
+   std::cout<<"RM_PALETTE_CANDIDATE rm="<<entry.first
+            <<" source="<<candidate.name
+            <<" entries="<<pal.entries
+            <<" direct="<<direct.directMatches
+            <<" bestOffset="<<direct.bestOffset
+            <<" bestMatches="<<direct.bestMatches
+            <<" compared="<<direct.bestCompared
+            <<" membership="<<direct.rgbMembership<<"\n";
+   for(const size_t index:{size_t(0),size_t(128)}){
+    if(index>=pal.entries)continue;
+    std::cout<<"RM_PALETTE_INDEX rm="<<entry.first
+             <<" source="<<candidate.name<<" index="<<index
+             <<" rgb888="<<unsigned(pal.rgb[3*index])<<","
+             <<unsigned(pal.rgb[3*index+1])<<","
+             <<unsigned(pal.rgb[3*index+2])
+             <<" interpretation=candidateOnly\n";
+   }
+  }
+  const auto standardMatch=reluva::stafu::rmPaletteOffsets(bytes.data(),384,
+    standard.data(),standard.size());
+  std::cout<<"RM_PALETTE_STANDARD rm="<<entry.first
+           <<" direct="<<standardMatch.directMatches
+           <<" bestOffset="<<standardMatch.bestOffset
+           <<" bestMatches="<<standardMatch.bestMatches
+           <<" compared="<<standardMatch.bestCompared
+           <<" membership="<<standardMatch.rgbMembership
+           <<" standardEntries=128\n";
+ }
  if(tails.size()==2){
   const auto& a=tails[0].second;
   const auto& b=tails[1].second;
