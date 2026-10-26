@@ -311,4 +311,42 @@ inline RmScanlineSurvey rmScanlines(const uint8_t* bytes,size_t length,
  return out;
 }
 
+
+struct RmBoundaryRun {
+ size_t x=0,length=0;
+ unsigned index=0;
+};
+struct RmBoundaryRow {
+ bool valid=false;
+ size_t y=0,low=0,high=0,runCount=0;
+ std::array<RmBoundaryRun,3> longestRuns{};
+ std::array<size_t,256> counts{};
+};
+inline RmBoundaryRow rmBoundaryRow(const uint8_t* bytes,size_t length,size_t y,
+                                   size_t offset=384,size_t width=640,size_t height=480){
+ RmBoundaryRow out;
+ if(!bytes||!width||!height||y>=height||width>SIZE_MAX/height)return out;
+ const size_t raster=width*height;
+ if(offset>length||raster>length-offset)return out;
+ out.valid=true;out.y=y;
+ size_t start=0;
+ for(size_t x=0;x<width;++x){
+  const unsigned v=bytes[offset+y*width+x];
+  ++out.counts[v];
+  if(v&128u)++out.high;else ++out.low;
+  if(x+1<width&&bytes[offset+y*width+x+1]==v)continue;
+  const RmBoundaryRun run{start,x+1-start,v};
+  ++out.runCount;
+  for(size_t k=0;k<out.longestRuns.size();++k)
+   if(run.length>out.longestRuns[k].length){
+    for(size_t j=out.longestRuns.size()-1;j>k;--j)
+     out.longestRuns[j]=out.longestRuns[j-1];
+    out.longestRuns[k]=run;
+    break;
+   }
+  start=x+1;
+ }
+ return out;
+}
+
 }
