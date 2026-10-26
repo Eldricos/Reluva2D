@@ -141,6 +141,46 @@ int main(int argc,char** argv){
              <<" distance="<<distance<<"\n";
   }
  }
+
+ // Milestone 97: printable-string neighborhoods around known RM references.
+ // These are bounded byte-range observations, not decoded code or call relationships.
+ const auto overlayPath=looseRoot/"STTNG.OVL";
+ std::ifstream overlay(overlayPath,std::ios::binary);
+ if(overlay){
+  std::vector<unsigned char> bytes((std::istreambuf_iterator<char>(overlay)),
+                                    std::istreambuf_iterator<char>());
+  const std::vector<std::pair<const char*,size_t>> anchors={
+   {"BRIDGE.RM",1407391},{"BRIDGE.RM",1408226},{"VIEWSCR.RM",1408760}
+  };
+  for(const auto& anchor:anchors){
+   if(anchor.second>=bytes.size()){
+    std::cout<<"RM_CONTEXT_ANCHOR term="<<anchor.first<<" status=outsideFile\n";
+    continue;
+   }
+   const size_t begin=anchor.second>1024?anchor.second-1024:0;
+   const size_t end=std::min(bytes.size(),anchor.second+1024);
+   std::cout<<"RM_CONTEXT_ANCHOR term="<<anchor.first
+            <<" offset="<<anchor.second<<" range="<<begin<<"-"<<end
+            <<" interpretation=printableStringsOnly\n";
+   size_t printed=0;
+   for(size_t i=begin;i<end;){
+    if(bytes[i]<32||bytes[i]>126){++i;continue;}
+    const size_t start=i;
+    while(i<end&&bytes[i]>=32&&bytes[i]<=126)++i;
+    if(i-start<5)continue;
+    std::string value;
+    for(size_t j=start;j<i;++j)value.push_back(static_cast<char>(bytes[j]));
+    if(printed<90){
+     std::cout<<"RM_CONTEXT_STRING anchor="<<anchor.second
+              <<" offset="<<start<<" length="<<(i-start)
+              <<" text="<<value<<"\n";
+    }
+    ++printed;
+   }
+   std::cout<<"RM_CONTEXT_SUMMARY anchor="<<anchor.second
+            <<" strings="<<printed<<" displayed="<<std::min<size_t>(printed,90)<<"\n";
+  }
+ }else std::cout<<"RM_CONTEXT_ANCHOR status=overlayUnavailable\n";
  std::vector<uint8_t> standard;
  if(!resources.read("standard.pal",standard,error,4096)||standard.size()!=384){
   std::cerr<<"standard.pal unavailable or unexpected size: "<<error<<"\n";return 1;
