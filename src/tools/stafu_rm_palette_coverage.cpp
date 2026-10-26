@@ -4,6 +4,8 @@
 #include "engines/stafu/rm_candidate_palette.h"
 #include <algorithm>
 #include <iostream>
+#include <iomanip>
+#include <sstream>
 #include <string>
 #include <vector>
 int main(int argc,char** argv){
@@ -41,6 +43,16 @@ int main(int argc,char** argv){
 
  }
  std::vector<std::pair<std::string,reluva::stafu::RmTrailingPalette>> tails;
+ std::vector<std::pair<std::string,std::vector<uint8_t>>> rmFiles;
+ auto hex64=[](const std::vector<uint8_t>& bytes){
+  std::ostringstream out;
+  const size_t count=std::min<size_t>(64,bytes.size());
+  for(size_t i=0;i<count;++i){
+   if(i)out<<" ";
+   out<<std::hex<<std::setfill('0')<<std::setw(2)<<unsigned(bytes[i]);
+  }
+  return out.str();
+ };
  for(const char* name:{"BRIDGE.RM","VIEWSCR.RM"}){
   std::vector<uint8_t> bytes;
   if(!resources.read(name,bytes,error,2*1024*1024)){std::cerr<<name<<": "<<error<<"\n";return 1;}
@@ -54,6 +66,25 @@ int main(int argc,char** argv){
            <<" standardByteMatches="<<tail.sameBytesAsStandard
            <<" standardEntryMatches="<<tail.sameEntriesAsStandard<<"\n";
   tails.emplace_back(name,tail);
+  std::cout<<"RM_FIRST64 "<<name<<" "<<hex64(bytes)<<"\n";
+  for(size_t offset:{size_t(0),size_t(384)}){
+   const auto boundary=reluva::stafu::rmBoundary(bytes.data(),bytes.size(),offset);
+   std::cout<<"RM_BOUNDARY "<<name<<" offset="<<offset<<" valid="<<boundary.valid;
+   if(boundary.valid)
+    std::cout<<" lower="<<boundary.coverage.lowerPixels
+             <<" upper="<<boundary.coverage.upperPixels
+             <<" horizontalEqual="<<boundary.adjacentEqual
+             <<" verticalEqual="<<boundary.verticalEqual;
+   std::cout<<"\n";
+  }
+  for(size_t pos:{size_t(0),size_t(2),size_t(4),size_t(6),size_t(8),size_t(10),size_t(12),size_t(14)}){
+   if(pos+1>=bytes.size())break;
+   const unsigned le=unsigned(bytes[pos])|(unsigned(bytes[pos+1])<<8);
+   const unsigned be=(unsigned(bytes[pos])<<8)|unsigned(bytes[pos+1]);
+   if(le==640||le==480||be==640||be==480)
+    std::cout<<"RM_DIMENSION_HINT "<<name<<" offset="<<pos<<" le16="<<le<<" be16="<<be<<"\n";
+  }
+  rmFiles.emplace_back(name,std::move(bytes));
   std::cout<<"RESOURCE "<<name<<" pixels="<<r.pixels
            <<" index0to127="<<r.lowerPixels<<" distinct="<<r.lowerDistinct
            <<" index128to255="<<r.upperPixels<<" distinct="<<r.upperDistinct<<"\n";
@@ -68,6 +99,20 @@ int main(int argc,char** argv){
   std::cout<<"\nUPPER_USED";
   for(unsigned i=128;i<256;++i)if(r.counts[i])std::cout<<" "<<i;
   std::cout<<"\n";
+ }
+ if(rmFiles.size()==2){
+  const auto& a=rmFiles[0].second;
+  const auto& b=rmFiles[1].second;
+  const size_t n=std::min<size_t>(384,std::min(a.size(),b.size()));
+  std::cout<<"RM_COMPARE_FIRST384 equal="
+           <<reluva::stafu::rmEqualRegion(a.data(),a.size(),b.data(),b.size(),0,n)
+           <<" of="<<n<<"\n";
+  if(a.size()>=384&&b.size()>=384){
+   size_t same=0;
+   for(size_t i=0;i<384;++i)
+    if(a[a.size()-384+i]==b[b.size()-384+i])++same;
+   std::cout<<"RM_COMPARE_LAST384 equal="<<same<<" of=384\n";
+  }
  }
  if(tails.size()==2){
   const auto& a=tails[0].second;
