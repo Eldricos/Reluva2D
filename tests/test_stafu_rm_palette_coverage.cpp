@@ -169,5 +169,17 @@ int main(){
  assert(!rmZero128Geometry(geomA,7,geomB,8,0,1,0,4,2).valid);
  assert(!rmZero128Geometry(geomA,8,geomB,8,1,0,0,4,2).valid);
  assert(!rmZero128Geometry(nullptr,8,geomB,8,0,1,0,4,2).valid);
+ const auto spans0=rmZero128Spans(geomA,8,geomB,8,0,0,4,2);
+ const auto spans1=rmZero128Spans(geomA,8,geomB,8,1,0,4,2);
+ assert(spans0.valid&&spans0.count==2&&spans0.pixels==3);
+ assert(spans0.starts[0]==0&&spans0.ends[0]==1);
+ assert(spans0.starts[1]==3&&spans0.ends[1]==3);
+ assert(spans1.valid&&spans1.count==1&&spans1.pixels==3);
+ assert(spans1.starts[0]==1&&spans1.ends[0]==3);
+ assert(rmZero128SharedSpans(spans0,spans1)==0);
+ assert(rmZero128SharedSpans(spans0,spans0)==2);
+ assert(!rmZero128Spans(geomA,7,geomB,8,0,0,4,2).valid);
+ assert(!rmZero128Spans(geomA,8,geomB,8,2,0,4,2).valid);
+ assert(!rmZero128Spans(nullptr,8,geomB,8,0,0,4,2).valid);
  return 0;
 }
