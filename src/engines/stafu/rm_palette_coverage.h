@@ -150,4 +150,34 @@ inline size_t rmEqualRegion(const uint8_t* a,size_t aLength,const uint8_t* b,
  return matches;
 }
 
+
+struct RmLeadingPalette {
+ bool present=false,plausibleVga6=false;
+ size_t channelsWithinVga6=0,uniqueColors=0,standardByteMatches=0,standardEntryMatches=0;
+ std::array<uint8_t,384> colors{};
+};
+inline RmLeadingPalette rmLeadingPalette(const uint8_t* bytes,size_t length,
+                                          const uint8_t* standard,size_t standardLength){
+ RmLeadingPalette r;
+ if(!bytes||length<384)return r;
+ r.present=true;
+ for(size_t i=0;i<384;++i){
+  r.colors[i]=bytes[i];
+  if(bytes[i]<=63)++r.channelsWithinVga6;
+  if(standard&&standardLength==384&&bytes[i]==standard[i])++r.standardByteMatches;
+ }
+ r.plausibleVga6=r.channelsWithinVga6==384;
+ for(size_t i=0;i<128;++i){
+  bool seen=false;
+  for(size_t j=0;j<i;++j)
+   if(bytes[3*i]==bytes[3*j]&&bytes[3*i+1]==bytes[3*j+1]&&
+      bytes[3*i+2]==bytes[3*j+2]){seen=true;break;}
+  if(!seen)++r.uniqueColors;
+  if(standard&&standardLength==384&&
+     bytes[3*i]==standard[3*i]&&bytes[3*i+1]==standard[3*i+1]&&
+     bytes[3*i+2]==standard[3*i+2])++r.standardEntryMatches;
+ }
+ return r;
+}
+
 }
