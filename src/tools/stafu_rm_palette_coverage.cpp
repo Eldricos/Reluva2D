@@ -40,11 +40,20 @@ int main(int argc,char** argv){
            <<"  RGB_MEMBERSHIP matches="<<offsets.rgbMembership<<" of=128\n";
 
  }
+ std::vector<std::pair<std::string,reluva::stafu::RmTrailingPalette>> tails;
  for(const char* name:{"BRIDGE.RM","VIEWSCR.RM"}){
   std::vector<uint8_t> bytes;
   if(!resources.read(name,bytes,error,2*1024*1024)){std::cerr<<name<<": "<<error<<"\n";return 1;}
   const auto r=reluva::stafu::rmPaletteCoverage(bytes.data(),bytes.size());
   if(!r.pixels){std::cerr<<name<<": insufficient raster bytes\n";return 1;}
+  const auto tail=reluva::stafu::rmTrailingPalette(bytes.data(),bytes.size(),standard.data(),standard.size());
+  std::cout<<"RM_TRAILER "<<name<<" total="<<tail.totalBytes
+           <<" remainder="<<tail.tailBytes<<" candidate384="<<tail.present
+           <<" vga6Channels="<<tail.channelsWithinVga6
+           <<" plausibleVga6="<<tail.plausibleVga6
+           <<" standardByteMatches="<<tail.sameBytesAsStandard
+           <<" standardEntryMatches="<<tail.sameEntriesAsStandard<<"\n";
+  tails.emplace_back(name,tail);
   std::cout<<"RESOURCE "<<name<<" pixels="<<r.pixels
            <<" index0to127="<<r.lowerPixels<<" distinct="<<r.lowerDistinct
            <<" index128to255="<<r.upperPixels<<" distinct="<<r.upperDistinct<<"\n";
@@ -60,6 +69,17 @@ int main(int argc,char** argv){
   for(unsigned i=128;i<256;++i)if(r.counts[i])std::cout<<" "<<i;
   std::cout<<"\n";
  }
+ if(tails.size()==2){
+  const auto& a=tails[0].second;
+  const auto& b=tails[1].second;
+  if(a.present&&b.present){
+   size_t same=0;
+   for(size_t i=0;i<384;++i)if(a.tail[i]==b.tail[i])++same;
+   std::cout<<"RM_TRAILER_COMPARE "<<tails[0].first<<" "<<tails[1].first
+            <<" equalBytes="<<same<<" of=384 identical="<<(same==384)<<"\n";
+  }else std::cout<<"RM_TRAILER_COMPARE unavailable=non384-remainder\n";
+ }
+ std::cout<<"NOTE: Trailer plausibility does not establish palette ownership.\n";
  std::cout<<"NOTE: Palette overlap is numerical only; it does not establish RM palette provenance.\n";
  return 0;
 }
