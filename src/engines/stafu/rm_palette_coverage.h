@@ -443,4 +443,41 @@ inline RmFlagPairs rmFlagPairs(const uint8_t* a,size_t aLength,
  return out;
 }
 
+
+struct RmZero128Geometry {
+ bool valid=false;
+ size_t total=0,rows=0,minX=0,minY=0,maxX=0,maxY=0;
+ size_t longestRun=0,longestX=0,longestY=0;
+ std::array<size_t,480> rowCounts{};
+ std::array<size_t,480> rowFirstX{};
+ std::array<size_t,480> rowLastX{};
+};
+inline RmZero128Geometry rmZero128Geometry(const uint8_t* bridge,size_t bridgeLength,
+ const uint8_t* view,size_t viewLength,size_t firstY,size_t lastY,
+ size_t offset=384,size_t width=640,size_t height=480){
+ RmZero128Geometry out;
+ if(!bridge||!view||!width||!height||height>out.rowCounts.size()||
+    firstY>lastY||lastY>=height||width>SIZE_MAX/height)return out;
+ const size_t raster=width*height;
+ if(offset>bridgeLength||raster>bridgeLength-offset||
+    offset>viewLength||raster>viewLength-offset)return out;
+ out.valid=true;
+ for(size_t y=firstY;y<=lastY;++y){
+  size_t run=0;
+  for(size_t x=0;x<width;++x){
+   const size_t i=offset+y*width+x;
+   if(bridge[i]!=128u||view[i]!=0u){run=0;continue;}
+   if(!out.total){out.minX=out.maxX=x;out.minY=out.maxY=y;}
+   if(x<out.minX)out.minX=x;
+   if(x>out.maxX)out.maxX=x;
+   out.maxY=y;
+   if(!out.rowCounts[y]){++out.rows;out.rowFirstX[y]=x;}
+   out.rowLastX[y]=x;
+   ++out.rowCounts[y];++out.total;++run;
+   if(run>out.longestRun){out.longestRun=run;out.longestX=x+1-run;out.longestY=y;}
+  }
+ }
+ return out;
+}
+
 }
