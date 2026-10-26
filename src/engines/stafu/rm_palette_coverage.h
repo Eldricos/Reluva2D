@@ -349,4 +349,36 @@ inline RmBoundaryRow rmBoundaryRow(const uint8_t* bytes,size_t length,size_t y,
  return out;
 }
 
+
+struct RmSharedRaster {
+ bool valid=false;
+ size_t pixels=0,exact=0,maskedEqual=0,longestRun=0,longestX=0,longestY=0;
+ size_t identicalRows=0;
+ std::array<size_t,480> rowMatches{};
+};
+inline RmSharedRaster rmSharedRaster(const uint8_t* a,size_t aLength,
+ const uint8_t* b,size_t bLength,size_t firstY,size_t lastY,
+ size_t offset=384,size_t width=640,size_t height=480){
+ RmSharedRaster out;
+ if(!a||!b||!width||!height||height>out.rowMatches.size()||
+    firstY>lastY||lastY>=height||width>SIZE_MAX/height)return out;
+ const size_t raster=width*height;
+ if(offset>aLength||raster>aLength-offset||offset>bLength||raster>bLength-offset)return out;
+ out.valid=true;
+ for(size_t y=firstY;y<=lastY;++y){
+  size_t run=0;
+  for(size_t x=0;x<width;++x){
+   const size_t i=offset+y*width+x;
+   ++out.pixels;
+   if((a[i]&127u)==(b[i]&127u))++out.maskedEqual;
+   if(a[i]==b[i]){
+    ++out.exact;++out.rowMatches[y];++run;
+    if(run>out.longestRun){out.longestRun=run;out.longestX=x+1-run;out.longestY=y;}
+   }else run=0;
+  }
+  if(out.rowMatches[y]==width)++out.identicalRows;
+ }
+ return out;
+}
+
 }
