@@ -64,6 +64,51 @@ int main(int argc,char** argv){
    std::cout<<"RM_PALETTE_RESOURCE source=installedTopLevel name="<<inventory[i]<<"\n";
  }else std::cout<<"RM_PALETTE_INVENTORY source=installedTopLevel unavailable=notDirectory\n";
 
+
+ // Milestone 99: inventory actual .RM resources before choosing a third example.
+ // Archive sizes are central-directory metadata; no extraction or modification.
+ auto isRm=[](std::string name){
+  std::transform(name.begin(),name.end(),name.begin(),[](unsigned char ch){
+   return static_cast<char>(std::tolower(ch));
+  });
+  return name.size()>=3&&name.compare(name.size()-3,3,".rm")==0;
+ };
+ std::vector<std::pair<std::string,uint64_t>> rmArchive;
+ std::string rmArchiveError;
+ reluva::stafu::ZipArchive rmZip;
+ if(rmZip.open(std::filesystem::path(argv[2])/"STTNG.ZIP",rmArchiveError)){
+  for(const auto& entry:rmZip.entries())
+   if(isRm(entry.name))rmArchive.emplace_back(entry.name,entry.uncompressedSize);
+  std::sort(rmArchive.begin(),rmArchive.end());
+  std::cout<<"RM_FILE_INVENTORY source=mainArchive totalEntries="<<rmZip.size()
+           <<" rmCount="<<rmArchive.size()<<"\n";
+  for(const auto& item:rmArchive)
+   std::cout<<"RM_FILE_ENTRY source=mainArchive name="<<item.first
+            <<" bytes="<<item.second
+            <<" expected307584="<<(item.second==307584)<<"\n";
+ }else std::cout<<"RM_FILE_INVENTORY source=mainArchive unavailable="
+                 <<rmArchiveError<<"\n";
+ std::vector<std::pair<std::string,uint64_t>> rmLoose;
+ std::error_code rmScanError;
+ if(std::filesystem::is_directory(looseRoot,rmScanError)){
+  for(std::filesystem::directory_iterator it(looseRoot,rmScanError),end;
+      !rmScanError&&it!=end;it.increment(rmScanError)){
+   std::error_code fileError;
+   if(!it->is_regular_file(fileError)||fileError)continue;
+   const auto name=it->path().filename().string();
+   if(!isRm(name))continue;
+   const auto size=it->file_size(fileError);
+   if(!fileError)rmLoose.emplace_back(name,size);
+  }
+  std::sort(rmLoose.begin(),rmLoose.end());
+  std::cout<<"RM_FILE_INVENTORY source=installedTopLevel rmCount="
+           <<rmLoose.size()<<" scanError="<<rmScanError.message()<<"\n";
+  for(const auto& item:rmLoose)
+   std::cout<<"RM_FILE_ENTRY source=installedTopLevel name="<<item.first
+            <<" bytes="<<item.second
+            <<" expected307584="<<(item.second==307584)<<"\n";
+ }else std::cout<<"RM_FILE_INVENTORY source=installedTopLevel unavailable=notDirectory\n";
+
  // Milestone 96: bounded read-only ASCII reference survey of installed executable/overlays.
  // Substring hits are clues, not evidence of calls, loading order or palette ownership.
  const std::vector<std::string> referenceTerms={
