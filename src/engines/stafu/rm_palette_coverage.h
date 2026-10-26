@@ -84,4 +84,37 @@ inline RmPaletteOffsetResult rmPaletteOffsets(const uint8_t* vga6,size_t vgaByte
  return out;
 }
 
+
+struct RmTrailingPalette {
+ bool present=false,plausibleVga6=false;
+ size_t totalBytes=0,tailBytes=0,channelsWithinVga6=0;
+ size_t sameBytesAsStandard=0,sameEntriesAsStandard=0;
+ std::array<uint8_t,384> tail{};
+};
+inline RmTrailingPalette rmTrailingPalette(const uint8_t* bytes,size_t length,
+                                           const uint8_t* standard,size_t standardLength,
+                                           size_t raster=640u*480u){
+ RmTrailingPalette r;
+ r.totalBytes=length;
+ if(!bytes||length<raster)return r;
+ r.tailBytes=length-raster;
+ if(r.tailBytes!=384)return r;
+ r.present=true;
+ for(size_t i=0;i<384;++i){
+  const uint8_t value=bytes[raster+i];
+  r.tail[i]=value;
+  if(value<=63)++r.channelsWithinVga6;
+ }
+ r.plausibleVga6=r.channelsWithinVga6==384;
+ if(standard&&standardLength==384){
+  for(size_t i=0;i<384;++i)
+   if(r.tail[i]==standard[i])++r.sameBytesAsStandard;
+  for(size_t i=0;i<128;++i)
+   if(r.tail[3*i]==standard[3*i]&&
+      r.tail[3*i+1]==standard[3*i+1]&&
+      r.tail[3*i+2]==standard[3*i+2])++r.sameEntriesAsStandard;
+ }
+ return r;
+}
+
 }
