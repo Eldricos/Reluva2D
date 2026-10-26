@@ -122,6 +122,49 @@ int main(int argc,char** argv){
             <<" distinctLow="<<c.distinctLow<<" distinctHigh="<<c.distinctHigh
             <<" topIndex="<<c.topIndex<<" topCount="<<c.topCount<<"\n";
   }
+  const auto scan=reluva::stafu::rmScanlines(bytes.data(),bytes.size());
+  if(!scan.valid){std::cerr<<name<<": invalid scanlines\n";return 1;}
+  std::vector<size_t> jumps;
+  for(size_t y=1;y<scan.height;++y)jumps.push_back(y);
+  std::sort(jumps.begin(),jumps.end(),[&](size_t a,size_t b){
+   const auto difference=[&](size_t y){
+    const size_t now=scan.rows[y].high,prev=scan.rows[y-1].high;
+    return now>prev?now-prev:prev-now;
+   };
+   return difference(a)!=difference(b)?difference(a)>difference(b):a<b;
+  });
+  for(size_t i=0;i<std::min<size_t>(12,jumps.size());++i){
+   const size_t y=jumps[i];
+   const auto& before=scan.rows[y-1];
+   const auto& after=scan.rows[y];
+   std::cout<<"RM_SCANLINE_JUMP "<<name<<" y="<<y
+            <<" previousHigh="<<before.high<<" currentHigh="<<after.high
+            <<" delta="<<(long long(after.high)-long long(before.high))
+            <<" transitions="<<after.transitions
+            <<" topIndex="<<after.dominantIndex
+            <<" topCount="<<after.dominantCount
+            <<" longestConstantRun="<<after.longestConstantRun<<"\n";
+  }
+  for(size_t y=0;y<scan.height;){
+   const bool allLow=scan.rows[y].high==0;
+   const bool allHigh=scan.rows[y].low==0;
+   if(!allLow&&!allHigh){++y;continue;}
+   size_t end=y+1;
+   while(end<scan.height&&
+         (allLow?scan.rows[end].high==0:scan.rows[end].low==0))++end;
+   std::cout<<"RM_SCANLINE_SOLID_BIT "<<name<<" firstY="<<y
+            <<" lastY="<<(end-1)<<" rows="<<(end-y)
+            <<" state="<<(allLow?"low":"high")<<"\n";
+   y=end;
+  }
+  for(size_t y=0;y<scan.height;++y){
+   const auto& row=scan.rows[y];
+   if(row.longestConstantRun>=320)
+    std::cout<<"RM_SCANLINE_UNIFORM "<<name<<" y="<<y
+             <<" longestConstantRun="<<row.longestConstantRun
+             <<" topIndex="<<row.dominantIndex<<" topCount="<<row.dominantCount
+             <<" high="<<row.high<<"\n";
+  }
   rmFiles.emplace_back(name,std::move(bytes));
   std::cout<<"RESOURCE "<<name<<" pixels="<<r.pixels
            <<" index0to127="<<r.lowerPixels<<" distinct="<<r.lowerDistinct
