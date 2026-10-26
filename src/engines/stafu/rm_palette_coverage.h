@@ -180,4 +180,62 @@ inline RmLeadingPalette rmLeadingPalette(const uint8_t* bytes,size_t length,
  return r;
 }
 
+
+struct RmHighBitAnalysis {
+ bool valid=false;
+ size_t lowPixels=0,highPixels=0;
+ size_t horizontalPairs=0,horizontalBitTransitions=0,horizontalMaskedEqual=0;
+ size_t horizontalFlagOnlyTransitions=0;
+ size_t verticalPairs=0,verticalBitTransitions=0,verticalMaskedEqual=0;
+ size_t verticalFlagOnlyTransitions=0;
+ size_t rowsLowOnly=0,rowsHighOnly=0,rowsMixed=0;
+ size_t pairedIndices=0,lowOnlyIndices=0,highOnlyIndices=0;
+ std::array<size_t,128> lowCounts{},highCounts{};
+};
+inline RmHighBitAnalysis rmHighBitAnalysis(const uint8_t* bytes,size_t length,
+                                           size_t offset=384,size_t width=640,size_t height=480){
+ RmHighBitAnalysis r;
+ if(!bytes||!width||!height||width>SIZE_MAX/height)return r;
+ const size_t raster=width*height;
+ if(offset>length||raster>length-offset)return r;
+ r.valid=true;
+ for(size_t y=0;y<height;++y){
+  size_t rowLow=0,rowHigh=0;
+  for(size_t x=0;x<width;++x){
+   const size_t i=offset+y*width+x;
+   const uint8_t v=bytes[i];
+   const unsigned index=v&127u;
+   if(v&128u){++r.highPixels;++r.highCounts[index];++rowHigh;}
+   else {++r.lowPixels;++r.lowCounts[index];++rowLow;}
+   if(x){
+    const uint8_t prev=bytes[i-1];
+    ++r.horizontalPairs;
+    if(((prev^v)&128u)!=0)++r.horizontalBitTransitions;
+    if((prev&127u)==index){
+     ++r.horizontalMaskedEqual;
+     if(((prev^v)&128u)!=0)++r.horizontalFlagOnlyTransitions;
+    }
+   }
+   if(y){
+    const uint8_t prev=bytes[i-width];
+    ++r.verticalPairs;
+    if(((prev^v)&128u)!=0)++r.verticalBitTransitions;
+    if((prev&127u)==index){
+     ++r.verticalMaskedEqual;
+     if(((prev^v)&128u)!=0)++r.verticalFlagOnlyTransitions;
+    }
+   }
+  }
+  if(rowLow&&rowHigh)++r.rowsMixed;
+  else if(rowHigh)++r.rowsHighOnly;
+  else ++r.rowsLowOnly;
+ }
+ for(size_t i=0;i<128;++i){
+  if(r.lowCounts[i]&&r.highCounts[i])++r.pairedIndices;
+  else if(r.lowCounts[i])++r.lowOnlyIndices;
+  else if(r.highCounts[i])++r.highOnlyIndices;
+ }
+ return r;
+}
+
 }
