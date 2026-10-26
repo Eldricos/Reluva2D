@@ -520,4 +520,40 @@ inline size_t rmZero128SharedSpans(const RmZero128Spans& a,const RmZero128Spans&
  return common;
 }
 
+
+struct RmHeaderSection {
+ size_t start=0,entries=0,unique=0,black=0,adjacentEqual=0;
+ size_t minChannel=255,maxChannel=0;
+};
+inline RmHeaderSection rmHeaderSection(const uint8_t* header,size_t length,
+ size_t first,size_t count){
+ RmHeaderSection out;
+ if(!header||length<384||first>=128||count>128-first)return out;
+ out.start=first;out.entries=count;
+ for(size_t i=first;i<first+count;++i){
+  const size_t j=i*3;
+  bool seen=false;
+  for(size_t k=first;k<i;++k)
+   if(header[k*3]==header[j]&&header[k*3+1]==header[j+1]&&
+      header[k*3+2]==header[j+2]){seen=true;break;}
+  if(!seen)++out.unique;
+  if(header[j]==0&&header[j+1]==0&&header[j+2]==0)++out.black;
+  if(i>first&&header[j]==header[j-3]&&header[j+1]==header[j-2]&&
+     header[j+2]==header[j-1])++out.adjacentEqual;
+  for(size_t c=0;c<3;++c){
+   if(header[j+c]<out.minChannel)out.minChannel=header[j+c];
+   if(header[j+c]>out.maxChannel)out.maxChannel=header[j+c];
+  }
+ }
+ return out;
+}
+inline size_t rmHeaderSectionMatches(const uint8_t* a,size_t aLength,
+ const uint8_t* b,size_t bLength,size_t first,size_t count){
+ if(!a||!b||aLength<384||bLength<384||first>=128||count>128-first)return 0;
+ size_t matches=0;
+ for(size_t i=first;i<first+count;++i)
+  if(a[3*i]==b[3*i]&&a[3*i+1]==b[3*i+1]&&a[3*i+2]==b[3*i+2])++matches;
+ return matches;
+}
+
 }
