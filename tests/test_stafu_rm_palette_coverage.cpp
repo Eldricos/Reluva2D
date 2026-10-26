@@ -129,5 +129,14 @@ int main(){
  assert(!rmBoundaryRow(boundaryRowBytes,sizeof(boundaryRowBytes)-1,0,0,10,1).valid);
  assert(!rmBoundaryRow(boundaryRowBytes,sizeof(boundaryRowBytes),1,0,10,1).valid);
  assert(!rmBoundaryRow(nullptr,sizeof(boundaryRowBytes),0,0,10,1).valid);
+ const uint8_t sharedA[]={1,2,3,4, 5,6,7,8};
+ const uint8_t sharedB[]={1,2,9,4, 5,6,7,8};
+ const auto shared=rmSharedRaster(sharedA,sizeof(sharedA),sharedB,sizeof(sharedB),0,1,0,4,2);
+ assert(shared.valid&&shared.pixels==8&&shared.exact==7&&shared.maskedEqual==7);
+ assert(shared.identicalRows==1&&shared.rowMatches[0]==3&&shared.rowMatches[1]==4);
+ assert(shared.longestRun==4&&shared.longestX==0&&shared.longestY==1);
+ assert(!rmSharedRaster(sharedA,7,sharedB,8,0,1,0,4,2).valid);
+ assert(!rmSharedRaster(sharedA,8,sharedB,8,1,0,0,4,2).valid);
+ assert(!rmSharedRaster(nullptr,8,sharedB,8,0,1,0,4,2).valid);
  return 0;
 }
