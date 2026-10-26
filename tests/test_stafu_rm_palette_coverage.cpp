@@ -106,5 +106,18 @@ int main(){
  assert(!rmRegionGrid(regions,sizeof(regions)-1,0,4,4).valid);
  assert(!rmRegionGrid(nullptr,sizeof(regions),0,4,4).valid);
  assert(!rmRegionGrid(regions,sizeof(regions),0,3,4).valid);
+ const uint8_t scanBytes[]={0,0,128,128, 7,7,7,7, 129,1,129,1};
+ const auto scan=rmScanlines(scanBytes,sizeof(scanBytes),0,4,3);
+ assert(scan.valid&&scan.height==3);
+ assert(scan.rows[0].low==2&&scan.rows[0].high==2);
+ assert(scan.rows[0].transitions==1&&scan.rows[0].longestConstantRun==2);
+ assert(scan.rows[0].dominantIndex==0&&scan.rows[0].dominantCount==2);
+ assert(scan.rows[1].low==4&&scan.rows[1].high==0);
+ assert(scan.rows[1].transitions==0&&scan.rows[1].longestConstantRun==4);
+ assert(scan.rows[2].low==2&&scan.rows[2].high==2);
+ assert(scan.rows[2].transitions==3&&scan.rows[2].longestConstantRun==1);
+ assert(!rmScanlines(scanBytes,sizeof(scanBytes)-1,0,4,3).valid);
+ assert(!rmScanlines(nullptr,sizeof(scanBytes),0,4,3).valid);
+ assert(!rmScanlines(scanBytes,sizeof(scanBytes),0,4,481).valid);
  return 0;
 }
