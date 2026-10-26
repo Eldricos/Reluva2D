@@ -88,5 +88,23 @@ int main(){
  assert(!rmHighBitAnalysis(flags,sizeof(flags),1,4,2).valid);
  assert(!rmHighBitAnalysis(nullptr,sizeof(flags),0,4,2).valid);
  assert(!rmHighBitAnalysis(flags,sizeof(flags),0,0,2).valid);
+ const uint8_t regions[]={
+  0,0,128,128,
+  0,0,128,128,
+  1,1,129,129,
+  1,1,129,129
+ };
+ const auto grid=rmRegionGrid(regions,sizeof(regions),0,4,4);
+ assert(grid.valid);
+ assert(grid.cells[0].x0==0&&grid.cells[0].y0==0);
+ assert(grid.cells[0].width==1&&grid.cells[0].height==1);
+ assert(grid.cells[0].low==1&&grid.cells[0].high==0);
+ assert(grid.cells[0].topIndex==0&&grid.cells[0].topCount==1);
+ assert(grid.cells[2].high==1&&grid.cells[2].distinctHigh==1);
+ assert(grid.cells[8].low==1&&grid.cells[8].topIndex==1);
+ assert(grid.cells[10].high==1&&grid.cells[10].topIndex==129);
+ assert(!rmRegionGrid(regions,sizeof(regions)-1,0,4,4).valid);
+ assert(!rmRegionGrid(nullptr,sizeof(regions),0,4,4).valid);
+ assert(!rmRegionGrid(regions,sizeof(regions),0,3,4).valid);
  return 0;
 }
