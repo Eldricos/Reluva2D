@@ -248,6 +248,28 @@ int main(int argc,char** argv){
              <<" exact="<<d.bandExact[k]<<" flagOnly="<<d.bandFlagOnly[k]
              <<" other="<<d.bandOther[k]<<"\n";
   }
+  for(const auto& region:regions){
+   const auto pairs=reluva::stafu::rmFlagPairs(a.data(),a.size(),b.data(),b.size(),region.first,region.last);
+   if(!pairs.valid){std::cerr<<"invalid RM flag pair region\n";return 1;}
+   std::cout<<"RM_FLAG_PAIRS "<<region.label
+            <<" bridgeLow_viewHigh="<<pairs.lowToHigh
+            <<" bridgeHigh_viewLow="<<pairs.highToLow<<"\n";
+   std::vector<size_t> indices;
+   for(size_t k=0;k<128;++k)
+    if(pairs.lowToHighByBase[k]||pairs.highToLowByBase[k])indices.push_back(k);
+   std::sort(indices.begin(),indices.end(),[&](size_t x,size_t y){
+    const size_t ax=pairs.lowToHighByBase[x]+pairs.highToLowByBase[x];
+    const size_t ay=pairs.lowToHighByBase[y]+pairs.highToLowByBase[y];
+    return ax!=ay?ax>ay:x<y;
+   });
+   for(size_t k=0;k<std::min<size_t>(16,indices.size());++k){
+    const size_t base=indices[k];
+    std::cout<<"RM_FLAG_PAIR "<<region.label<<" base="<<base
+             <<" low="<<base<<" high="<<(base+128)
+             <<" bridgeLow_viewHigh="<<pairs.lowToHighByBase[base]
+             <<" bridgeHigh_viewLow="<<pairs.highToLowByBase[base]<<"\n";
+   }
+  }
   const size_t n=std::min<size_t>(384,std::min(a.size(),b.size()));
   std::cout<<"RM_COMPARE_FIRST384 equal="
            <<reluva::stafu::rmEqualRegion(a.data(),a.size(),b.data(),b.size(),0,n)
