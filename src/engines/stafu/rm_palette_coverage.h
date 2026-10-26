@@ -238,4 +238,42 @@ inline RmHighBitAnalysis rmHighBitAnalysis(const uint8_t* bytes,size_t length,
  return r;
 }
 
+
+struct RmRegion {
+ size_t x0=0,y0=0,width=0,height=0,low=0,high=0,distinctLow=0,distinctHigh=0;
+ unsigned topIndex=0;
+ size_t topCount=0;
+};
+struct RmRegionGrid {
+ bool valid=false;
+ std::array<RmRegion,16> cells{};
+};
+inline RmRegionGrid rmRegionGrid(const uint8_t* bytes,size_t length,
+                                  size_t offset=384,size_t width=640,size_t height=480){
+ RmRegionGrid out;
+ if(!bytes||width<4||height<4||width>SIZE_MAX/height)return out;
+ const size_t raster=width*height;
+ if(offset>length||raster>length-offset)return out;
+ out.valid=true;
+ for(size_t gy=0;gy<4;++gy)for(size_t gx=0;gx<4;++gx){
+  auto& cell=out.cells[gy*4+gx];
+  cell.x0=gx*width/4;
+  cell.y0=gy*height/4;
+  const size_t xEnd=(gx+1)*width/4,yEnd=(gy+1)*height/4;
+  cell.width=xEnd-cell.x0;
+  cell.height=yEnd-cell.y0;
+  std::array<size_t,256> counts{};
+  for(size_t y=cell.y0;y<yEnd;++y)
+   for(size_t x=cell.x0;x<xEnd;++x){
+    const unsigned v=bytes[offset+y*width+x];
+    if(v&128u)++cell.high;else ++cell.low;
+    if(++counts[v]>cell.topCount){cell.topCount=counts[v];cell.topIndex=v;}
+   }
+  for(size_t i=0;i<256;++i)if(counts[i]){
+   if(i<128)++cell.distinctLow;else ++cell.distinctHigh;
+  }
+ }
+ return out;
+}
+
 }
