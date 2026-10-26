@@ -362,6 +362,26 @@ int main(int argc,char** argv){
            <<" membership="<<standardMatch.rgbMembership
            <<" standardEntries=128\n";
  }
+ // Milestone 94: fixed-size sections are observational, not assumed format boundaries.
+ for(const auto& entry:rmFiles){
+  const auto& bytes=entry.second;
+  for(size_t first=0;first<128;first+=16){
+   const auto s=reluva::stafu::rmHeaderSection(bytes.data(),bytes.size(),first,16);
+   std::cout<<"RM_HEADER_SECTION rm="<<entry.first<<" first="<<first
+            <<" last="<<(first+15)<<" unique="<<s.unique
+            <<" black="<<s.black<<" adjacentEqual="<<s.adjacentEqual
+            <<" minChannel="<<s.minChannel<<" maxChannel="<<s.maxChannel<<"\n";
+  }
+ }
+ if(rmFiles.size()==2){
+  for(size_t first=0;first<128;first+=16)
+   std::cout<<"RM_HEADER_SECTION_COMPARE first="<<first
+            <<" last="<<(first+15)
+            <<" equalEntries="<<reluva::stafu::rmHeaderSectionMatches(
+              rmFiles[0].second.data(),rmFiles[0].second.size(),
+              rmFiles[1].second.data(),rmFiles[1].second.size(),first,16)
+            <<" of=16\n";
+ }
  if(tails.size()==2){
   const auto& a=tails[0].second;
   const auto& b=tails[1].second;
