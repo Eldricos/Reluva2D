@@ -383,6 +383,72 @@ int main(int argc,char** argv){
   }
  }
 
+
+ // Milestone 102: inspect the exact upper-index boundary in holodeck.rm.
+ // These are raw index values, not inferred palette-bank or transparency semantics.
+ {
+  reluva::stafu::ZipArchive zip;
+  std::string zipError;
+  if(!zip.open(std::filesystem::path(argv[2])/"STTNG.ZIP",zipError)){
+   std::cout<<"RM_HOLO_BOUNDARY_STATUS read=0 reason="<<zipError<<"\n";
+  }else{
+   std::vector<uint8_t> data;
+   std::string readError;
+   if(!zip.read("holodeck.rm",data,readError,2*1024*1024)){
+    std::cout<<"RM_HOLO_BOUNDARY_STATUS read=0 reason="<<readError<<"\n";
+   }else if(data.size()!=384+640*480){
+    std::cout<<"RM_HOLO_BOUNDARY_STATUS read=1 layout=unexpected bytes="<<data.size()<<"\n";
+   }else{
+    int firstRow=-1,lastRow=-1,firstX=-1,lastX=-1;
+    size_t highTotal=0;
+    size_t indexCounts[128]={};
+    for(int y=0;y<480;++y){
+     size_t rowCounts[128]={};
+     int left=-1,right=-1;
+     size_t spans=0,longest=0;
+     int spanStart=-1;
+     for(int x=0;x<=640;++x){
+      const bool high=x<640 && data[384+size_t(y)*640+x]>=128;
+      if(high){
+       const unsigned index=data[384+size_t(y)*640+x]-128;
+       ++rowCounts[index];
+       ++indexCounts[index];
+       ++highTotal;
+       if(left<0)left=x;
+       right=x;
+       if(spanStart<0)spanStart=x;
+       if(firstRow<0){firstRow=y;firstX=x;}
+       lastRow=y;lastX=x;
+      }else if(spanStart>=0){
+       ++spans;
+       longest=std::max(longest,size_t(x-spanStart));
+       spanStart=-1;
+      }
+     }
+     if(left<0)continue;
+     size_t count=0,distinct=0;
+     std::ostringstream indices;
+     for(unsigned i=0;i<128;++i)if(rowCounts[i]){
+      count+=rowCounts[i];++distinct;
+      if(indices.tellp()>0)indices<<",";
+      indices<<(i+128)<<":"<<rowCounts[i];
+     }
+     std::cout<<"RM_HOLO_ROW y="<<y<<" high="<<count
+              <<" firstX="<<left<<" lastX="<<right
+              <<" spans="<<spans<<" longestSpan="<<longest
+              <<" distinct="<<distinct<<" indices="<<indices.str()<<"\n";
+    }
+    std::cout<<"RM_HOLO_BOUNDARY_STATUS read=1 layout=expected"
+             <<" firstRow="<<firstRow<<" lastRow="<<lastRow
+             <<" firstX="<<firstX<<" lastX="<<lastX
+             <<" highPixels="<<highTotal<<"\n";
+    for(unsigned i=0;i<128;++i)if(indexCounts[i])
+     std::cout<<"RM_HOLO_INDEX index="<<(i+128)
+              <<" pixels="<<indexCounts[i]<<"\n";
+   }
+  }
+ }
+
  // Milestone 98: independent third-RM comparison, without changing existing
  // two-file differential diagnostics or assuming the third resource is identical.
  {
