@@ -449,6 +449,61 @@ int main(int argc,char** argv){
   }
  }
 
+
+ // Milestone 103: raw index neighborhoods at the holodeck boundary.
+ // The numeric +/-128 comparison is observational, not a palette-bank claim.
+ {
+  reluva::stafu::ZipArchive zip;
+  std::string error103;
+  if(!zip.open(std::filesystem::path(argv[2])/"STTNG.ZIP",error103)){
+   std::cout<<"RM_HOLO_EDGE_STATUS read=0 reason="<<error103<<"\n";
+  }else{
+   std::vector<uint8_t> bytes;
+   if(!zip.read("holodeck.rm",bytes,error103,2*1024*1024)){
+    std::cout<<"RM_HOLO_EDGE_STATUS read=0 reason="<<error103<<"\n";
+   }else if(bytes.size()!=384+640*480){
+    std::cout<<"RM_HOLO_EDGE_STATUS read=1 layout=unexpected bytes="<<bytes.size()<<"\n";
+   }else{
+    auto pixel=[&](int x,int y)->unsigned{return bytes[384+size_t(y)*640+size_t(x)];};
+    const int rows[]={363,364,365,393,394,395,396,397,479};
+    const struct {int left,right;} windows[]={{0,15},{368,400},{624,639}};
+    for(int y:rows){
+     for(const auto& window:windows){
+      std::ostringstream raw;
+      size_t low=0,high=0;
+      for(int x=window.left;x<=window.right;++x){
+       if(x!=window.left)raw<<",";
+       const unsigned v=pixel(x,y);
+       raw<<v;
+       if(v>=128)++high;else ++low;
+      }
+      std::cout<<"RM_HOLO_EDGE_ROW y="<<y<<" x0="<<window.left
+               <<" x1="<<window.right<<" low="<<low<<" high="<<high
+               <<" values="<<raw.str()<<"\n";
+     }
+    }
+    // Compare adjacent pixels across the horizontal transition (y=394/395)
+    // and vertical boundary (x=383/384) using equal or bit7-only differences.
+    for(int x:{0,1,15,368,383,384,385,400,624,639}){
+     const unsigned a=pixel(x,394),b=pixel(x,395);
+     std::cout<<"RM_HOLO_EDGE_VERTICAL x="<<x<<" above="<<a<<" below="<<b
+              <<" equal="<<(a==b)<<" sameLow7="<<((a&127)==(b&127))<<"\n";
+    }
+    for(int y:{393,394,395,396,397,427,479}){
+     const unsigned a=pixel(383,y),b=pixel(384,y);
+     std::cout<<"RM_HOLO_EDGE_HORIZONTAL y="<<y<<" left="<<a<<" right="<<b
+              <<" equal="<<(a==b)<<" sameLow7="<<((a&127)==(b&127))<<"\n";
+    }
+    for(int y:{363,364,365,393,394,395,396,397,479}){
+     const unsigned a=pixel(0,y),b=pixel(1,y);
+     std::cout<<"RM_HOLO_EDGE_COLUMN y="<<y<<" x0="<<a<<" x1="<<b
+              <<" equal="<<(a==b)<<" sameLow7="<<((a&127)==(b&127))<<"\n";
+    }
+    std::cout<<"RM_HOLO_EDGE_STATUS read=1 layout=expected\n";
+   }
+  }
+ }
+
  // Milestone 98: independent third-RM comparison, without changing existing
  // two-file differential diagnostics or assuming the third resource is identical.
  {
