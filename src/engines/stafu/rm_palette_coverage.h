@@ -117,4 +117,37 @@ inline RmTrailingPalette rmTrailingPalette(const uint8_t* bytes,size_t length,
  return r;
 }
 
+
+struct RmBoundary {
+ bool valid=false;
+ size_t offset=0;
+ RmPaletteCoverage coverage{};
+ size_t adjacentEqual=0,verticalEqual=0;
+};
+inline RmBoundary rmBoundary(const uint8_t* data,size_t length,size_t offset,
+                             size_t width=640,size_t height=480){
+ RmBoundary out;
+ out.offset=offset;
+ if(!data||!width||!height||width>SIZE_MAX/height)return out;
+ const size_t raster=width*height;
+ if(offset>length||raster>length-offset)return out;
+ out.valid=true;
+ out.coverage=rmPaletteCoverage(data+offset,length-offset,raster);
+ for(size_t y=0;y<height;++y)
+  for(size_t x=0;x<width;++x){
+   const size_t i=offset+y*width+x;
+   if(x&&data[i]==data[i-1])++out.adjacentEqual;
+   if(y&&data[i]==data[i-width])++out.verticalEqual;
+  }
+ return out;
+}
+inline size_t rmEqualRegion(const uint8_t* a,size_t aLength,const uint8_t* b,
+                            size_t bLength,size_t start,size_t count){
+ if(!a||!b||start>aLength||start>bLength||
+    count>aLength-start||count>bLength-start)return 0;
+ size_t matches=0;
+ for(size_t i=0;i<count;++i)if(a[start+i]==b[start+i])++matches;
+ return matches;
+}
+
 }
