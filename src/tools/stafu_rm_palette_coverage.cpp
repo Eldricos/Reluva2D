@@ -5,6 +5,8 @@
 #include <algorithm>
 #include <filesystem>
 #include <cctype>
+#include <fstream>
+#include <iterator>
 #include <iostream>
 #include <iomanip>
 #include <sstream>
@@ -61,6 +63,84 @@ int main(int argc,char** argv){
   for(size_t i=0;i<std::min<size_t>(60,inventory.size());++i)
    std::cout<<"RM_PALETTE_RESOURCE source=installedTopLevel name="<<inventory[i]<<"\n";
  }else std::cout<<"RM_PALETTE_INVENTORY source=installedTopLevel unavailable=notDirectory\n";
+
+ // Milestone 96: bounded read-only ASCII reference survey of installed executable/overlays.
+ // Substring hits are clues, not evidence of calls, loading order or palette ownership.
+ const std::vector<std::string> referenceTerms={
+  "BRIDGE.RM","VIEWSCR.RM","STANDARD.PAL","COLOR.IMG",
+  "BRIDGE.IMG","DBRIDGE.IMG"
+ };
+ std::error_code referenceError;
+ std::vector<std::filesystem::path> binaries;
+ if(std::filesystem::is_directory(looseRoot,referenceError)){
+  for(std::filesystem::directory_iterator it(looseRoot,referenceError),end;
+      !referenceError&&it!=end;it.increment(referenceError)){
+   if(!it->is_regular_file(referenceError))continue;
+   std::string ext=it->path().extension().string();
+   std::transform(ext.begin(),ext.end(),ext.begin(),[](unsigned char ch){
+    return static_cast<char>(std::toupper(ch));
+   });
+   if(ext==".EXE"||ext==".OVL")binaries.push_back(it->path());
+  }
+ }
+ std::sort(binaries.begin(),binaries.end());
+ std::cout<<"RM_REFERENCE_FILES candidates="<<binaries.size()
+          <<" scanError="<<referenceError.message()<<"\n";
+ for(const auto& file:binaries){
+  std::error_code sizeError;
+  const auto fileSize=std::filesystem::file_size(file,sizeError);
+  if(sizeError||fileSize>8ull*1024*1024){
+   std::cout<<"RM_REFERENCE_FILE name="<<file.filename().string()
+            <<" status=skippedSizeOrError\n";
+   continue;
+  }
+  std::ifstream input(file,std::ios::binary);
+  if(!input){
+   std::cout<<"RM_REFERENCE_FILE name="<<file.filename().string()
+            <<" status=unreadable\n";
+   continue;
+  }
+  std::vector<unsigned char> raw((std::istreambuf_iterator<char>(input)),
+                                  std::istreambuf_iterator<char>());
+  std::string upper;
+  upper.reserve(raw.size());
+  for(unsigned char ch:raw)upper.push_back(static_cast<char>(std::toupper(ch)));
+  std::vector<std::pair<size_t,size_t>> hits;
+  for(size_t term=0;term<referenceTerms.size();++term){
+   size_t pos=0;
+   while((pos=upper.find(referenceTerms[term],pos))!=std::string::npos){
+    hits.emplace_back(pos,term);
+    ++pos;
+   }
+  }
+  std::sort(hits.begin(),hits.end());
+  std::cout<<"RM_REFERENCE_FILE name="<<file.filename().string()
+           <<" bytes="<<raw.size()<<" hits="<<hits.size()<<"\n";
+  for(size_t i=0;i<std::min<size_t>(100,hits.size());++i){
+   const auto [offset,term]=hits[i];
+   const size_t left=offset>64?offset-64:0;
+   const size_t right=std::min(raw.size(),offset+referenceTerms[term].size()+64);
+   std::string context;
+   for(size_t j=left;j<right;++j){
+    const unsigned char ch=raw[j];
+    context.push_back(ch>=32&&ch<=126?static_cast<char>(ch):'.');
+   }
+   std::cout<<"RM_REFERENCE_HIT file="<<file.filename().string()
+            <<" offset="<<offset<<" term="<<referenceTerms[term]
+            <<" context="<<context<<"\n";
+  }
+  if(hits.size()>100)
+   std::cout<<"RM_REFERENCE_TRUNCATED file="<<file.filename().string()
+            <<" remaining="<<(hits.size()-100)<<"\n";
+  for(size_t i=1;i<hits.size();++i){
+   const size_t distance=hits[i].first-hits[i-1].first;
+   if(distance<=256)
+    std::cout<<"RM_REFERENCE_NEAR file="<<file.filename().string()
+             <<" first="<<referenceTerms[hits[i-1].second]
+             <<" second="<<referenceTerms[hits[i].second]
+             <<" distance="<<distance<<"\n";
+  }
+ }
  std::vector<uint8_t> standard;
  if(!resources.read("standard.pal",standard,error,4096)||standard.size()!=384){
   std::cerr<<"standard.pal unavailable or unexpected size: "<<error<<"\n";return 1;
