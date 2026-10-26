@@ -416,4 +416,31 @@ inline RmDifferenceRegion rmDifferenceRegion(const uint8_t* a,size_t aLength,
  return out;
 }
 
+
+struct RmFlagPairs {
+ bool valid=false;
+ size_t lowToHigh=0,highToLow=0;
+ std::array<size_t,128> lowToHighByBase{};
+ std::array<size_t,128> highToLowByBase{};
+};
+inline RmFlagPairs rmFlagPairs(const uint8_t* a,size_t aLength,
+ const uint8_t* b,size_t bLength,size_t firstY,size_t lastY,
+ size_t offset=384,size_t width=640,size_t height=480){
+ RmFlagPairs out;
+ if(!a||!b||!width||!height||firstY>lastY||lastY>=height||
+    width>SIZE_MAX/height)return out;
+ const size_t raster=width*height;
+ if(offset>aLength||raster>aLength-offset||offset>bLength||raster>bLength-offset)return out;
+ out.valid=true;
+ for(size_t y=firstY;y<=lastY;++y)
+  for(size_t x=0;x<width;++x){
+   const size_t i=offset+y*width+x;
+   if((a[i]^b[i])!=128u)continue;
+   const size_t base=a[i]&127u;
+   if(a[i]&128u){++out.highToLow;++out.highToLowByBase[base];}
+   else{++out.lowToHigh;++out.lowToHighByBase[base];}
+  }
+ return out;
+}
+
 }
