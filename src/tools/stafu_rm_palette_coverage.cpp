@@ -504,6 +504,81 @@ int main(int argc,char** argv){
   }
  }
 
+
+ // Milestone 104: compare adjacent pixels differing only by bit 7 in all five RMs.
+ // Count horizontal and vertical transitions separately and preserve exact pairs.
+ {
+  reluva::stafu::ZipArchive zip;
+  std::string err104;
+  if(!zip.open(std::filesystem::path(argv[2])/"STTNG.ZIP",err104)){
+   std::cout<<"RM_BIT7_EDGE_STATUS read=0 reason="<<err104<<"\n";
+  }else{
+   size_t readCount=0;
+   for(const char* name:{"bridge.rm","viewscr.rm","transp.rm","holodeck.rm","endgame.rm"}){
+    std::vector<uint8_t> bytes;
+    std::string readError;
+    if(!zip.read(name,bytes,readError,2*1024*1024)){
+     std::cout<<"RM_BIT7_EDGE_RESOURCE name="<<name<<" read=0 reason="<<readError<<"\n";
+     continue;
+    }
+    if(bytes.size()!=384+640*480){
+     std::cout<<"RM_BIT7_EDGE_RESOURCE name="<<name<<" read=1 layout=unexpected bytes="
+              <<bytes.size()<<"\n";
+     continue;
+    }
+    ++readCount;
+    auto pixel=[&](int x,int y)->unsigned{
+     return bytes[384+size_t(y)*640+size_t(x)];
+    };
+    size_t horizontal=0,vertical=0;
+    size_t hRow[480]={},vRow[480]={};
+    size_t hPair[128]={},vPair[128]={};
+    for(int y=0;y<480;++y){
+     for(int x=0;x<640;++x){
+      const unsigned a=pixel(x,y);
+      if(x+1<640){
+       const unsigned b=pixel(x+1,y);
+       if((a^b)==128){
+        ++horizontal;++hRow[y];++hPair[a&127];
+       }
+      }
+      if(y+1<480){
+       const unsigned b=pixel(x,y+1);
+       if((a^b)==128){
+        ++vertical;++vRow[y];++vPair[a&127];
+       }
+      }
+     }
+    }
+    std::cout<<"RM_BIT7_EDGE_RESOURCE name="<<name<<" read=1 horizontal="
+             <<horizontal<<" vertical="<<vertical
+             <<" horizontalComparisons="<<(639*480)
+             <<" verticalComparisons="<<(640*479)<<"\n";
+    auto reportRows=[&](const char* axis,const size_t* rows){
+     std::vector<int> ranked;
+     for(int y=0;y<480;++y)if(rows[y])ranked.push_back(y);
+     std::sort(ranked.begin(),ranked.end(),[&](int a,int b){
+      return rows[a]!=rows[b]?rows[a]>rows[b]:a<b;
+     });
+     std::cout<<"RM_BIT7_EDGE_ROWS name="<<name<<" axis="<<axis
+              <<" affected="<<ranked.size()<<"\n";
+     for(size_t i=0;i<std::min<size_t>(12,ranked.size());++i)
+      std::cout<<"RM_BIT7_EDGE_ROW name="<<name<<" axis="<<axis
+               <<" y="<<ranked[i]<<" transitions="<<rows[ranked[i]]<<"\n";
+    };
+    reportRows("horizontal",hRow);
+    reportRows("vertical",vRow);
+    for(unsigned low=0;low<128;++low){
+     if(hPair[low]||vPair[low])
+      std::cout<<"RM_BIT7_EDGE_PAIR name="<<name<<" low="<<low
+               <<" high="<<(low+128)<<" horizontal="<<hPair[low]
+               <<" vertical="<<vPair[low]<<"\n";
+    }
+   }
+   std::cout<<"RM_BIT7_EDGE_STATUS read="<<readCount<<" requested=5\n";
+  }
+ }
+
  // Milestone 98: independent third-RM comparison, without changing existing
  // two-file differential diagnostics or assuming the third resource is identical.
  {
