@@ -93,6 +93,24 @@ int main(int argc,char** argv){
    if(le==640||le==480||be==640||be==480)
     std::cout<<"RM_DIMENSION_HINT "<<name<<" offset="<<pos<<" le16="<<le<<" be16="<<be<<"\n";
   }
+  const auto bits=reluva::stafu::rmHighBitAnalysis(bytes.data(),bytes.size());
+  std::cout<<"RM_HIGHBIT "<<name<<" valid="<<bits.valid
+           <<" lowPixels="<<bits.lowPixels<<" highPixels="<<bits.highPixels
+           <<" pairedIndices="<<bits.pairedIndices
+           <<" lowOnlyIndices="<<bits.lowOnlyIndices
+           <<" highOnlyIndices="<<bits.highOnlyIndices
+           <<" rowsMixed="<<bits.rowsMixed
+           <<" rowsLowOnly="<<bits.rowsLowOnly
+           <<" rowsHighOnly="<<bits.rowsHighOnly<<"\n";
+  std::cout<<"RM_HIGHBIT_NEIGHBORS "<<name
+           <<" horizontalPairs="<<bits.horizontalPairs
+           <<" bitTransitions="<<bits.horizontalBitTransitions
+           <<" maskedEqual="<<bits.horizontalMaskedEqual
+           <<" flagOnlyTransitions="<<bits.horizontalFlagOnlyTransitions
+           <<" verticalPairs="<<bits.verticalPairs
+           <<" verticalBitTransitions="<<bits.verticalBitTransitions
+           <<" verticalMaskedEqual="<<bits.verticalMaskedEqual
+           <<" verticalFlagOnlyTransitions="<<bits.verticalFlagOnlyTransitions<<"\n";
   rmFiles.emplace_back(name,std::move(bytes));
   std::cout<<"RESOURCE "<<name<<" pixels="<<r.pixels
            <<" index0to127="<<r.lowerPixels<<" distinct="<<r.lowerDistinct
