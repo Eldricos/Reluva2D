@@ -119,5 +119,15 @@ int main(){
  assert(!rmScanlines(scanBytes,sizeof(scanBytes)-1,0,4,3).valid);
  assert(!rmScanlines(nullptr,sizeof(scanBytes),0,4,3).valid);
  assert(!rmScanlines(scanBytes,sizeof(scanBytes),0,4,481).valid);
+ const uint8_t boundaryRowBytes[]={9,9,128,128,128,1,1,1,1,1};
+ const auto detail=rmBoundaryRow(boundaryRowBytes,sizeof(boundaryRowBytes),0,0,10,1);
+ assert(detail.valid&&detail.low==7&&detail.high==3);
+ assert(detail.runCount==3&&detail.counts[9]==2&&detail.counts[128]==3&&detail.counts[1]==5);
+ assert(detail.longestRuns[0].x==5&&detail.longestRuns[0].length==5&&detail.longestRuns[0].index==1);
+ assert(detail.longestRuns[1].x==2&&detail.longestRuns[1].length==3&&detail.longestRuns[1].index==128);
+ assert(detail.longestRuns[2].x==0&&detail.longestRuns[2].length==2&&detail.longestRuns[2].index==9);
+ assert(!rmBoundaryRow(boundaryRowBytes,sizeof(boundaryRowBytes)-1,0,0,10,1).valid);
+ assert(!rmBoundaryRow(boundaryRowBytes,sizeof(boundaryRowBytes),1,0,10,1).valid);
+ assert(!rmBoundaryRow(nullptr,sizeof(boundaryRowBytes),0,0,10,1).valid);
  return 0;
 }
