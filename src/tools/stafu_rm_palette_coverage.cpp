@@ -579,6 +579,67 @@ int main(int argc,char** argv){
   }
  }
 
+
+ // Milestone 105: bounded, read-only observations near STANDARD.PAL in STTNG.OVL.
+ // Printable strings and VGA6-like byte runs do not establish executable semantics.
+ {
+  std::ifstream input(looseRoot/"STTNG.OVL",std::ios::binary);
+  if(!input){
+   std::cout<<"RM_OVL_PALETTE_STATUS read=0 reason=missingOverlay\n";
+  }else{
+   std::vector<unsigned char> bytes((std::istreambuf_iterator<char>(input)),
+                                     std::istreambuf_iterator<char>());
+   const std::string needle105="STANDARD.PAL";
+   std::vector<size_t> offsets;
+   for(size_t i=0;i+needle105.size()<=bytes.size();++i){
+    bool match=true;
+    for(size_t j=0;j<needle105.size();++j)
+     if(std::toupper(bytes[i+j])!=needle105[j]){match=false;break;}
+    if(match)offsets.push_back(i);
+   }
+   std::cout<<"RM_OVL_PALETTE_STATUS read=1 bytes="<<bytes.size()
+            <<" references="<<offsets.size()<<"\n";
+   for(size_t offset:offsets){
+    const size_t start=offset>512?offset-512:0;
+    const size_t end=std::min(bytes.size(),offset+needle105.size()+512);
+    std::cout<<"RM_OVL_PALETTE_ANCHOR offset="<<offset
+             <<" rangeStart="<<start<<" rangeEnd="<<end<<"\n";
+    // Report nearby printable runs, retaining their absolute file offsets.
+    size_t reported=0;
+    for(size_t i=start;i<end;){
+     if(bytes[i]<32||bytes[i]>126){++i;continue;}
+     const size_t runStart=i;
+     while(i<end&&bytes[i]>=32&&bytes[i]<=126)++i;
+     if(i-runStart<5)continue;
+     if(reported++>=20)break;
+     std::string run(bytes.begin()+runStart,bytes.begin()+std::min(i,runStart+96));
+     std::cout<<"RM_OVL_PALETTE_STRING anchor="<<offset
+              <<" offset="<<runStart<<" length="<<(i-runStart)
+              <<" text="<<run<<"\n";
+    }
+    // Find 384-byte windows whose every byte is within VGA6 range [0,63].
+    // This is only a format candidate and may occur in code, padding, or other data.
+    size_t candidateCount=0;
+    size_t firstCandidate=bytes.size();
+    if(end>=start+384){
+     size_t bad=0;
+     for(size_t i=start;i<start+384;++i)if(bytes[i]>63)++bad;
+     for(size_t i=start;i+384<=end;++i){
+      if(bad==0){++candidateCount;if(firstCandidate==bytes.size())firstCandidate=i;}
+      if(i+384<end){
+       if(bytes[i]>63)--bad;
+       if(bytes[i+384]>63)++bad;
+      }
+     }
+    }
+    std::cout<<"RM_OVL_PALETTE_VGA6_CANDIDATE anchor="<<offset
+             <<" windows384="<<candidateCount
+             <<" firstOffset="<<(firstCandidate==bytes.size()?-1LL:static_cast<long long>(firstCandidate))
+             <<" scope=plusMinus512\n";
+   }
+  }
+ }
+
  // Milestone 98: independent third-RM comparison, without changing existing
  // two-file differential diagnostics or assuming the third resource is identical.
  {
