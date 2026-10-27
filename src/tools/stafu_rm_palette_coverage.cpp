@@ -640,6 +640,69 @@ int main(int argc,char** argv){
   }
  }
 
+
+ // Milestone 106: raw format inventory for the two known palette-related assets.
+ // Byte layouts are observations; they do not establish RM palette ownership.
+ for(const char* name106:{"standard.pal","color.img"}){
+  std::vector<uint8_t> raw106;
+  std::string err106;
+  if(!resources.read(name106,raw106,err106,1024*1024)){
+   std::cout<<"RM_PALETTE_FORMAT name="<<name106<<" read=0 reason="<<err106<<"\n";
+   continue;
+  }
+  size_t under64=0,zero=0;
+  bool used106[256]={};
+  for(uint8_t b:raw106){
+   if(b<64)++under64;
+   if(b==0)++zero;
+   used106[b]=true;
+  }
+  size_t unique106=0;
+  for(bool present:used106)if(present)++unique106;
+  std::cout<<"RM_PALETTE_FORMAT name="<<name106
+           <<" read=1 bytes="<<raw106.size()
+           <<" divisibleBy3="<<(raw106.size()%3==0)
+           <<" rgbTriplets="<<(raw106.size()/3)
+           <<" divisibleBy384="<<(raw106.size()%384==0)
+           <<" full384Blocks="<<(raw106.size()/384)
+           <<" bytesUnder64="<<under64<<" zeroBytes="<<zero
+           <<" uniqueByteValues="<<unique106<<"\n";
+  std::cout<<"RM_PALETTE_FORMAT_PREFIX name="<<name106<<" hex=";
+  for(size_t i=0;i<std::min<size_t>(32,raw106.size());++i){
+   if(i)std::cout<<",";
+   std::cout<<std::hex<<std::setw(2)<<std::setfill('0')<<unsigned(raw106[i]);
+  }
+  std::cout<<std::dec<<std::setfill(' ')<<"\n";
+  if(raw106.size()>=13&&raw106[0]=='G'&&raw106[1]=='I'&&raw106[2]=='F'
+      &&raw106[3]=='8'&&(raw106[4]=='7'||raw106[4]=='9')&&raw106[5]=='a'){
+   const unsigned width=unsigned(raw106[6])|(unsigned(raw106[7])<<8);
+   const unsigned height=unsigned(raw106[8])|(unsigned(raw106[9])<<8);
+   const unsigned packed=raw106[10];
+   const bool globalTable=(packed&0x80)!=0;
+   const size_t tableEntries=globalTable?(size_t(1)<<(1+(packed&7))):0;
+   const size_t tableEnd=13+3*tableEntries;
+   std::cout<<"RM_PALETTE_FORMAT_GIF name="<<name106
+            <<" width="<<width<<" height="<<height
+            <<" globalColorTable="<<globalTable
+            <<" globalEntries="<<tableEntries
+            <<" globalTableEnd="<<tableEnd
+            <<" tableFits="<<(tableEnd<=raw106.size())
+            <<" trailingBytes="<<(tableEnd<=raw106.size()?raw106.size()-tableEnd:0)
+            <<"\n";
+  }else{
+   std::cout<<"RM_PALETTE_FORMAT_GIF name="<<name106<<" signature=absent\n";
+  }
+  if(raw106.size()%384==0&&raw106.size()<=4096){
+   for(size_t offset=0;offset<raw106.size();offset+=384){
+    size_t vga6=0;
+    for(size_t i=offset;i<offset+384;++i)if(raw106[i]<=63)++vga6;
+    std::cout<<"RM_PALETTE_FORMAT_BLOCK name="<<name106
+             <<" offset="<<offset<<" bytes=384 vga6RangeBytes="<<vga6
+             <<" of=384\n";
+   }
+  }
+ }
+
  // Milestone 98: independent third-RM comparison, without changing existing
  // two-file differential diagnostics or assuming the third resource is identical.
  {
