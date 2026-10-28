@@ -258,6 +258,64 @@ int main(int argc,char** argv){
  }
 
 
+
+ // Milestone 107: compare each half of color.img's GIF palette to standard.pal.
+ // Two explicit VGA6->RGB888 mappings are checked; matches do not prove ownership.
+ {
+  const auto it=std::find_if(candidates.begin(),candidates.end(),
+    [](const Candidate& candidate){return std::string(candidate.name)=="color.img";});
+  if(it==candidates.end()||!it->palette.valid||it->palette.entries<256){
+   std::cout<<"RM_PALETTE_BANK_STATUS available=0 reason=colorImgPaletteMissingOrShort\n";
+  }else{
+   const auto& rgb=it->palette.rgb;
+   std::cout<<"RM_PALETTE_BANK_STATUS available=1 gifEntries="<<it->palette.entries
+            <<" standardEntries="<<(standard.size()/3)<<"\n";
+   for(const char* conversion:{"scale255","shift2"}){
+    auto convert=[&](unsigned v)->unsigned{
+     return std::string(conversion)=="scale255"?(v*255+31)/63:(v<<2);
+    };
+    for(unsigned bank=0;bank<2;++bank){
+     size_t sameIndex=0,member=0,uniqueMatched=0;
+     bool matchedStandard[128]={};
+     size_t sameIndexIndices[128]={};
+     size_t sameIndexCount=0;
+     for(unsigned i=0;i<128;++i){
+      const unsigned gifIndex=bank*128+i;
+      bool exact=true;
+      for(unsigned channel=0;channel<3;++channel)
+       if(convert(standard[3*i+channel])!=rgb[3*gifIndex+channel])
+        exact=false;
+      if(exact){++sameIndex;sameIndexIndices[sameIndexCount++]=i;}
+      bool found=false;
+      for(unsigned j=0;j<128;++j){
+       bool equal=true;
+       for(unsigned channel=0;channel<3;++channel)
+        if(convert(standard[3*j+channel])!=rgb[3*gifIndex+channel])
+         equal=false;
+       if(equal){found=true;matchedStandard[j]=true;}
+      }
+      if(found)++member;
+     }
+     for(bool found:matchedStandard)if(found)++uniqueMatched;
+     std::cout<<"RM_PALETTE_BANK_COMPARE source=color.img conversion="<<conversion
+              <<" bank="<<bank<<" gifFirst="<<(bank*128)
+              <<" gifLast="<<(bank*128+127)
+              <<" sameIndex="<<sameIndex
+              <<" gifEntriesMatchingAnyStandard="<<member
+              <<" uniqueStandardEntriesMatched="<<uniqueMatched<<"\n";
+     std::cout<<"RM_PALETTE_BANK_DIRECT source=color.img conversion="<<conversion
+              <<" bank="<<bank<<" indices=";
+     if(!sameIndexCount)std::cout<<"none";
+     for(size_t k=0;k<sameIndexCount;++k){
+      if(k)std::cout<<",";
+      std::cout<<sameIndexIndices[k];
+     }
+     std::cout<<"\n";
+    }
+   }
+  }
+ }
+
  // Milestone 100: survey all five verified RM names directly from the CD archive.
  // This intentionally bypasses installed-file precedence and case-sensitive
  // ResourceManager lookup; results describe archive bytes only.
