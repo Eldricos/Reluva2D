@@ -374,6 +374,67 @@ int main(int argc,char** argv){
  }
 
 
+
+ // Milestone 108: compare each RM's 128-entry VGA6 header against both
+ // color.img GIF palette halves under explicit RGB888 conversions.
+ // These are color comparisons only, not evidence of palette ownership.
+ {
+  const auto gif=std::find_if(candidates.begin(),candidates.end(),
+    [](const Candidate& v){return std::string(v.name)=="color.img";});
+  reluva::stafu::ZipArchive zip108;
+  std::string error108;
+  if(gif==candidates.end()||!gif->palette.valid||gif->palette.entries<256){
+   std::cout<<"RM_GIF_BANK_STATUS available=0 reason=colorImgPaletteMissingOrShort\n";
+  }else if(!zip108.open(std::filesystem::path(argv[2])/"STTNG.ZIP",error108)){
+   std::cout<<"RM_GIF_BANK_STATUS available=0 reason=archiveUnavailable\n";
+  }else{
+   std::cout<<"RM_GIF_BANK_STATUS available=1 gifEntries="<<gif->palette.entries<<"\n";
+   for(const char* name108:{"bridge.rm","viewscr.rm","transp.rm","holodeck.rm","endgame.rm"}){
+    std::vector<uint8_t> raw108;
+    std::string readError108;
+    if(!zip108.read(name108,raw108,readError108,2*1024*1024)||raw108.size()!=307584){
+     std::cout<<"RM_GIF_BANK_RESOURCE name="<<name108<<" read=0\n";
+     continue;
+    }
+    std::cout<<"RM_GIF_BANK_RESOURCE name="<<name108<<" read=1 headerEntries=128\n";
+    for(const char* method108:{"scale255","shift2"}){
+     const bool scale108=std::string(method108)=="scale255";
+     auto convert108=[&](unsigned x)->unsigned{
+      return scale108?(x*255+31)/63:(x<<2);
+     };
+     for(unsigned bank108=0;bank108<2;++bank108){
+      size_t direct108=0,rmMatching108=0,gifMatching108=0;
+      bool rmMatched108[128]={};
+      bool gifMatched108[128]={};
+      for(size_t i=0;i<128;++i){
+       bool same108=true;
+       for(size_t channel=0;channel<3;++channel)
+        if(convert108(raw108[3*i+channel])!=gif->palette.rgb[3*(bank108*128+i)+channel])
+         same108=false;
+       if(same108)++direct108;
+       for(size_t j=0;j<128;++j){
+        bool equal108=true;
+        for(size_t channel=0;channel<3;++channel)
+         if(convert108(raw108[3*i+channel])!=gif->palette.rgb[3*(bank108*128+j)+channel])
+          equal108=false;
+        if(equal108){rmMatched108[i]=true;gifMatched108[j]=true;}
+       }
+      }
+      for(bool yes:rmMatched108)if(yes)++rmMatching108;
+      for(bool yes:gifMatched108)if(yes)++gifMatching108;
+      std::cout<<"RM_GIF_BANK_COMPARE name="<<name108
+               <<" conversion="<<method108<<" bank="<<bank108
+               <<" gifFirst="<<(bank108*128)<<" gifLast="<<(bank108*128+127)
+               <<" sameIndex="<<direct108
+               <<" rmEntriesMatchingAnyGif="<<rmMatching108
+               <<" gifEntriesMatchingAnyRm="<<gifMatching108
+               <<" compared=128\n";
+     }
+    }
+   }
+  }
+ }
+
  // Milestone 101: high-index frequency and spatial survey for every archive RM.
  // Interpret bit 7 numerically only; no palette-bank or transparency assumption.
  {
