@@ -1219,6 +1219,84 @@ int main(int argc,char** argv){
             <<" equalBytes="<<same<<" of=384 identical="<<(same==384)<<"\n";
   }else std::cout<<"RM_TRAILER_COMPARE unavailable=non384-remainder\n";
  }
+
+ // Milestone 109: bounded byte-pattern survey, not disassembly.
+ // Patterns may occur in code, embedded data, immediates, or compressed material.
+ // DOS port writes: MOV DX,03C8/03C9 (BA imm16), OUT DX,AL (EE),
+ // OUT DX,AX (EF), and OUT DX,AL/AX after immediate load.
+ // BIOS INT 10h bytes (CD 10) and common AX palette function loads
+ // (B8 10 10 / B8 12 10) are independently counted; no control-flow claim.
+ {
+  const struct Pattern109 {const char* label;std::vector<uint8_t> bytes;} patterns109[]={
+   {"mov_dx_03c8",{0xBA,0xC8,0x03}},
+   {"mov_dx_03c9",{0xBA,0xC9,0x03}},
+   {"out_dx_al",{0xEE}},
+   {"out_dx_ax",{0xEF}},
+   {"int_10",{0xCD,0x10}},
+   {"mov_ax_1010",{0xB8,0x10,0x10}},
+   {"mov_ax_1012",{0xB8,0x12,0x10}},
+   {"mov_ah_10",{0xB4,0x10}},
+   {"mov_al_10",{0xB0,0x10}},
+   {"mov_al_12",{0xB0,0x12}}
+  };
+  for(const char* file109:{"STTNG.EXE","STTNG.OVL"}){
+   const auto path109=std::filesystem::path(argv[1])/file109;
+   std::ifstream input109(path109,std::ios::binary);
+   if(!input109){
+    std::cout<<"RM_VGA_SCAN_STATUS file="<<file109<<" read=0\n";
+    continue;
+   }
+   const std::vector<uint8_t> data109(
+    (std::istreambuf_iterator<char>(input109)),std::istreambuf_iterator<char>());
+   std::cout<<"RM_VGA_SCAN_STATUS file="<<file109
+            <<" read=1 bytes="<<data109.size()
+            <<" scope=rawBytePatternOnly\n";
+   for(const auto& pattern109:patterns109){
+    size_t count109=0;
+    std::vector<size_t> first109;
+    if(data109.size()>=pattern109.bytes.size())
+     for(size_t pos109=0;pos109<=data109.size()-pattern109.bytes.size();++pos109)
+      if(std::equal(pattern109.bytes.begin(),pattern109.bytes.end(),
+                    data109.begin()+pos109)){
+       ++count109;
+       if(first109.size()<12)first109.push_back(pos109);
+      }
+    std::cout<<"RM_VGA_SCAN_PATTERN file="<<file109
+             <<" pattern="<<pattern109.label
+             <<" matches="<<count109<<" firstOffsets=";
+    if(first109.empty())std::cout<<"none";
+    for(size_t k109=0;k109<first109.size();++k109){
+     if(k109)std::cout<<",";
+     std::cout<<first109[k109];
+    }
+    std::cout<<"\n";
+   }
+   // Report nearby pairs of MOV DX, DAC port and OUT DX instruction bytes.
+   // This is a proximity heuristic, not instruction decoding or a call graph.
+   size_t pairs109=0;
+   for(size_t i109=0;i109+2<data109.size();++i109){
+    if(data109[i109]!=0xBA||data109[i109+2]!=0x03||
+       (data109[i109+1]!=0xC8&&data109[i109+1]!=0xC9))continue;
+    const size_t end109=std::min(data109.size(),i109+35);
+    for(size_t j109=i109+3;j109<end109;++j109)
+     if(data109[j109]==0xEE||data109[j109]==0xEF){
+      ++pairs109;
+      if(pairs109<=20)
+       std::cout<<"RM_VGA_SCAN_NEAR file="<<file109
+                <<" movDxOffset="<<i109
+                <<" port=0x3"<<(data109[i109+1]==0xC8?"c8":"c9")
+                <<" outOffset="<<j109
+                <<" distance="<<(j109-i109)
+                <<"\n";
+      break;
+     }
+   }
+   std::cout<<"RM_VGA_SCAN_NEAR_SUMMARY file="<<file109
+            <<" candidatePairs="<<pairs109<<" displayed="<<std::min<size_t>(pairs109,20)
+            <<" maxDistance=34\n";
+  }
+ }
+
  std::cout<<"NOTE: Trailer plausibility does not establish palette ownership.\n";
  std::cout<<"NOTE: Palette overlap is numerical only; it does not establish RM palette provenance.\n";
  return 0;
