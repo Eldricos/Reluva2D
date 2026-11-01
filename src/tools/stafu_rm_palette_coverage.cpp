@@ -1297,6 +1297,58 @@ int main(int argc,char** argv){
   }
  }
 
+
+ // Milestone 110: bounded, offset-addressed hex windows around the strongest
+ // Milestone 109 VGA DAC candidates. No instruction-boundary assumptions.
+ {
+  const auto overlay110=std::filesystem::path(argv[1])/"STTNG.OVL";
+  std::ifstream stream110(overlay110,std::ios::binary);
+  if(!stream110){
+   std::cout<<"RM_VGA_WINDOW_STATUS read=0\n";
+  }else{
+   const std::vector<uint8_t> bytes110(
+    (std::istreambuf_iterator<char>(stream110)),std::istreambuf_iterator<char>());
+   const size_t anchors110[]={637886,638028,1211956,1212507,1358117};
+   std::cout<<"RM_VGA_WINDOW_STATUS read=1 bytes="<<bytes110.size()
+            <<" anchors=5 radius=32\n";
+   for(size_t anchor110:anchors110){
+    if(anchor110>=bytes110.size()){
+     std::cout<<"RM_VGA_WINDOW_ANCHOR offset="<<anchor110<<" available=0\n";
+     continue;
+    }
+    const size_t start110=anchor110>32?anchor110-32:0;
+    const size_t end110=std::min(bytes110.size(),anchor110+33);
+    std::cout<<"RM_VGA_WINDOW_ANCHOR offset="<<anchor110
+             <<" available=1 start="<<start110<<" endExclusive="<<end110<<"\n";
+    for(size_t row110=start110;row110<end110;row110+=16){
+     std::cout<<"RM_VGA_WINDOW_HEX anchor="<<anchor110
+              <<" offset="<<row110<<" hex=";
+     for(size_t i110=row110;i110<std::min(end110,row110+16);++i110){
+      if(i110!=row110)std::cout<<" ";
+      std::cout<<std::hex<<std::setw(2)<<std::setfill('0')<<unsigned(bytes110[i110]);
+     }
+     std::cout<<std::dec<<std::setfill(' ')<<"\n";
+    }
+    // Match only contiguous four-byte sequences, without claiming they are code.
+    size_t exact110=0;
+    for(size_t pos110=start110;pos110+3<end110;++pos110){
+     if(bytes110[pos110]!=0xBA||bytes110[pos110+2]!=0x03||
+        (bytes110[pos110+1]!=0xC8&&bytes110[pos110+1]!=0xC9)||
+        (bytes110[pos110+3]!=0xEE&&bytes110[pos110+3]!=0xEF))
+      continue;
+     ++exact110;
+     std::cout<<"RM_VGA_WINDOW_SEQUENCE anchor="<<anchor110
+              <<" offset="<<pos110
+              <<" port="<<(bytes110[pos110+1]==0xC8?"0x3C8":"0x3C9")
+              <<" outByte="<<(bytes110[pos110+3]==0xEE?"EE":"EF")
+              <<" interpretation=bytePatternOnly\n";
+    }
+    std::cout<<"RM_VGA_WINDOW_SUMMARY anchor="<<anchor110
+             <<" contiguousMovDxOut="<<exact110<<"\n";
+   }
+  }
+ }
+
  std::cout<<"NOTE: Trailer plausibility does not establish palette ownership.\n";
  std::cout<<"NOTE: Palette overlap is numerical only; it does not establish RM palette provenance.\n";
  return 0;
