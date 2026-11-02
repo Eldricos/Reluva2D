@@ -2704,11 +2704,11 @@ int main(int argc,char** argv){
             <<" scope=boundedRawBytesAndAnchoredTemplates\n";
    dump127("pre_assignment",522848,523024);
    const bool assignment127=match127(522991,{0xA3,0xA4,0x97,0x09,0x00});
-   const bool nearby127=match127(522986,{0x68,0x98,0x02,0x00,0x00,0x50,0xA3,0xA4,0x97,0x09,0x00});
+   const bool nearby127=match127(522985,{0x68,0x98,0x02,0x00,0x00,0x50,0xA3,0xA4,0x97,0x09,0x00});
    std::cout<<"RM_PALETTE_OWNER_PRODUCER_ASSIGNMENT offset=522991 match="
             <<(assignment127?1:0)
             <<" operation=storeEAXToGlobal caution=EAXProducerNotYetEstablished\n";
-   std::cout<<"RM_PALETTE_OWNER_PRODUCER_NEARBY offset=522986 match="
+   std::cout<<"RM_PALETTE_OWNER_PRODUCER_NEARBY offset=522985 match="
             <<(nearby127?1:0)
             <<" operation=push0x298_pushEAX_storeEAX caution=localSequenceOnly\n";
    // Identify CALL rel32 candidates within the bounded upstream window.
@@ -2737,6 +2737,75 @@ int main(int argc,char** argv){
             <<" runtimeEAX=unknown"
             <<" objectAllocation=unverified"
             <<" resourceLoaderLink=unverified"
+            <<" rmPaletteProvenance=unverified\n";
+  }
+ }
+
+
+ // Milestone 128: bounded investigation of the function at 518504 whose
+ // returned EAX is stored into global 0x000997A4 by the caller at 522991.
+ // This is raw file-offset evidence, not a control-flow disassembly.
+ {
+  std::ifstream in128(std::filesystem::path(argv[1])/"STTNG.OVL",std::ios::binary);
+  if(!in128){
+   std::cout<<"RM_PALETTE_OWNER_FACTORY_STATUS read=0\n";
+  }else{
+   const std::vector<uint8_t> d128(
+    (std::istreambuf_iterator<char>(in128)),std::istreambuf_iterator<char>());
+   const size_t start128=518504,end128=518888;
+   std::cout<<"RM_PALETTE_OWNER_FACTORY_STATUS read=1 bytes="<<d128.size()
+            <<" start="<<start128<<" endExclusive="<<end128
+            <<" scope=boundedHexAndRawCallReturnSurvey\n";
+   for(size_t p=start128;p<std::min(end128,d128.size());p+=16){
+    std::cout<<"RM_PALETTE_OWNER_FACTORY_HEX offset="<<p<<" hex=";
+    for(size_t j=p;j<std::min(p+16,std::min(end128,d128.size()));++j){
+     if(j!=p)std::cout<<" ";
+     std::cout<<std::hex<<std::setw(2)<<std::setfill('0')<<unsigned(d128[j]);
+    }
+    std::cout<<std::dec<<std::setfill(' ')<<"\n";
+   }
+   size_t calls128=0,returns128=0,branches128=0;
+   for(size_t p=start128;p<std::min(end128,d128.size());++p){
+    if(d128[p]==0xC3||d128[p]==0xC2){
+     ++returns128;
+     std::cout<<"RM_PALETTE_OWNER_FACTORY_RETURN offset="<<p
+              <<" opcode="<<std::hex<<unsigned(d128[p])<<std::dec
+              <<" caution=rawByteNotProvenInstruction\n";
+    }
+    if(p+5<=d128.size()&&p+5<=end128&&d128[p]==0xE8){
+     const uint32_t v=uint32_t(d128[p+1])|(uint32_t(d128[p+2])<<8)|
+      (uint32_t(d128[p+3])<<16)|(uint32_t(d128[p+4])<<24);
+     const int32_t disp=static_cast<int32_t>(v);
+     ++calls128;
+     std::cout<<"RM_PALETTE_OWNER_FACTORY_CALL offset="<<p
+              <<" flatTarget="<<(int64_t(p)+5+disp)
+              <<" caution=rawOpcodeCandidateNotDisassembled\n";
+    }
+    if(p+2<=end128&&p+2<=d128.size()&&
+       (d128[p]==0x74||d128[p]==0x75||d128[p]==0xEB)){
+     ++branches128;
+     const int8_t disp=static_cast<int8_t>(d128[p+1]);
+     std::cout<<"RM_PALETTE_OWNER_FACTORY_BRANCH offset="<<p
+              <<" flatTarget="<<(int64_t(p)+2+disp)
+              <<" caution=rawOpcodeCandidateNotDisassembled\n";
+    }
+   }
+   std::cout<<"RM_PALETTE_OWNER_FACTORY_SUMMARY rawCalls="<<calls128
+            <<" rawReturns="<<returns128<<" rawShortBranches="<<branches128<<"\n";
+   const std::vector<uint8_t> caller128={
+    0xE8,0x82,0xEE,0xFF,0xFF,0x83,0xC4,0x0C,0x68,0x98,0x02,
+    0x00,0x00,0x50,0xA3,0xA4,0x97,0x09,0x00};
+   const bool callerMatch128=522977+caller128.size()<=d128.size()&&
+    std::equal(caller128.begin(),caller128.end(),d128.begin()+522977);
+   std::cout<<"RM_PALETTE_OWNER_FACTORY_CALLER offset=522977 match="
+            <<(callerMatch128?1:0)
+            <<" callTarget=518504 storeOffset=522991"
+            <<" caution=returnValueSemanticsUnverified\n";
+   std::cout<<"RM_PALETTE_OWNER_FACTORY_LIMITATION"
+            <<" functionExtent=unverified"
+            <<" returnPathReachability=unverified"
+            <<" EAXMeaning=unknown"
+            <<" allocatorOrLoader=unverified"
             <<" rmPaletteProvenance=unverified\n";
   }
  }
