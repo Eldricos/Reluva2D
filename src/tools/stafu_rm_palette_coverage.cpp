@@ -1420,6 +1420,65 @@ int main(int argc,char** argv){
   }
  }
 
+
+ // Milestone 112: corrected DAC-writer entry and bounded caller neighborhoods.
+ // The E8 sites remain byte-pattern candidates, not validated runtime calls.
+ {
+  const auto path112=std::filesystem::path(argv[1])/"STTNG.OVL";
+  std::ifstream input112(path112,std::ios::binary);
+  if(!input112){
+   std::cout<<"RM_DAC_CALLERS_STATUS read=0\n";
+  }else{
+   const std::vector<uint8_t> data112(
+    (std::istreambuf_iterator<char>(input112)),std::istreambuf_iterator<char>());
+   const size_t entry112=1358100;
+   const uint8_t signature112[]={
+    0x55,0x8B,0xEC,0x50,0x51,0x52,0x56,0x8B,0x4D,0x10,
+    0x8B,0x45,0x0C,0x8B,0x75,0x08,0x66,0xBA,0xC8,0x03,
+    0xEE,0x66,0x42,0xAC,0xEE,0xAC,0xEE,0xAC,0xEE,
+    0x49,0x75,0xF7,0x5E,0x5A,0x59,0x58,0x5D,0xC3
+   };
+   const bool matches112=entry112+sizeof(signature112)<=data112.size()&&
+    std::equal(std::begin(signature112),std::end(signature112),data112.begin()+entry112);
+   std::cout<<"RM_DAC_CALLERS_STATUS read=1 bytes="<<data112.size()
+            <<" candidateCalls=4 radiusBefore=80 radiusAfter=24\n";
+   std::cout<<"RM_DAC_CALLERS_SIGNATURE entryOffset="<<entry112
+            <<" matches="<<matches112<<" bytes="<<sizeof(signature112)
+            <<" scope=staticBytePatternOnly\n";
+   const size_t sites112[]={1165092,1165591,1166889,1167061};
+   for(size_t site112:sites112){
+    if(site112+5>data112.size()){
+     std::cout<<"RM_DAC_CALLERS_SITE offset="<<site112<<" available=0\n";
+     continue;
+    }
+    const bool e8_112=data112[site112]==0xE8;
+    const uint32_t displacement112=
+      uint32_t(data112[site112+1])|
+      (uint32_t(data112[site112+2])<<8)|
+      (uint32_t(data112[site112+3])<<16)|
+      (uint32_t(data112[site112+4])<<24);
+    const int64_t target112=int64_t(site112)+5+int64_t(int32_t(displacement112));
+    const size_t start112=site112>80?site112-80:0;
+    const size_t end112=std::min(data112.size(),site112+29);
+    std::cout<<"RM_DAC_CALLERS_SITE offset="<<site112
+             <<" available=1 opcodeE8="<<e8_112
+             <<" flatTarget="<<target112
+             <<" matchesEntry="<<(e8_112&&target112==int64_t(entry112))
+             <<" start="<<start112<<" endExclusive="<<end112
+             <<" scope=unvalidatedFlatFileOffset\n";
+    for(size_t row112=start112;row112<end112;row112+=16){
+     std::cout<<"RM_DAC_CALLERS_HEX site="<<site112
+              <<" offset="<<row112<<" hex=";
+     for(size_t j112=row112;j112<std::min(end112,row112+16);++j112){
+      if(j112!=row112)std::cout<<" ";
+      std::cout<<std::hex<<std::setw(2)<<std::setfill('0')<<unsigned(data112[j112]);
+     }
+     std::cout<<std::dec<<std::setfill(' ')<<"\n";
+    }
+   }
+  }
+ }
+
  std::cout<<"NOTE: Trailer plausibility does not establish palette ownership.\n";
  std::cout<<"NOTE: Palette overlap is numerical only; it does not establish RM palette provenance.\n";
  return 0;
