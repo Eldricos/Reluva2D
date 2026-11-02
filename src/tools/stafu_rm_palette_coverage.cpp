@@ -2105,6 +2105,84 @@ int main(int argc,char** argv){
   }
  }
 
+
+ // Milestone 120: investigate candidate entry at 1166740 and the ESI
+ // register's provenance. Bounded byte-indexed evidence only: no raw
+ // candidate is promoted to a reaching definition without control-flow proof.
+ {
+  std::ifstream in120(std::filesystem::path(argv[1])/"STTNG.OVL",std::ios::binary);
+  if(!in120){
+   std::cout<<"RM_PALETTE_ESI_ENTRY_STATUS read=0\n";
+  }else{
+   const std::vector<uint8_t> d120(
+    (std::istreambuf_iterator<char>(in120)),std::istreambuf_iterator<char>());
+   auto match120=[&](size_t p,const std::vector<uint8_t>& seq){
+    return p<=d120.size()&&seq.size()<=d120.size()-p&&
+     std::equal(seq.begin(),seq.end(),d120.begin()+p);
+   };
+   std::cout<<"RM_PALETTE_ESI_ENTRY_STATUS read=1 bytes="<<d120.size()
+            <<" scope=boundedByteIndexedAndAnchoredTemplates\n";
+   const size_t entry120=1166740;
+   const bool saves120=match120(entry120,{0x53,0x56,0x57,0x55})||
+                       match120(entry120,{0x56,0x57,0x55});
+   std::cout<<"RM_PALETTE_ESI_ENTRY_CANDIDATE offset="<<entry120
+            <<" saveTemplateMatch="<<(saves120?1:0)
+            <<" functionBoundaryProven=0\n";
+   // Print small, independently indexed windows around the candidate
+   // prologue and each of the two verified use sites of [ESI+0C].
+   const size_t anchors120[]={1166740,1166843,1166886,1166990,1167055,1167199,1167228};
+   for(size_t a120:anchors120){
+    const size_t begin120=a120>=16?a120-16:0;
+    const size_t end120=std::min(d120.size(),a120+33);
+    std::cout<<"RM_PALETTE_ESI_WINDOW anchor="<<a120
+             <<" start="<<begin120<<" endExclusive="<<end120<<"\n";
+    for(size_t p120=begin120;p120<end120;++p120){
+     std::cout<<"RM_PALETTE_ESI_BYTE anchor="<<a120
+              <<" offset="<<p120<<" hex="<<std::hex
+              <<std::setw(2)<<std::setfill('0')<<unsigned(d120[p120])
+              <<std::dec<<std::setfill(' ')<<"\n";
+    }
+   }
+   // Anchored ESI-relative operations known from prior verified dumps.
+   const struct {size_t offset;std::vector<uint8_t> bytes;const char* meaning;} checks120[]={
+    {1166843,{0x8B,0x7E,0x0C},"mov_edi_dword_esi_plus_0C"},
+    {1166886,{0x8B,0x6E,0x0C},"mov_ebp_dword_esi_plus_0C"},
+    {1167199,{0x66,0x83,0x7E,0x06,0x00},"cmp_word_esi_plus_06_zero"},
+    {1167228,{0x8B,0x5E,0x0C},"mov_ebx_dword_esi_plus_0C"}
+   };
+   for(const auto& ch120:checks120){
+    std::cout<<"RM_PALETTE_ESI_USE offset="<<ch120.offset
+             <<" templateMatch="<<(match120(ch120.offset,ch120.bytes)?1:0)
+             <<" operation="<<ch120.meaning<<"\n";
+   }
+   // Scan a narrow entry region for possible ESI writes; these are
+   // byte patterns, not decoded instructions or proven path assignments.
+   const size_t begin120=1166735;
+   const size_t end120=std::min(d120.size(),size_t(1166810));
+   size_t candidates120=0;
+   for(size_t p120=begin120;p120<end120;++p120){
+    const bool mov120=p120+2<=end120&&d120[p120]==0x8B&&
+                      (d120[p120+1]&0x38)==0x30;
+    const bool lea120=p120+2<=end120&&d120[p120]==0x8D&&
+                      (d120[p120+1]&0x38)==0x30;
+    const bool pop120=d120[p120]==0x5E;
+    const bool immediate120=p120+5<=end120&&d120[p120]==0xBE;
+    if(!(mov120||lea120||pop120||immediate120))continue;
+    ++candidates120;
+    std::cout<<"RM_PALETTE_ESI_WRITE_CANDIDATE offset="<<p120
+             <<" kind="<<(mov120?"mov":lea120?"lea":pop120?"pop":"immediate")
+             <<" scope=rawCandidateNotInstructionBoundary\n";
+   }
+   std::cout<<"RM_PALETTE_ESI_WRITE_SUMMARY start="<<begin120
+            <<" endExclusive="<<end120<<" candidates="<<candidates120<<"\n";
+   std::cout<<"RM_PALETTE_ESI_LIMITATION"
+            <<" functionEntry=unverified"
+            <<" esiReachingDefinition=unknown"
+            <<" pointerOwnership=unknown"
+            <<" rmPaletteLink=unverified\n";
+  }
+ }
+
  std::cout<<"NOTE: Trailer plausibility does not establish palette ownership.\n";
  std::cout<<"NOTE: Palette overlap is numerical only; it does not establish RM palette provenance.\n";
  return 0;
