@@ -2842,10 +2842,10 @@ int main(int argc,char** argv){
     {"caller_store_global",522991,{0xA3,0xA4,0x97,0x09,0x00},"storeReturnedEAX"},
     {"record_counter_reset",518516,{0xC7,0x83,0xB8,0x01,0x00,0x00,0x00,0x00,0x00,0x00},"recordCounterReset"},
     {"record_stride_16hex",518591,{0x6B,0x83,0xB8,0x01,0x00,0x00,0x16},"recordStride22"},
-    {"record_state_7fff",518675,{0x6B,0x83,0xB8,0x01,0x00,0x00,0x16,0x66,0xC7,0x44,0x03,0x10,0xFF,0x7F},"stateInitialization"},
-    {"owner_record_head",518870,{0x89,0x9B,0xC4,0x01,0x00,0x00},"field1C4"},
-    {"owner_record_tail",518876,{0x89,0x9B,0xC8,0x01,0x00,0x00},"field1C8"},
-    {"return_owner",518882,{0x89,0xD8},"returnEBXAsEAX"}
+    {"record_state_7fff",518679,{0x6B,0x83,0xB8,0x01,0x00,0x00,0x16,0x66,0xC7,0x44,0x03,0x10,0xFF,0x7F},"stateInitialization"},
+    {"owner_record_head",518867,{0x89,0x9B,0xC4,0x01,0x00,0x00},"field1C4"},
+    {"owner_record_tail",518873,{0x89,0x9B,0xC8,0x01,0x00,0x00},"field1C8"},
+    {"return_owner",518879,{0x89,0xD8},"returnEBXAsEAX"}
    };
    size_t passed129=0;
    for(const auto& t:checks129){
@@ -2955,6 +2955,63 @@ int main(int argc,char** argv){
             <<" instructionBoundaries=notFullyDecoded"
             <<" returnValueMeaning=unknown"
             <<" allocationSemantics=unverified"
+            <<" resourceLoaderLink=unverified"
+            <<" rmPaletteProvenance=unverified\n";
+  }
+ }
+
+
+ // Milestone 131: verify the allocation-wrapper sequence and inspect the
+ // two helper entry points without asserting their semantics.
+ {
+  std::ifstream in131(std::filesystem::path(argv[1])/"STTNG.OVL",std::ios::binary);
+  if(!in131){
+   std::cout<<"RM_PALETTE_OWNER_ALLOC_HELPERS_STATUS read=0\n";
+  }else{
+   const std::vector<uint8_t> d131(
+    (std::istreambuf_iterator<char>(in131)),std::istreambuf_iterator<char>());
+   auto match131=[&](size_t p,const std::vector<uint8_t>& b){
+    return p+b.size()<=d131.size()&&
+     std::equal(b.begin(),b.end(),d131.begin()+p);
+   };
+   struct T131{const char* name;size_t offset;std::vector<uint8_t> bytes;const char* meaning;};
+   const std::vector<T131> checks131={
+    {"wrapper_push_size",588364,{0x53,0x8B,0x54,0x24,0x08,0x52},"stackSizeArgument"},
+    {"wrapper_alloc_call",588370,{0xE8,0x3F,0xF4,0x08,0x00},"call1175190"},
+    {"wrapper_save_test",588375,{0x83,0xC4,0x04,0x89,0xC3,0x85,0xC0,0x74,0x10},"saveAndTestPointer"},
+    {"wrapper_zero_arguments",588384,{0x8B,0x4C,0x24,0x08,0x51,0x6A,0x00,0x50},"pushSizeZeroPointer"},
+    {"wrapper_zero_call",588392,{0xE8,0x97,0x9B,0x08,0x00},"call1152516"},
+    {"wrapper_return_pointer",588397,{0x83,0xC4,0x0C,0x89,0xD8,0x5B,0xC3},"returnSavedPointer"}
+   };
+   std::cout<<"RM_PALETTE_OWNER_ALLOC_HELPERS_STATUS read=1 bytes="<<d131.size()
+            <<" scope=anchoredWrapperAndBoundedHelperEntryHex\n";
+   size_t matches131=0;
+   for(const auto& t:checks131){
+    const bool ok=match131(t.offset,t.bytes);
+    if(ok)++matches131;
+    std::cout<<"RM_PALETTE_OWNER_ALLOC_HELPERS_TEMPLATE name="<<t.name
+             <<" offset="<<t.offset<<" match="<<(ok?1:0)
+             <<" interpretation="<<t.meaning<<"\n";
+   }
+   std::cout<<"RM_PALETTE_OWNER_ALLOC_HELPERS_TEMPLATE_SUMMARY matched="
+            <<matches131<<" total="<<checks131.size()<<"\n";
+   for(const auto& entry:std::vector<std::pair<const char*,size_t>>{
+       {"allocation_candidate",1175190},{"zeroing_candidate",1152516}}){
+    const size_t end=entry.second+160;
+    for(size_t p=entry.second;p<std::min(end,d131.size());p+=16){
+     std::cout<<"RM_PALETTE_OWNER_ALLOC_HELPER_HEX name="<<entry.first
+              <<" offset="<<p<<" hex=";
+     for(size_t j=p;j<std::min(p+16,std::min(end,d131.size()));++j){
+      if(j!=p)std::cout<<" ";
+      std::cout<<std::hex<<std::setw(2)<<std::setfill('0')<<unsigned(d131[j]);
+     }
+     std::cout<<std::dec<<std::setfill(' ')<<"\n";
+    }
+   }
+   std::cout<<"RM_PALETTE_OWNER_ALLOC_HELPERS_LIMITATION"
+            <<" helperFunctionExtent=unverified"
+            <<" helperSemantics=unverified"
+            <<" callingConvention=unverified"
             <<" resourceLoaderLink=unverified"
             <<" rmPaletteProvenance=unverified\n";
   }
