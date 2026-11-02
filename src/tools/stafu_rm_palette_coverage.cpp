@@ -1479,6 +1479,79 @@ int main(int argc,char** argv){
   }
  }
 
+
+ // Milestone 113: bounded palette-structure and RM-reference proximity survey.
+ // Raw byte occurrences are not instruction decoding or runtime data-flow proof.
+ {
+  const auto path113=std::filesystem::path(argv[1])/"STTNG.OVL";
+  std::ifstream input113(path113,std::ios::binary);
+  if(!input113){
+   std::cout<<"RM_PALETTE_TRACE_STATUS read=0\n";
+  }else{
+   const std::vector<uint8_t> data113(
+    (std::istreambuf_iterator<char>(input113)),std::istreambuf_iterator<char>());
+   const size_t sites113[]={1166889,1167061};
+   const uint8_t global113[]={0xF8,0x17,0x12,0x00};
+   const uint8_t rm113[]={0x2E,0x52,0x4D};
+   std::cout<<"RM_PALETTE_TRACE_STATUS read=1 bytes="<<data113.size()
+            <<" callerSites=2 radius=192 scope=rawByteSurvey\n";
+   for(size_t site113:sites113){
+    const size_t start113=site113>192?site113-192:0;
+    const size_t end113=std::min(data113.size(),site113+193);
+    size_t globals113=0,offsets113=0;
+    std::cout<<"RM_PALETTE_TRACE_CALLER site="<<site113
+             <<" start="<<start113<<" endExclusive="<<end113<<"\n";
+    for(size_t p113=start113;p113<end113;++p113){
+     if(p113+sizeof(global113)<=end113&&
+        std::equal(std::begin(global113),std::end(global113),data113.begin()+p113)){
+      ++globals113;
+      std::cout<<"RM_PALETTE_TRACE_GLOBAL site="<<site113
+               <<" offset="<<p113<<" addressLE=001217F8\n";
+     }
+     if(p113+3<=end113&&data113[p113]==0x00&&
+        (data113[p113+1]==0x7E||data113[p113+1]==0x80||data113[p113+1]==0x84)&&
+        data113[p113+2]==0x00){
+      ++offsets113;
+      if(offsets113<=24)
+       std::cout<<"RM_PALETTE_TRACE_FIELD_CANDIDATE site="<<site113
+                <<" offset="<<p113<<" fieldHex="<<std::hex
+                <<unsigned(data113[p113+1])<<std::dec
+                <<" scope=rawBytePattern\n";
+     }
+    }
+    std::cout<<"RM_PALETTE_TRACE_CALLER_SUMMARY site="<<site113
+             <<" globalPatterns="<<globals113
+             <<" fieldPatterns="<<offsets113<<"\n";
+   }
+   // Search the complete overlay for references to the exact global address
+   // bytes; summarize distribution without claiming common ownership.
+   size_t globalTotal113=0,nearRm113=0,shown113=0;
+   for(size_t p113=0;p113+sizeof(global113)<=data113.size();++p113){
+    if(!std::equal(std::begin(global113),std::end(global113),data113.begin()+p113))
+     continue;
+    ++globalTotal113;
+    const size_t begin113=p113>512?p113-512:0;
+    const size_t finish113=std::min(data113.size(),p113+516);
+    bool rmNearby113=false;
+    for(size_t q113=begin113;q113+sizeof(rm113)<=finish113;++q113){
+     if(std::equal(std::begin(rm113),std::end(rm113),data113.begin()+q113)){
+      rmNearby113=true;break;
+     }
+    }
+    if(rmNearby113)++nearRm113;
+    if(shown113<32){
+     ++shown113;
+     std::cout<<"RM_PALETTE_TRACE_GLOBAL_REF offset="<<p113
+              <<" rmExtensionWithin512="<<rmNearby113<<"\n";
+    }
+   }
+   std::cout<<"RM_PALETTE_TRACE_GLOBAL_SUMMARY matches="<<globalTotal113
+            <<" rmExtensionNearby="<<nearRm113
+            <<" displayed="<<shown113
+            <<" caution=rawBytesNotDataFlow\n";
+  }
+ }
+
  std::cout<<"NOTE: Trailer plausibility does not establish palette ownership.\n";
  std::cout<<"NOTE: Palette overlap is numerical only; it does not establish RM palette provenance.\n";
  return 0;
