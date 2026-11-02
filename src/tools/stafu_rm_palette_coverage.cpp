@@ -1349,6 +1349,77 @@ int main(int argc,char** argv){
   }
  }
 
+
+ // Milestone 111: inspect a bounded region around the parameterized VGA DAC
+ // writer and survey candidate near calls. This is NOT a control-flow analysis:
+ // relative CALL targets use file offsets only, which may not correspond to
+ // runtime addresses in an overlay.
+ {
+  const auto path111=std::filesystem::path(argv[1])/"STTNG.OVL";
+  std::ifstream input111(path111,std::ios::binary);
+  if(!input111){
+   std::cout<<"RM_DAC_WRITER_STATUS read=0\n";
+  }else{
+   const std::vector<uint8_t> data111(
+    (std::istreambuf_iterator<char>(input111)),std::istreambuf_iterator<char>());
+   const size_t anchor111=1358117;
+   const size_t start111=anchor111>96?anchor111-96:0;
+   const size_t end111=std::min(data111.size(),anchor111+129);
+   std::cout<<"RM_DAC_WRITER_STATUS read=1 bytes="<<data111.size()
+            <<" anchor="<<anchor111<<" start="<<start111
+            <<" endExclusive="<<end111<<"\n";
+   for(size_t pos111=start111;pos111<end111;pos111+=16){
+    std::cout<<"RM_DAC_WRITER_HEX offset="<<pos111<<" hex=";
+    for(size_t j111=pos111;j111<std::min(end111,pos111+16);++j111){
+     if(j111!=pos111)std::cout<<" ";
+     std::cout<<std::hex<<std::setw(2)<<std::setfill('0')<<unsigned(data111[j111]);
+    }
+    std::cout<<std::dec<<std::setfill(' ')<<"\n";
+   }
+   // Verify the exact observed function prologue and DAC writer body bytes.
+   const uint8_t signature111[]={
+    0x55,0x8B,0xEC,0x50,0x51,0x52,0x56,0x8B,0x4D,0x10,
+    0x8B,0x45,0x0C,0x8B,0x75,0x08,0x66,0xBA,0xC8,0x03,
+    0xEE,0x66,0x42,0xAC,0xEE,0xAC,0xEE,0xAC,0xEE,
+    0x49,0x75,0xF7,0x5E,0x5A,0x59,0x58,0x5D,0xC3
+   };
+   const size_t entry111=1358101;
+   const bool signatureFits111=entry111+sizeof(signature111)<=data111.size();
+   const bool signatureMatches111=signatureFits111&&std::equal(
+    std::begin(signature111),std::end(signature111),data111.begin()+entry111);
+   std::cout<<"RM_DAC_WRITER_SIGNATURE entryOffset="<<entry111
+            <<" matches="<<signatureMatches111
+            <<" bytes="<<sizeof(signature111)
+            <<" parameterOffsets=8,12,16"
+            <<" note=staticBytePatternOnly\n";
+   // An E8 displacement is relative to the next instruction in a flat
+   // address space; overlay relocation and segment mapping are unknown.
+   size_t rawCalls111=0,nearEntry111=0;
+   for(size_t i111=0;i111+4<data111.size();++i111){
+    if(data111[i111]!=0xE8)continue;
+    ++rawCalls111;
+    const uint32_t displacement111=
+      uint32_t(data111[i111+1])|
+      (uint32_t(data111[i111+2])<<8)|
+      (uint32_t(data111[i111+3])<<16)|
+      (uint32_t(data111[i111+4])<<24);
+    const int64_t target111=int64_t(i111)+5+int64_t(int32_t(displacement111));
+    if(target111>=int64_t(entry111)-32&&target111<=int64_t(entry111)+32){
+     ++nearEntry111;
+     if(nearEntry111<=20)
+      std::cout<<"RM_DAC_WRITER_CALL_CANDIDATE offset="<<i111
+               <<" flatTarget="<<target111
+               <<" deltaFromEntry="<<(target111-int64_t(entry111))
+               <<" scope=unvalidatedFlatFileOffset\n";
+    }
+   }
+   std::cout<<"RM_DAC_WRITER_CALL_SUMMARY rawE8Patterns="<<rawCalls111
+            <<" flatNearEntryCandidates="<<nearEntry111
+            <<" displayed="<<std::min<size_t>(nearEntry111,20)
+            <<" warning=overlayAddressMappingUnknown\n";
+  }
+ }
+
  std::cout<<"NOTE: Trailer plausibility does not establish palette ownership.\n";
  std::cout<<"NOTE: Palette overlap is numerical only; it does not establish RM palette provenance.\n";
  return 0;
