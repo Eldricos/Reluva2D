@@ -2842,10 +2842,10 @@ int main(int argc,char** argv){
     {"caller_store_global",522991,{0xA3,0xA4,0x97,0x09,0x00},"storeReturnedEAX"},
     {"record_counter_reset",518516,{0xC7,0x83,0xB8,0x01,0x00,0x00,0x00,0x00,0x00,0x00},"recordCounterReset"},
     {"record_stride_16hex",518591,{0x6B,0x83,0xB8,0x01,0x00,0x00,0x16},"recordStride22"},
-    {"record_state_7fff",518676,{0x6B,0x83,0xB8,0x01,0x00,0x00,0x16,0x66,0xC7,0x44,0x03,0x10,0xFF,0x7F},"stateInitialization"},
-    {"owner_record_head",518868,{0x89,0x9B,0xC4,0x01,0x00,0x00},"field1C4"},
-    {"owner_record_tail",518874,{0x89,0x9B,0xC8,0x01,0x00,0x00},"field1C8"},
-    {"return_owner",518880,{0x89,0xD8},"returnEBXAsEAX"}
+    {"record_state_7fff",518675,{0x6B,0x83,0xB8,0x01,0x00,0x00,0x16,0x66,0xC7,0x44,0x03,0x10,0xFF,0x7F},"stateInitialization"},
+    {"owner_record_head",518870,{0x89,0x9B,0xC4,0x01,0x00,0x00},"field1C4"},
+    {"owner_record_tail",518876,{0x89,0x9B,0xC8,0x01,0x00,0x00},"field1C8"},
+    {"return_owner",518882,{0x89,0xD8},"returnEBXAsEAX"}
    };
    size_t passed129=0;
    for(const auto& t:checks129){
@@ -2871,6 +2871,90 @@ int main(int argc,char** argv){
             <<" callerArgumentOrigin=unverified"
             <<" functionBoundaries=notFullyDecoded"
             <<" allocationSemantics=unknown"
+            <<" resourceLoaderLink=unverified"
+            <<" rmPaletteProvenance=unverified\n";
+  }
+ }
+
+
+ // Milestone 130: examine the candidate producer at 588364 and verify the
+ // caller's argument setup and conditional handoff to the record initializer.
+ // Raw opcode surveys are not instruction-boundary-aware disassembly.
+ {
+  std::ifstream in130(std::filesystem::path(argv[1])/"STTNG.OVL",std::ios::binary);
+  if(!in130){
+   std::cout<<"RM_PALETTE_OWNER_ALLOC_STATUS read=0\n";
+  }else{
+   const std::vector<uint8_t> d130(
+    (std::istreambuf_iterator<char>(in130)),std::istreambuf_iterator<char>());
+   auto match130=[&](size_t p,const std::vector<uint8_t>& b){
+    return p+b.size()<=d130.size()&&
+     std::equal(b.begin(),b.end(),d130.begin()+p);
+   };
+   const size_t start130=588364,end130=588748;
+   std::cout<<"RM_PALETTE_OWNER_ALLOC_STATUS read=1 bytes="<<d130.size()
+            <<" start="<<start130<<" endExclusive="<<end130
+            <<" scope=boundedHexAndRawControlFlowSurvey\n";
+   for(size_t p=start130;p<std::min(end130,d130.size());p+=16){
+    std::cout<<"RM_PALETTE_OWNER_ALLOC_HEX offset="<<p<<" hex=";
+    for(size_t j=p;j<std::min(p+16,std::min(end130,d130.size()));++j){
+     if(j!=p)std::cout<<" ";
+     std::cout<<std::hex<<std::setw(2)<<std::setfill('0')<<unsigned(d130[j]);
+    }
+    std::cout<<std::dec<<std::setfill(' ')<<"\n";
+   }
+   size_t calls130=0,returns130=0,branches130=0;
+   for(size_t p=start130;p<std::min(end130,d130.size());++p){
+    if(d130[p]==0xC3||d130[p]==0xC2){
+     ++returns130;
+     std::cout<<"RM_PALETTE_OWNER_ALLOC_RETURN offset="<<p
+              <<" opcode="<<std::hex<<unsigned(d130[p])<<std::dec
+              <<" caution=rawByteNotProvenInstruction\n";
+    }
+    if(p+5<=end130&&p+5<=d130.size()&&d130[p]==0xE8){
+     const uint32_t v=uint32_t(d130[p+1])|(uint32_t(d130[p+2])<<8)|
+      (uint32_t(d130[p+3])<<16)|(uint32_t(d130[p+4])<<24);
+     const int32_t displacement=static_cast<int32_t>(v);
+     ++calls130;
+     std::cout<<"RM_PALETTE_OWNER_ALLOC_CALL offset="<<p
+              <<" flatTarget="<<(int64_t(p)+5+displacement)
+              <<" caution=rawOpcodeCandidateNotDisassembled\n";
+    }
+    if(p+2<=end130&&p+2<=d130.size()&&
+       (d130[p]==0x74||d130[p]==0x75||d130[p]==0xEB)){
+     ++branches130;
+     std::cout<<"RM_PALETTE_OWNER_ALLOC_BRANCH offset="<<p
+              <<" flatTarget="<<(int64_t(p)+2+int8_t(d130[p+1]))
+              <<" caution=rawOpcodeCandidateNotDisassembled\n";
+    }
+   }
+   std::cout<<"RM_PALETTE_OWNER_ALLOC_SUMMARY rawCalls="<<calls130
+            <<" rawReturns="<<returns130
+            <<" rawShortBranches="<<branches130<<"\n";
+   struct T130{const char* name;size_t offset;std::vector<uint8_t> bytes;const char* meaning;};
+   const std::vector<T130> checks130={
+    {"caller_three_constants",522946,{0x68,0xCB,0x03,0x00,0x00,0x68,0x43,0x0F,0x00,0x00,0x68,0x98,0x02,0x00,0x00},"threePushArguments"},
+    {"caller_producer_call",522961,{0xE8,0x76,0xFF,0x00,0x00},"call588364"},
+    {"caller_success_check",522966,{0x83,0xC4,0x0C,0x85,0xC0,0x74,0x0C},"stackCleanupTestEAXAndBranch"},
+    {"caller_record_arguments",522973,{0x53,0x6A,0x02,0x50},"pushEBX_2_EAX"},
+    {"caller_initializer_call",522977,{0xE8,0x82,0xEE,0xFF,0xFF},"call518504"},
+    {"caller_global_store",522991,{0xA3,0xA4,0x97,0x09,0x00},"storeEAX"}
+   };
+   size_t matches130=0;
+   for(const auto& t:checks130){
+    const bool ok=match130(t.offset,t.bytes);
+    if(ok)++matches130;
+    std::cout<<"RM_PALETTE_OWNER_ALLOC_TEMPLATE name="<<t.name
+             <<" offset="<<t.offset<<" match="<<(ok?1:0)
+             <<" interpretation="<<t.meaning<<"\n";
+   }
+   std::cout<<"RM_PALETTE_OWNER_ALLOC_TEMPLATE_SUMMARY matched="<<matches130
+            <<" total="<<checks130.size()<<"\n";
+   std::cout<<"RM_PALETTE_OWNER_ALLOC_LIMITATION"
+            <<" functionExtent=unverified"
+            <<" instructionBoundaries=notFullyDecoded"
+            <<" returnValueMeaning=unknown"
+            <<" allocationSemantics=unverified"
             <<" resourceLoaderLink=unverified"
             <<" rmPaletteProvenance=unverified\n";
   }
