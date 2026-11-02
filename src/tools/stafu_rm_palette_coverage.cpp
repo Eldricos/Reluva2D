@@ -2357,6 +2357,83 @@ int main(int argc,char** argv){
   }
  }
 
+
+ // Milestone 123: byte-indexed investigation of the structure initialization
+ // and intervening direct CALL before the palette routine. Anchored x86
+ // templates are checked separately from raw hex; no runtime provenance claim.
+ {
+  std::ifstream in123(std::filesystem::path(argv[1])/"STTNG.OVL",std::ios::binary);
+  if(!in123){
+   std::cout<<"RM_PALETTE_INIT_TRACE_STATUS read=0\n";
+  }else{
+   const std::vector<uint8_t> d123(
+    (std::istreambuf_iterator<char>(in123)),std::istreambuf_iterator<char>());
+   auto match123=[&](size_t p,const std::vector<uint8_t>& bytes){
+    return p<=d123.size()&&bytes.size()<=d123.size()-p&&
+      std::equal(bytes.begin(),bytes.end(),d123.begin()+p);
+   };
+   auto callTarget123=[&](size_t p)->int64_t{
+    if(p+5>d123.size()||d123[p]!=0xE8)return -1;
+    const uint32_t raw=uint32_t(d123[p+1])|
+      (uint32_t(d123[p+2])<<8)|
+      (uint32_t(d123[p+3])<<16)|
+      (uint32_t(d123[p+4])<<24);
+    return int64_t(p)+5+int64_t(int32_t(raw));
+   };
+   std::cout<<"RM_PALETTE_INIT_TRACE_STATUS read=1 bytes="<<d123.size()
+            <<" scope=boundedIndexedHexAndAnchoredTemplates\n";
+   // Include code before the observed initialization to investigate EAX's
+   // origin, as well as the CALL that runs between reset and palette setup.
+   const size_t anchors123[]={522079,522091,522102,522123,522714,522730,522754};
+   for(size_t a123:anchors123){
+    const size_t begin123=a123>=48?a123-48:0;
+    const size_t end123=std::min(d123.size(),a123+24);
+    std::cout<<"RM_PALETTE_INIT_TRACE_WINDOW anchor="<<a123
+             <<" start="<<begin123<<" endExclusive="<<end123<<"\n";
+    for(size_t row123=begin123;row123<end123;row123+=16){
+     std::cout<<"RM_PALETTE_INIT_TRACE_HEX anchor="<<a123
+              <<" offset="<<row123<<" hex=";
+     for(size_t j123=row123;j123<std::min(row123+16,end123);++j123){
+      if(j123!=row123)std::cout<<" ";
+      std::cout<<std::hex<<std::setw(2)<<std::setfill('0')
+               <<unsigned(d123[j123]);
+     }
+     std::cout<<std::dec<<std::setfill(' ')<<"\n";
+    }
+   }
+   // Verify the exact source-buffer setup sequence as observed in M122.
+   const bool base123=match123(522082,{
+    0x8B,0x58,0x06,0x8D,0x0C,0x18,0x89,0x0D,0x58,0x97,0x09,0x00});
+   const bool clear123=match123(522094,{
+    0x31,0xC9,0x8B,0x70,0x0A,0x89,0x0D,0x64,0x97,0x09,0x00});
+   const bool assign123=match123(522120,{
+    0x01,0xF0,0xA3,0x64,0x97,0x09,0x00});
+   std::cout<<"RM_PALETTE_INIT_TRACE_TEMPLATES"
+            <<" basePointerMatch="<<(base123?1:0)
+            <<" clearPointerMatch="<<(clear123?1:0)
+            <<" conditionalPointerAssignMatch="<<(assign123?1:0)
+            <<" caution=offsetsRequireVerification\n";
+   // Derive CALL location from a verified short sequence rather than
+   // assuming its position; the target uses flat file-offset arithmetic.
+   const size_t callStart123=522720,callEnd123=std::min(d123.size(),size_t(522740));
+   size_t calls123=0;
+   for(size_t p123=callStart123;p123+5<=callEnd123;++p123){
+    if(d123[p123]!=0xE8)continue;
+    ++calls123;
+    std::cout<<"RM_PALETTE_INIT_TRACE_PRECALL offset="<<p123
+             <<" flatTarget="<<callTarget123(p123)
+             <<" caution=rawCallCandidateBoundaryUnverified\n";
+   }
+   std::cout<<"RM_PALETTE_INIT_TRACE_PRECALL_SUMMARY candidates="<<calls123
+            <<" start="<<callStart123<<" endExclusive="<<callEnd123<<"\n";
+   std::cout<<"RM_PALETTE_INIT_TRACE_LIMITATION"
+            <<" eaxOrigin=unknown"
+            <<" precallEffect=unknown"
+            <<" esiSourceObject=unknown"
+            <<" rmResourceProvenance=unverified\n";
+  }
+ }
+
  std::cout<<"NOTE: Trailer plausibility does not establish palette ownership.\n";
  std::cout<<"NOTE: Palette overlap is numerical only; it does not establish RM palette provenance.\n";
  return 0;
