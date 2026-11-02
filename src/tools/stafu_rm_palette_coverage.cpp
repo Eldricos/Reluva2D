@@ -3075,6 +3075,83 @@ int main(int argc,char** argv){
   }
  }
 
+
+ // Milestone 133: locate the verified palette-source writer and provide
+ // bounded context around the initializer and record-pointer fields.
+ {
+  std::ifstream in133(std::filesystem::path(argv[1])/"STTNG.OVL",std::ios::binary);
+  if(!in133){
+   std::cout<<"RM_PALETTE_SOURCE_WRITER_STATUS read=0\n";
+  }else{
+   const std::vector<uint8_t> d133(
+    (std::istreambuf_iterator<char>(in133)),std::istreambuf_iterator<char>());
+   auto match133=[&](size_t p,const std::vector<uint8_t>& b){
+    return p+b.size()<=d133.size()&&
+     std::equal(b.begin(),b.end(),d133.begin()+p);
+   };
+   // Locate the three older record templates by searching a bounded
+   // region rather than guessing their instruction offsets again.
+   struct Template133{const char* name;std::vector<uint8_t> bytes;};
+   const std::vector<Template133> tail133={
+    {"owner_record_head",{0x89,0x9B,0xC4,0x01,0x00,0x00}},
+    {"owner_record_tail",{0x89,0x9B,0xC8,0x01,0x00,0x00}},
+    {"return_owner",{0x89,0xD8}}
+   };
+   for(const auto& t:tail133){
+    size_t count=0,first=0;
+    for(size_t p=518848;p<518896&&p+t.bytes.size()<=d133.size();++p){
+     if(match133(p,t.bytes)){
+      if(count==0)first=p;
+      ++count;
+     }
+    }
+    std::cout<<"RM_PALETTE_SOURCE_WRITER_RECORD_TEMPLATE name="<<t.name
+             <<" matches="<<count<<" firstOffset="<<(count?int64_t(first):-1)
+             <<" scope=boundedExactByteSearch\n";
+   }
+   struct Region133{const char* name;size_t start;size_t end;};
+   const std::vector<Region133> regions133={
+    {"record_tail",518848,518896},
+    {"palette_initializer",522032,522128},
+    {"palette_caller",522688,522768},
+    {"palette_consumer_entry",1166736,1166864},
+    {"palette_consumer_copy",1167192,1167256}
+   };
+   std::cout<<"RM_PALETTE_SOURCE_WRITER_STATUS read=1 bytes="<<d133.size()
+            <<" scope=boundedHexAndExactPointerTemplates\n";
+   for(const auto& region:regions133){
+    for(size_t p=region.start;p<std::min(region.end,d133.size());p+=16){
+     std::cout<<"RM_PALETTE_SOURCE_WRITER_HEX region="<<region.name
+              <<" offset="<<p<<" hex=";
+     for(size_t j=p;j<std::min(p+16,std::min(region.end,d133.size()));++j){
+      if(j!=p)std::cout<<" ";
+      std::cout<<std::hex<<std::setw(2)<<std::setfill('0')<<unsigned(d133[j]);
+     }
+     std::cout<<std::dec<<std::setfill(' ')<<"\n";
+    }
+   }
+   // The global 0x99758 is populated by the initializer, then its address
+   // is passed to the palette consumer. Neither fact proves RM provenance.
+   const std::vector<uint8_t> addr133={0x58,0x97,0x09,0x00};
+   size_t references133=0;
+   for(size_t p=522032;p<522128&&p+addr133.size()<=d133.size();++p){
+    if(match133(p,addr133)){
+     ++references133;
+     std::cout<<"RM_PALETTE_SOURCE_WRITER_GLOBAL_REF offset="<<p
+              <<" address=00099758 caution=literalAddressNotWriterProof\n";
+    }
+   }
+   std::cout<<"RM_PALETTE_SOURCE_WRITER_GLOBAL_REF_SUMMARY count="
+            <<references133<<"\n";
+   std::cout<<"RM_PALETTE_SOURCE_WRITER_LIMITATION"
+            <<" runtimePointerValues=unknown"
+            <<" recordPathReachability=unverified"
+            <<" sourceBufferAllocation=unverified"
+            <<" resourceIdentity=unverified"
+            <<" rmUpperPaletteProvenance=unverified\n";
+  }
+ }
+
  std::cout<<"NOTE: Trailer plausibility does not establish palette ownership.\n";
  std::cout<<"NOTE: Palette overlap is numerical only; it does not establish RM palette provenance.\n";
  return 0;
