@@ -2050,11 +2050,11 @@ int main(int argc,char** argv){
             <<" destinationBaseRegister=EDX\n";
    // The call immediately preceding the copy path is on a distinct
    // branch; it cannot be assumed to provide EAX for the copy.
-   const bool prior119=match119(1167205,{0xE8,0x69,0xF2,0x02,0x00});
-   const bool jump119=match119(1167210,{0xEB,0x6E});
-   std::cout<<"RM_PALETTE_ENTRY_PRECEDING_CALL offset=1167205"
+   const bool prior119=match119(1167204,{0xE8,0x69,0xF2,0x02,0x00});
+   const bool jump119=match119(1167209,{0xEB,0x6E});
+   std::cout<<"RM_PALETTE_ENTRY_PRECEDING_CALL offset=1167204"
             <<" templateMatch="<<(prior119?1:0);
-   if(prior119)std::cout<<" flatTarget="<<rel119(1167205,1,5);
+   if(prior119)std::cout<<" flatTarget="<<rel119(1167204,1,5);
    std::cout<<" followedByJump="<<(jump119?1:0)
             <<" copyPathFallthrough="<<(jump119?0:1)
             <<" caution=alternatePathNotCountProducerProof\n";
