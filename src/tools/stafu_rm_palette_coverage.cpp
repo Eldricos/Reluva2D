@@ -2515,6 +2515,76 @@ int main(int argc,char** argv){
   }
  }
 
+
+ // Milestone 125: bounded, byte-indexed helper branch and record-field survey.
+ // This is a static inspection, not a control-flow graph or runtime proof.
+ {
+  std::ifstream in125(std::filesystem::path(argv[1])/"STTNG.OVL",std::ios::binary);
+  if(!in125){
+   std::cout<<"RM_PALETTE_HELPER_RECORD_STATUS read=0\n";
+  }else{
+   const std::vector<uint8_t> d125(
+    (std::istreambuf_iterator<char>(in125)),std::istreambuf_iterator<char>());
+   const size_t start125=521248,end125=std::min(d125.size(),size_t(521488));
+   auto match125=[&](size_t p,const std::vector<uint8_t>& v){
+    return p<=d125.size()&&v.size()<=d125.size()-p&&
+           std::equal(v.begin(),v.end(),d125.begin()+p);
+   };
+   auto u32125=[&](size_t p)->uint32_t{
+    return uint32_t(d125[p])|(uint32_t(d125[p+1])<<8)|
+           (uint32_t(d125[p+2])<<16)|(uint32_t(d125[p+3])<<24);
+   };
+   std::cout<<"RM_PALETTE_HELPER_RECORD_STATUS read=1 bytes="<<d125.size()
+            <<" start="<<start125<<" endExclusive="<<end125
+            <<" scope=anchoredTemplatesAndRawBranchSurvey\n";
+   struct Pattern125{const char* name;size_t offset;std::vector<uint8_t> bytes;const char* meaning;};
+   const std::vector<Pattern125> patterns125={
+    {"entry_stack_arg",521248,{0x53,0x56,0x8B,0x5C,0x24,0x0C,0x8B,0x03},"argumentDereference"},
+    {"state_8000",521258,{0x66,0x8B,0x50,0x10,0x81,0xFA,0x00,0x80,0x00,0x00},"stateComparison"},
+    {"record_offset_0c",521272,{0x8B,0x50,0x0C,0x8B,0x5A,0x02,0x8D,0x0C,0x1A},"relativePointerCandidate"},
+    {"record_update_0c",521281,{0x8B,0x58,0x08,0x89,0x48,0x0C},"recordMutation"},
+    {"state_set_8001",521290,{0x66,0xC7,0x40,0x10,0x01,0x80},"stateMutation"},
+    {"state_8001",521299,{0x81,0xFA,0x01,0x80,0x00,0x00},"stateComparison"},
+    {"state_7fff",521382,{0x81,0xFA,0xFF,0x7F,0x00,0x00},"stateComparison"}
+   };
+   for(const auto& p125:patterns125)
+    std::cout<<"RM_PALETTE_HELPER_RECORD_TEMPLATE name="<<p125.name
+             <<" offset="<<p125.offset<<" match="<<(match125(p125.offset,p125.bytes)?1:0)
+             <<" interpretation="<<p125.meaning<<"\n";
+   size_t returns125=0,branches125=0;
+   for(size_t p125=start125;p125<end125;++p125){
+    if(d125[p125]==0xC3){
+     ++returns125;
+     std::cout<<"RM_PALETTE_HELPER_RECORD_RET offset="<<p125
+              <<" caution=rawByteNotProvenInstruction\n";
+    }
+    if(p125+2<=end125 && (d125[p125]==0x74||d125[p125]==0x75||d125[p125]==0xEB)){
+     ++branches125;
+     const int8_t disp=static_cast<int8_t>(d125[p125+1]);
+     std::cout<<"RM_PALETTE_HELPER_RECORD_BRANCH offset="<<p125
+              <<" opcode="<<std::hex<<unsigned(d125[p125])<<std::dec
+              <<" flatTarget="<<(int64_t(p125)+2+disp)
+              <<" caution=rawByteNotProvenInstruction\n";
+    }else if(p125+6<=end125 && d125[p125]==0x0F &&
+             (d125[p125+1]==0x84||d125[p125+1]==0x85)){
+     ++branches125;
+     const int32_t disp=static_cast<int32_t>(u32125(p125+2));
+     std::cout<<"RM_PALETTE_HELPER_RECORD_BRANCH offset="<<p125
+              <<" opcode=0f"<<std::hex<<unsigned(d125[p125+1])<<std::dec
+              <<" flatTarget="<<(int64_t(p125)+6+disp)
+              <<" caution=rawByteNotProvenInstruction\n";
+    }
+   }
+   std::cout<<"RM_PALETTE_HELPER_RECORD_SUMMARY rawReturns="<<returns125
+            <<" rawBranches="<<branches125<<"\n";
+   std::cout<<"RM_PALETTE_HELPER_RECORD_LIMITATION"
+            <<" branchReachability=unknown"
+            <<" recordLayout=unverified"
+            <<" returnValuePaths=notProven"
+            <<" rmResourceProvenance=unverified\n";
+  }
+ }
+
  std::cout<<"NOTE: Trailer plausibility does not establish palette ownership.\n";
  std::cout<<"NOTE: Palette overlap is numerical only; it does not establish RM palette provenance.\n";
  return 0;
