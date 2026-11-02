@@ -3174,8 +3174,8 @@ int main(int argc,char** argv){
     {"record_global_99758_store",522089,{0x89,0x0D,0x58,0x97,0x09,0x00},"storeComputedPointer"},
     {"record_relative_0a_read",522097,{0x8B,0x70,0x0A},"readRecordOffset0A"},
     {"record_global_99764_clear",522100,{0x89,0x0D,0x64,0x97,0x09,0x00},"clearOptionalPointer"},
-    {"record_relative_0a_add",522119,{0x01,0xF0},"addOptionalOffset"},
-    {"record_global_99764_store",522121,{0xA3,0x64,0x97,0x09,0x00},"storeOptionalPointer"}
+    {"record_relative_0a_add",522120,{0x01,0xF0},"addOptionalOffset"},
+    {"record_global_99764_store",522122,{0xA3,0x64,0x97,0x09,0x00},"storeOptionalPointer"}
    };
    std::cout<<"RM_PALETTE_RECORD_RELATIVE_STATUS read=1 bytes="<<d134.size()
             <<" scope=boundedExactTemplatesAndRawFieldSearch\n";
@@ -3388,6 +3388,91 @@ int main(int argc,char** argv){
             <<" helperSemantics=unverified"
             <<" payloadWriters=unverified"
             <<" resourceLoaderLink=unverified"
+            <<" rmUpperPaletteProvenance=unverified\n";
+  }
+ }
+
+
+ // Milestone 137: bounded evidence around payload traversal callers,
+ // potential resource operations, and record-relative header offsets.
+ {
+  std::ifstream in137(std::filesystem::path(argv[1])/"STTNG.OVL",std::ios::binary);
+  if(!in137){
+   std::cout<<"RM_PALETTE_PAYLOAD_PROVENANCE_STATUS read=0\n";
+  }else{
+   const std::vector<uint8_t> d137(
+    (std::istreambuf_iterator<char>(in137)),std::istreambuf_iterator<char>());
+   auto match137=[&](size_t p,const std::vector<uint8_t>& b){
+    return p+b.size()<=d137.size()&&
+     std::equal(b.begin(),b.end(),d137.begin()+p);
+   };
+   std::cout<<"RM_PALETTE_PAYLOAD_PROVENANCE_STATUS read=1 bytes="
+            <<d137.size()<<" scope=boundedTraversalCallerAndResourceCandidates\n";
+   struct Region137{const char* name;size_t start;size_t end;};
+   const std::vector<Region137> regions137={
+    {"initializer_predecessor",521920,522048},
+    {"payload_initializer",522044,522224},
+    {"consumer_caller",522624,522832},
+    {"owner_factory_caller",522816,523056},
+    {"traversal_helper",521248,521488}
+   };
+   for(const auto& region:regions137){
+    for(size_t p=region.start;p<std::min(region.end,d137.size());p+=16){
+     std::cout<<"RM_PALETTE_PAYLOAD_PROVENANCE_HEX region="<<region.name
+              <<" offset="<<p<<" hex=";
+     for(size_t j=p;j<std::min(p+16,std::min(region.end,d137.size()));++j){
+      if(j!=p)std::cout<<" ";
+      std::cout<<std::hex<<std::setw(2)<<std::setfill('0')<<unsigned(d137[j]);
+     }
+     std::cout<<std::dec<<std::setfill(' ')<<"\n";
+    }
+   }
+   struct Candidate137{const char* name;size_t target;};
+   const std::vector<Candidate137> targets137={
+    {"record_traversal",521248},
+    {"payload_initializer",522044},
+    {"owner_factory",518504}
+   };
+   for(const auto& target:targets137){
+    size_t total=0;
+    for(size_t p=518000;p<524000&&p+5<=d137.size();++p){
+     if(d137[p]!=0xE8)continue;
+     const uint32_t u=uint32_t(d137[p+1])|
+       (uint32_t(d137[p+2])<<8)|
+       (uint32_t(d137[p+3])<<16)|
+       (uint32_t(d137[p+4])<<24);
+     if(int64_t(p)+5+int64_t(int32_t(u))!=int64_t(target.target))continue;
+     ++total;
+     if(total<=32)
+      std::cout<<"RM_PALETTE_PAYLOAD_PROVENANCE_RAW_CALL name="
+               <<target.name<<" offset="<<p
+               <<" target="<<target.target
+               <<" caution=rawCandidateNotDecoded\n";
+    }
+    std::cout<<"RM_PALETTE_PAYLOAD_PROVENANCE_RAW_CALL_SUMMARY name="
+             <<target.name<<" count="<<total<<" displayedMax=32\n";
+   }
+   // Find the precise read sites in the initializer, without assuming
+   // those record fields were written by the same subsystem.
+   for(const auto& field:std::vector<std::pair<const char*,std::vector<uint8_t>>>{
+      {"relative_offset_06",{0x8B,0x58,0x06}},
+      {"relative_offset_0a",{0x8B,0x70,0x0A}}}){
+    size_t count=0;
+    for(size_t p=522044;p<522224&&p+field.second.size()<=d137.size();++p){
+     if(!match137(p,field.second))continue;
+     ++count;
+     std::cout<<"RM_PALETTE_PAYLOAD_PROVENANCE_FIELD_READ name="
+              <<field.first<<" offset="<<p
+              <<" caution=recordHeaderMeaningUnverified\n";
+    }
+    std::cout<<"RM_PALETTE_PAYLOAD_PROVENANCE_FIELD_SUMMARY name="
+             <<field.first<<" count="<<count<<"\n";
+   }
+   std::cout<<"RM_PALETTE_PAYLOAD_PROVENANCE_LIMITATION"
+            <<" callers=rawCandidates"
+            <<" fileIOPath=unverified"
+            <<" resourceIdentity=unverified"
+            <<" relativeOffsetWriter=unverified"
             <<" rmUpperPaletteProvenance=unverified\n";
   }
  }
