@@ -2843,9 +2843,9 @@ int main(int argc,char** argv){
     {"record_counter_reset",518516,{0xC7,0x83,0xB8,0x01,0x00,0x00,0x00,0x00,0x00,0x00},"recordCounterReset"},
     {"record_stride_16hex",518591,{0x6B,0x83,0xB8,0x01,0x00,0x00,0x16},"recordStride22"},
     {"record_state_7fff",518679,{0x6B,0x83,0xB8,0x01,0x00,0x00,0x16,0x66,0xC7,0x44,0x03,0x10,0xFF,0x7F},"stateInitialization"},
-    {"owner_record_head",518867,{0x89,0x9B,0xC4,0x01,0x00,0x00},"field1C4"},
-    {"owner_record_tail",518873,{0x89,0x9B,0xC8,0x01,0x00,0x00},"field1C8"},
-    {"return_owner",518879,{0x89,0xD8},"returnEBXAsEAX"}
+    {"owner_record_head",518866,{0x89,0x9B,0xC4,0x01,0x00,0x00},"field1C4"},
+    {"owner_record_tail",518872,{0x89,0x9B,0xC8,0x01,0x00,0x00},"field1C8"},
+    {"return_owner",518878,{0x89,0xD8},"returnEBXAsEAX"}
    };
    size_t passed129=0;
    for(const auto& t:checks129){
@@ -3014,6 +3014,64 @@ int main(int argc,char** argv){
             <<" callingConvention=unverified"
             <<" resourceLoaderLink=unverified"
             <<" rmPaletteProvenance=unverified\n";
+  }
+ }
+
+
+ // Milestone 132: revisit the palette consumer and its source-pointer
+ // setup. These bounded bytes are evidence, not a full disassembly.
+ {
+  std::ifstream in132(std::filesystem::path(argv[1])/"STTNG.OVL",std::ios::binary);
+  if(!in132){
+   std::cout<<"RM_PALETTE_CONSUMER_SOURCE_STATUS read=0\n";
+  }else{
+   const std::vector<uint8_t> d132(
+    (std::istreambuf_iterator<char>(in132)),std::istreambuf_iterator<char>());
+   auto match132=[&](size_t p,const std::vector<uint8_t>& b){
+    return p+b.size()<=d132.size()&&
+     std::equal(b.begin(),b.end(),d132.begin()+p);
+   };
+   std::cout<<"RM_PALETTE_CONSUMER_SOURCE_STATUS read=1 bytes="<<d132.size()
+            <<" scope=boundedPaletteConsumerAndCallerHex\n";
+   struct Region132{const char* name;size_t start;size_t end;};
+   const std::vector<Region132> regions132={
+    {"consumer_entry",1166720,1166912},
+    {"consumer_copy",1167104,1167376},
+    {"caller",522704,522768}
+   };
+   for(const auto& region:regions132){
+    for(size_t p=region.start;p<std::min(region.end,d132.size());p+=16){
+     std::cout<<"RM_PALETTE_CONSUMER_SOURCE_HEX region="<<region.name
+              <<" offset="<<p<<" hex=";
+     for(size_t j=p;j<std::min(p+16,std::min(region.end,d132.size()));++j){
+      if(j!=p)std::cout<<" ";
+      std::cout<<std::hex<<std::setw(2)<<std::setfill('0')<<unsigned(d132[j]);
+     }
+     std::cout<<std::dec<<std::setfill(' ')<<"\n";
+    }
+   }
+   struct T132{const char* name;size_t offset;std::vector<uint8_t> bytes;const char* meaning;};
+   const std::vector<T132> checks132={
+    {"consumer_esi_stack_argument",1166747,{0x8B,0x74,0x24,0x18},"ESIFromStack"},
+    {"caller_palette_arg_99750",522744,{0x68,0x50,0x97,0x09,0x00},"paletteArgumentAddress"},
+    {"caller_palette_arg_99758",522749,{0x68,0x58,0x97,0x09,0x00},"paletteArgumentAddress"},
+    {"caller_palette_call",522754,{0xE8,0x8D,0xD3,0x09,0x00},"paletteConsumerCall"}
+   };
+   size_t matches132=0;
+   for(const auto& t:checks132){
+    const bool ok=match132(t.offset,t.bytes);
+    if(ok)++matches132;
+    std::cout<<"RM_PALETTE_CONSUMER_SOURCE_TEMPLATE name="<<t.name
+             <<" offset="<<t.offset<<" match="<<(ok?1:0)
+             <<" interpretation="<<t.meaning<<"\n";
+   }
+   std::cout<<"RM_PALETTE_CONSUMER_SOURCE_TEMPLATE_SUMMARY matched="
+            <<matches132<<" total="<<checks132.size()<<"\n";
+   std::cout<<"RM_PALETTE_CONSUMER_SOURCE_LIMITATION"
+            <<" sourcePointerWriter=unverified"
+            <<" callerResourceIdentity=unverified"
+            <<" copyPathReachability=unverified"
+            <<" rmUpperPaletteProvenance=unverified\n";
   }
  }
 
