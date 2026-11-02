@@ -3477,6 +3477,88 @@ int main(int argc,char** argv){
   }
  }
 
+
+ // Milestone 138: verify the third relative payload pointer, the
+ // owner-setup call and the preceding transformation routine.
+ {
+  std::ifstream in138(std::filesystem::path(argv[1])/"STTNG.OVL",std::ios::binary);
+  if(!in138){
+   std::cout<<"RM_PALETTE_THIRD_POINTER_STATUS read=0\n";
+  }else{
+   const std::vector<uint8_t> d138(
+    (std::istreambuf_iterator<char>(in138)),std::istreambuf_iterator<char>());
+   auto match138=[&](size_t p,const std::vector<uint8_t>& b){
+    return p+b.size()<=d138.size()&&
+     std::equal(b.begin(),b.end(),d138.begin()+p);
+   };
+   std::cout<<"RM_PALETTE_THIRD_POINTER_STATUS read=1 bytes="
+            <<d138.size()<<" scope=boundedExactAnchorsAndHex\n";
+   struct Anchor138{const char* name;size_t offset;std::vector<uint8_t> bytes;};
+   const std::vector<Anchor138> anchors138={
+    {"third_relative_read",522128,{0x8B,0x6A,0x0E}},
+    {"third_pointer_zero",522131,{0x89,0x3D,0x88,0x97,0x09,0x00}},
+    {"third_relative_add",522141,{0x01,0xEA}},
+    {"third_pointer_store",522143,{0x89,0x15,0x88,0x97,0x09,0x00}},
+    {"owner_global_load",523009,{0x8B,0x2D,0xA4,0x97,0x09,0x00}},
+    {"owner_push",523014,{0x55}},
+    {"setup_call",523015,{0xE8,0x3F,0xF0,0xFF,0xFF}}
+   };
+   size_t anchorMatched138=0;
+   for(const auto& a:anchors138){
+    const bool ok=match138(a.offset,a.bytes);
+    if(ok)++anchorMatched138;
+    std::cout<<"RM_PALETTE_THIRD_POINTER_TEMPLATE name="<<a.name
+             <<" offset="<<a.offset<<" match="<<(ok?1:0)<<"\n";
+   }
+   std::cout<<"RM_PALETTE_THIRD_POINTER_TEMPLATE_SUMMARY matched="
+            <<anchorMatched138<<" total="<<anchors138.size()<<"\n";
+   struct Call138{const char* name;size_t offset;int64_t expected;};
+   const std::vector<Call138> calls138={
+    {"owner_setup",523015,518724},
+    {"payload_traversal",522059,521248},
+    {"payload_initializer",522730,522044}
+   };
+   for(const auto& call:calls138){
+    int64_t target=-1;
+    if(call.offset+5<=d138.size()&&d138[call.offset]==0xE8){
+     const uint32_t u=uint32_t(d138[call.offset+1])|
+       (uint32_t(d138[call.offset+2])<<8)|
+       (uint32_t(d138[call.offset+3])<<16)|
+       (uint32_t(d138[call.offset+4])<<24);
+     target=int64_t(call.offset)+5+int64_t(int32_t(u));
+    }
+    std::cout<<"RM_PALETTE_THIRD_POINTER_CALL name="<<call.name
+             <<" offset="<<call.offset<<" target="<<target
+             <<" expected="<<call.expected
+             <<" match="<<(target==call.expected?1:0)<<"\n";
+   }
+   struct Region138{const char* name;size_t start;size_t end;};
+   const std::vector<Region138> regions138={
+    {"third_pointer_consumers",522112,522320},
+    {"record_setup_entry",518704,518896},
+    {"transform_predecessor",521760,522048},
+    {"owner_setup_caller",522960,523088}
+   };
+   for(const auto& region:regions138){
+    for(size_t p=region.start;p<std::min(region.end,d138.size());p+=16){
+     std::cout<<"RM_PALETTE_THIRD_POINTER_HEX region="<<region.name
+              <<" offset="<<p<<" hex=";
+     for(size_t j=p;j<std::min(p+16,std::min(region.end,d138.size()));++j){
+      if(j!=p)std::cout<<" ";
+      std::cout<<std::hex<<std::setw(2)<<std::setfill('0')<<unsigned(d138[j]);
+     }
+     std::cout<<std::dec<<std::setfill(' ')<<"\n";
+    }
+   }
+   std::cout<<"RM_PALETTE_THIRD_POINTER_LIMITATION"
+            <<" instructionBoundaries=partiallyVerified"
+            <<" thirdPayloadMeaning=unverified"
+            <<" setupFunctionSemantics=unverified"
+            <<" transformInputFormat=unverified"
+            <<" rmUpperPaletteProvenance=unverified\n";
+  }
+ }
+
  std::cout<<"NOTE: Trailer plausibility does not establish palette ownership.\n";
  std::cout<<"NOTE: Palette overlap is numerical only; it does not establish RM palette provenance.\n";
  return 0;
