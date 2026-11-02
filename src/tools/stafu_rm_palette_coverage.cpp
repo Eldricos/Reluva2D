@@ -1630,6 +1630,114 @@ int main(int argc,char** argv){
   }
  }
 
+
+ // Milestone 115: inspect branch destinations and deduplicate overlapping
+ // structure-field byte templates. This is bounded static evidence, not a
+ // full instruction decoder or proof of executable control flow.
+ {
+  const auto path115=std::filesystem::path(argv[1])/"STTNG.OVL";
+  std::ifstream input115(path115,std::ios::binary);
+  if(!input115){
+   std::cout<<"RM_PALETTE_DEST_STATUS read=0\n";
+  }else{
+   const std::vector<uint8_t> data115(
+    (std::istreambuf_iterator<char>(input115)),std::istreambuf_iterator<char>());
+   const size_t destinations115[]={1167145,1167213,1167351};
+   std::cout<<"RM_PALETTE_DEST_STATUS read=1 bytes="<<data115.size()
+            <<" destinations=3 radiusBefore=48 radiusAfter=96"
+            <<" scope=staticByteWindows\n";
+   for(size_t destination115:destinations115){
+    if(destination115>=data115.size()){
+     std::cout<<"RM_PALETTE_DEST_ANCHOR offset="<<destination115
+              <<" available=0\n";
+     continue;
+    }
+    const size_t begin115=destination115>48?destination115-48:0;
+    const size_t end115=std::min(data115.size(),destination115+97);
+    std::cout<<"RM_PALETTE_DEST_ANCHOR offset="<<destination115
+             <<" available=1 start="<<begin115
+             <<" endExclusive="<<end115<<"\n";
+    for(size_t row115=begin115;row115<end115;row115+=16){
+     std::cout<<"RM_PALETTE_DEST_HEX anchor="<<destination115
+              <<" offset="<<row115<<" hex=";
+     for(size_t j115=row115;j115<std::min(end115,row115+16);++j115){
+      if(j115!=row115)std::cout<<" ";
+      std::cout<<std::hex<<std::setw(2)<<std::setfill('0')
+               <<unsigned(data115[j115]);
+     }
+     std::cout<<std::dec<<std::setfill(' ')<<"\n";
+    }
+    size_t returns115=0,nearCalls115=0;
+    for(size_t p115=destination115;p115<end115;++p115){
+     if(data115[p115]==0xC3||data115[p115]==0xC2){
+      ++returns115;
+      if(returns115<=12)
+       std::cout<<"RM_PALETTE_DEST_RET_CANDIDATE anchor="<<destination115
+                <<" offset="<<p115<<" opcode="
+                <<(data115[p115]==0xC3?"C3":"C2")
+                <<" scope=rawBytePattern\n";
+     }
+     if(data115[p115]==0xE8&&p115+5<=end115){
+      ++nearCalls115;
+      const uint32_t raw115=uint32_t(data115[p115+1])|
+       (uint32_t(data115[p115+2])<<8)|
+       (uint32_t(data115[p115+3])<<16)|
+       (uint32_t(data115[p115+4])<<24);
+      if(nearCalls115<=12)
+       std::cout<<"RM_PALETTE_DEST_CALL_CANDIDATE anchor="<<destination115
+                <<" offset="<<p115
+                <<" flatTarget="<<(int64_t(p115)+5+int64_t(int32_t(raw115)))
+                <<" scope=unvalidatedFlatFileOffset\n";
+     }
+    }
+    std::cout<<"RM_PALETTE_DEST_SUMMARY anchor="<<destination115
+             <<" rawRetBytes="<<returns115<<" rawCallBytes="<<nearCalls115<<"\n";
+   }
+   // Correct the prior survey's duplicate recognition of the same disp32
+   // instruction at adjacent starting offsets. Match the exact observed
+   // templates and advance past the full matched instruction.
+   const size_t callers115[]={1166889,1167061};
+   for(size_t site115:callers115){
+    const size_t begin115=site115>96?site115-96:0;
+    const size_t end115=std::min(data115.size(),site115+65);
+    size_t count115=0;
+    for(size_t p115=begin115;p115<end115;){
+     size_t len115=0;
+     const char* kind115=nullptr;
+     int displacement115=0;
+     if(p115+4<=end115&&data115[p115]==0x0F&&data115[p115+1]==0xBF&&
+        (data115[p115+2]&0xC0)==0x40&&data115[p115+3]==0x7E){
+      len115=4;kind115="movsx_disp8_7E";displacement115=126;
+     }else if(p115+7<=end115&&data115[p115]==0x66&&
+        data115[p115+1]==0x8B&&(data115[p115+2]&0xC0)==0x80&&
+        data115[p115+3]==0x80&&data115[p115+4]==0&&
+        data115[p115+5]==0&&data115[p115+6]==0){
+      len115=7;kind115="mov16_disp32_80";displacement115=128;
+     }else if(p115+6<=end115&&data115[p115]==0x8B&&
+        (data115[p115+1]&0xC0)==0x80&&
+        (data115[p115+2]==0x80||data115[p115+2]==0x84)&&
+        data115[p115+3]==0&&data115[p115+4]==0&&
+        data115[p115+5]==0){
+      len115=6;kind115="mov32_disp32";
+      displacement115=data115[p115+2];
+     }
+     if(len115){
+      ++count115;
+      std::cout<<"RM_PALETTE_DEST_FIELD site="<<site115
+               <<" offset="<<p115<<" kind="<<kind115
+               <<" displacement="<<displacement115
+               <<" length="<<len115
+               <<" scope=selectedByteTemplate\n";
+      p115+=len115;
+     }else ++p115;
+    }
+    std::cout<<"RM_PALETTE_DEST_FIELD_SUMMARY site="<<site115
+             <<" nonOverlappingMatches="<<count115
+             <<" caution=notFullInstructionDecode\n";
+   }
+  }
+ }
+
  std::cout<<"NOTE: Trailer plausibility does not establish palette ownership.\n";
  std::cout<<"NOTE: Palette overlap is numerical only; it does not establish RM palette provenance.\n";
  return 0;
