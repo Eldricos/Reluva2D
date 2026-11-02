@@ -2183,6 +2183,66 @@ int main(int argc,char** argv){
   }
  }
 
+
+ // Milestone 120 follow-up: independently index exact bytes around the
+ // candidate ESI definition and the two previously mismatched use sites.
+ // Only complete local byte sequences count as matches.
+ {
+  std::ifstream in120b(std::filesystem::path(argv[1])/"STTNG.OVL",std::ios::binary);
+  if(!in120b){
+   std::cout<<"RM_PALETTE_ESI_INDEX_STATUS read=0\n";
+  }else{
+   const std::vector<uint8_t> d120b(
+    (std::istreambuf_iterator<char>(in120b)),std::istreambuf_iterator<char>());
+   auto matches120b=[&](size_t p,const std::vector<uint8_t>& seq){
+    return p<=d120b.size()&&seq.size()<=d120b.size()-p&&
+           std::equal(seq.begin(),seq.end(),d120b.begin()+p);
+   };
+   std::cout<<"RM_PALETTE_ESI_INDEX_STATUS read=1 bytes="<<d120b.size()
+            <<" scope=byteIndexedWindowsNotDisassembly\n";
+   const size_t anchors120b[]={1166740,1166747,1166843,1166886};
+   for(size_t a120b:anchors120b){
+    const size_t start120b=a120b>=12?a120b-12:0;
+    const size_t end120b=std::min(d120b.size(),a120b+20);
+    std::cout<<"RM_PALETTE_ESI_INDEX_WINDOW anchor="<<a120b
+             <<" start="<<start120b<<" endExclusive="<<end120b<<"\n";
+    for(size_t p120b=start120b;p120b<end120b;++p120b)
+     std::cout<<"RM_PALETTE_ESI_INDEX_BYTE anchor="<<a120b
+              <<" offset="<<p120b<<" hex="<<std::hex
+              <<std::setw(2)<<std::setfill('0')<<unsigned(d120b[p120b])
+              <<std::dec<<std::setfill(' ')<<"\n";
+   }
+   struct Pattern120b{const char* label;size_t begin;size_t end;
+                      std::vector<uint8_t> seq;};
+   const Pattern120b patterns120b[]={
+    {"esi_mov_candidate",1166735,1166770,{0x8B,0x74,0x24}},
+    {"esi_read_edi",1166828,1166860,{0x8B,0x7E,0x0C}},
+    {"esi_read_ebp",1166871,1166905,{0x8B,0x6E,0x0C}}
+   };
+   for(const auto& pat120b:patterns120b){
+    size_t count120b=0;
+    const size_t end120b=std::min(pat120b.end,d120b.size());
+    for(size_t p120b=pat120b.begin;
+        p120b<=end120b&&pat120b.seq.size()<=end120b-p120b;++p120b){
+     if(!matches120b(p120b,pat120b.seq))continue;
+     ++count120b;
+     std::cout<<"RM_PALETTE_ESI_INDEX_MATCH label="<<pat120b.label
+              <<" offset="<<p120b
+              <<" bytes="<<pat120b.seq.size()
+              <<" caution=instructionBoundaryAndReachabilityUnverified\n";
+    }
+    std::cout<<"RM_PALETTE_ESI_INDEX_SUMMARY label="<<pat120b.label
+             <<" matches="<<count120b
+             <<" start="<<pat120b.begin
+             <<" endExclusive="<<end120b<<"\n";
+   }
+   std::cout<<"RM_PALETTE_ESI_INDEX_LIMITATION"
+            <<" esiReachingDefinition=unknown"
+            <<" sourcePointerOwnership=unknown"
+            <<" rmPaletteConnection=unverified\n";
+  }
+ }
+
  std::cout<<"NOTE: Trailer plausibility does not establish palette ownership.\n";
  std::cout<<"NOTE: Palette overlap is numerical only; it does not establish RM palette provenance.\n";
  return 0;
