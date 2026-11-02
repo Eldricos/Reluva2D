@@ -2450,6 +2450,71 @@ int main(int argc,char** argv){
   }
  }
 
+
+ // Milestone 124: inspect the upstream helper at flat offset 521248.
+ // Hex windows are byte-indexed and CALL candidates are raw rel32 patterns;
+ // they do not establish instruction boundaries or runtime return semantics.
+ {
+  std::ifstream in124(std::filesystem::path(argv[1])/"STTNG.OVL",std::ios::binary);
+  if(!in124){
+   std::cout<<"RM_PALETTE_HELPER_STATUS read=0\n";
+  }else{
+   const std::vector<uint8_t> d124(
+    (std::istreambuf_iterator<char>(in124)),std::istreambuf_iterator<char>());
+   auto matches124=[&](size_t p,const std::vector<uint8_t>& seq){
+    return p<=d124.size()&&seq.size()<=d124.size()-p&&
+           std::equal(seq.begin(),seq.end(),d124.begin()+p);
+   };
+   auto target124=[&](size_t p)->int64_t{
+    if(p+5>d124.size()||d124[p]!=0xE8)return -1;
+    const uint32_t u=uint32_t(d124[p+1])|
+      (uint32_t(d124[p+2])<<8)|
+      (uint32_t(d124[p+3])<<16)|
+      (uint32_t(d124[p+4])<<24);
+    return int64_t(p)+5+int64_t(int32_t(u));
+   };
+   const size_t helper124=521248;
+   const size_t start124=helper124>=32?helper124-32:0;
+   const size_t end124=std::min(d124.size(),helper124+256);
+   std::cout<<"RM_PALETTE_HELPER_STATUS read=1 bytes="<<d124.size()
+            <<" helperOffset="<<helper124
+            <<" scope=boundedHexAndRawCallCandidates\n";
+   for(size_t row124=start124;row124<end124;row124+=16){
+    std::cout<<"RM_PALETTE_HELPER_HEX offset="<<row124<<" hex=";
+    for(size_t j124=row124;j124<std::min(end124,row124+16);++j124){
+     if(j124!=row124)std::cout<<" ";
+     std::cout<<std::hex<<std::setw(2)<<std::setfill('0')
+              <<unsigned(d124[j124]);
+    }
+    std::cout<<std::dec<<std::setfill(' ')<<"\n";
+   }
+   // Caller-to-helper relationship established in M123.
+   const bool caller124=matches124(522048,{
+    0xA1,0xA4,0x97,0x09,0x00,0x05,0xC4,0x01,0x00,0x00,
+    0x50,0xE8,0xD0,0xFC,0xFF,0xFF,0x83,0xC4,0x04});
+   std::cout<<"RM_PALETTE_HELPER_CALLER callOffset=522059"
+            <<" templateMatch="<<(caller124?1:0)
+            <<" flatTarget="<<target124(522059)
+            <<" argument=global_000997A4_plus_0x1C4\n";
+   size_t calls124=0;
+   for(size_t p124=helper124;p124+5<=end124;++p124){
+    if(d124[p124]!=0xE8)continue;
+    ++calls124;
+    std::cout<<"RM_PALETTE_HELPER_CALL_CANDIDATE offset="<<p124
+             <<" flatTarget="<<target124(p124)
+             <<" caution=rawOpcodeNotDecodedInstruction\n";
+   }
+   std::cout<<"RM_PALETTE_HELPER_CALL_SUMMARY candidates="<<calls124
+            <<" start="<<helper124<<" endExclusive="<<end124<<"\n";
+   std::cout<<"RM_PALETTE_HELPER_LIMITATION"
+            <<" functionBoundary=unverified"
+            <<" returnValueConstruction=unknown"
+            <<" stackArgumentUse=unknown"
+            <<" indirectCallsNotEnumerated=1"
+            <<" rmResourceProvenance=unverified\n";
+  }
+ }
+
  std::cout<<"NOTE: Trailer plausibility does not establish palette ownership.\n";
  std::cout<<"NOTE: Palette overlap is numerical only; it does not establish RM palette provenance.\n";
  return 0;
