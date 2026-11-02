@@ -3169,13 +3169,13 @@ int main(int argc,char** argv){
    };
    struct T134{const char* name;size_t offset;std::vector<uint8_t> bytes;const char* interpretation;};
    const std::vector<T134> checks134={
-    {"record_relative_06_read",522084,{0x8B,0x58,0x06},"readRecordOffset06"},
-    {"record_relative_06_add",522087,{0x8D,0x0C,0x18},"addRecordBase"},
-    {"record_global_99758_store",522090,{0x89,0x0D,0x58,0x97,0x09,0x00},"storeComputedPointer"},
-    {"record_relative_0a_read",522098,{0x8B,0x70,0x0A},"readRecordOffset0A"},
-    {"record_global_99764_clear",522101,{0x89,0x0D,0x64,0x97,0x09,0x00},"clearOptionalPointer"},
-    {"record_relative_0a_add",522117,{0x01,0xF0},"addOptionalOffset"},
-    {"record_global_99764_store",522119,{0xA3,0x64,0x97,0x09,0x00},"storeOptionalPointer"}
+    {"record_relative_06_read",522083,{0x8B,0x58,0x06},"readRecordOffset06"},
+    {"record_relative_06_add",522086,{0x8D,0x0C,0x18},"addRecordBase"},
+    {"record_global_99758_store",522089,{0x89,0x0D,0x58,0x97,0x09,0x00},"storeComputedPointer"},
+    {"record_relative_0a_read",522097,{0x8B,0x70,0x0A},"readRecordOffset0A"},
+    {"record_global_99764_clear",522100,{0x89,0x0D,0x64,0x97,0x09,0x00},"clearOptionalPointer"},
+    {"record_relative_0a_add",522118,{0x01,0xF0},"addOptionalOffset"},
+    {"record_global_99764_store",522120,{0xA3,0x64,0x97,0x09,0x00},"storeOptionalPointer"}
    };
    std::cout<<"RM_PALETTE_RECORD_RELATIVE_STATUS read=1 bytes="<<d134.size()
             <<" scope=boundedExactTemplatesAndRawFieldSearch\n";
@@ -3236,6 +3236,88 @@ int main(int argc,char** argv){
             <<" instructionBoundaries=notFullyDecoded"
             <<" relativeOffsetMeaning=unknown"
             <<" resourceIdentity=unverified"
+            <<" rmUpperPaletteProvenance=unverified\n";
+  }
+ }
+
+
+ // Milestone 135: bounded inspection of the record allocation/setup
+ // calls and potential payload-origin sites. No writer is inferred from
+ // raw byte coincidences; branch targets and call semantics remain open.
+ {
+  std::ifstream in135(std::filesystem::path(argv[1])/"STTNG.OVL",std::ios::binary);
+  if(!in135){
+   std::cout<<"RM_PALETTE_RECORD_PAYLOAD_STATUS read=0\n";
+  }else{
+   const std::vector<uint8_t> d135(
+    (std::istreambuf_iterator<char>(in135)),std::istreambuf_iterator<char>());
+   auto match135=[&](size_t p,const std::vector<uint8_t>& b){
+    return p+b.size()<=d135.size()&&
+     std::equal(b.begin(),b.end(),d135.begin()+p);
+   };
+   std::cout<<"RM_PALETTE_RECORD_PAYLOAD_STATUS read=1 bytes="<<d135.size()
+            <<" scope=boundedInitializerCallAndPayloadOriginCandidates\n";
+   // These exact-byte anchors come from the observed initializer dump.
+   struct T135{const char* name;std::vector<uint8_t> bytes;};
+   const std::vector<T135> patterns135={
+    {"initial_record_alloc_call",{0xE8,0xED,0x0D,0x01,0x00}},
+    {"initial_record_link_store",{0x89,0x54,0x03,0x08}},
+    {"record_stride_22",{0x6B,0xC1,0x16}},
+    {"record_pointer_plus_10",{0x83,0xC2,0x10}},
+    {"record_state_7fff",{0x66,0xC7,0x44,0x03,0x10,0xFF,0x7F}}
+   };
+   for(const auto& t:patterns135){
+    size_t count=0,first=0;
+    for(size_t p=518504;p<518896&&p+t.bytes.size()<=d135.size();++p){
+     if(match135(p,t.bytes)){
+      if(count==0)first=p;
+      ++count;
+     }
+    }
+    std::cout<<"RM_PALETTE_RECORD_PAYLOAD_TEMPLATE name="<<t.name
+             <<" matches="<<count<<" firstOffset="<<(count?int64_t(first):-1)
+             <<" scope=boundedExactByteSearch\n";
+   }
+   // Resolve only raw E8 rel32 candidates within the initializer. A
+   // bytewise scan may encounter an E8 inside data or another operand.
+   size_t callCount135=0;
+   for(size_t p=518504;p<518896&&p+5<=d135.size();++p){
+    if(d135[p]!=0xE8)continue;
+    const uint32_t u=uint32_t(d135[p+1])|
+       (uint32_t(d135[p+2])<<8)|
+       (uint32_t(d135[p+3])<<16)|
+       (uint32_t(d135[p+4])<<24);
+    const int64_t target=int64_t(p)+5+int64_t(int32_t(u));
+    ++callCount135;
+    std::cout<<"RM_PALETTE_RECORD_PAYLOAD_RAW_CALL offset="<<p
+             <<" target="<<target
+             <<" caution=rawCandidateNotDecoded\n";
+   }
+   std::cout<<"RM_PALETTE_RECORD_PAYLOAD_RAW_CALL_SUMMARY count="
+            <<callCount135<<"\n";
+   struct Region135{const char* name;size_t start;size_t end;};
+   const std::vector<Region135> regions135={
+    {"initializer_setup",518504,518624},
+    {"initializer_record_fields",518624,518712},
+    {"initializer_cleanup",518744,518824},
+    {"traversal_entry",521248,521376},
+    {"payload_pointer_use",522048,522128}
+   };
+   for(const auto& region:regions135){
+    for(size_t p=region.start;p<std::min(region.end,d135.size());p+=16){
+     std::cout<<"RM_PALETTE_RECORD_PAYLOAD_HEX region="<<region.name
+              <<" offset="<<p<<" hex=";
+     for(size_t j=p;j<std::min(p+16,std::min(region.end,d135.size()));++j){
+      if(j!=p)std::cout<<" ";
+      std::cout<<std::hex<<std::setw(2)<<std::setfill('0')<<unsigned(d135[j]);
+     }
+     std::cout<<std::dec<<std::setfill(' ')<<"\n";
+    }
+   }
+   std::cout<<"RM_PALETTE_RECORD_PAYLOAD_LIMITATION"
+            <<" callTargets=rawCandidates"
+            <<" payloadOffsetWriters=unverified"
+            <<" resourceLoaderLink=unverified"
             <<" rmUpperPaletteProvenance=unverified\n";
   }
  }
