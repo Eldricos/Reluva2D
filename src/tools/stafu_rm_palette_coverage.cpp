@@ -2082,11 +2082,11 @@ int main(int argc,char** argv){
    std::cout<<"RM_PALETTE_ENTRY_CALL_JUMP_SUMMARY matches="<<matches119
             <<" searchStart="<<inspectBegin119
             <<" searchEndExclusive="<<inspectEnd119<<"\n";
-   const bool prior119=match119(1167204,{0xE8,0x69,0xF2,0x02,0x00});
-   const bool jump119=match119(1167209,{0xEB,0x6E});
-   std::cout<<"RM_PALETTE_ENTRY_PRECEDING_CALL offset=1167204"
+   const bool prior119=match119(1167206,{0xE8,0x69,0xF2,0x02,0x00});
+   const bool jump119=match119(1167211,{0xEB,0x6E});
+   std::cout<<"RM_PALETTE_ENTRY_PRECEDING_CALL offset=1167206"
             <<" templateMatch="<<(prior119?1:0);
-   if(prior119)std::cout<<" flatTarget="<<rel119(1167204,1,5);
+   if(prior119)std::cout<<" flatTarget="<<rel119(1167206,1,5);
    std::cout<<" followedByJump="<<(jump119?1:0)
             <<" copyPathFallthrough="<<(jump119?0:1)
             <<" caution=alternatePathNotCountProducerProof\n";
