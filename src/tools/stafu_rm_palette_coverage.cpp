@@ -2402,9 +2402,9 @@ int main(int argc,char** argv){
     }
    }
    // Verify the exact source-buffer setup sequence as observed in M122.
-   const bool base123=match123(522082,{
+   const bool base123=match123(522083,{
     0x8B,0x58,0x06,0x8D,0x0C,0x18,0x89,0x0D,0x58,0x97,0x09,0x00});
-   const bool clear123=match123(522094,{
+   const bool clear123=match123(522095,{
     0x31,0xC9,0x8B,0x70,0x0A,0x89,0x0D,0x64,0x97,0x09,0x00});
    const bool assign123=match123(522120,{
     0x01,0xF0,0xA3,0x64,0x97,0x09,0x00});
@@ -2413,6 +2413,22 @@ int main(int argc,char** argv){
             <<" clearPointerMatch="<<(clear123?1:0)
             <<" conditionalPointerAssignMatch="<<(assign123?1:0)
             <<" caution=offsetsRequireVerification\n";
+   // Upstream call: the initializer passes [global 0x997A4]+0x1C4
+   // to a helper, then uses the returned EAX as a candidate base pointer.
+   // Verify the whole local sequence and compute the relative target.
+   const bool upstream123=match123(522048,{
+    0xA1,0xA4,0x97,0x09,0x00,
+    0x05,0xC4,0x01,0x00,0x00,
+    0x50,0xE8,0xD0,0xFC,0xFF,0xFF,
+    0x83,0xC4,0x04,0x89,0xC2,0x85,0xC0});
+   std::cout<<"RM_PALETTE_INIT_TRACE_UPSTREAM"
+            <<" callOffset=522059"
+            <<" templateMatch="<<(upstream123?1:0);
+   if(upstream123)
+    std::cout<<" flatTarget="<<callTarget123(522059);
+   std::cout<<" argumentExpression=dword_at_000997A4_plus_0x1C4"
+            <<" returnRegister=EAX"
+            <<" caution=returnValueSemanticsUnknown\n";
    // Derive CALL location from a verified short sequence rather than
    // assuming its position; the target uses flat file-offset arithmetic.
    const size_t callStart123=522720,callEnd123=std::min(d123.size(),size_t(522740));
