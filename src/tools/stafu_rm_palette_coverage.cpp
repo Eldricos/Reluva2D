@@ -2050,6 +2050,38 @@ int main(int argc,char** argv){
             <<" destinationBaseRegister=EDX\n";
    // The call immediately preceding the copy path is on a distinct
    // branch; it cannot be assumed to provide EAX for the copy.
+   // Byte-indexed evidence, independent of guessed instruction starts.
+   // Show every byte and its absolute offset around the suspected CALL/JMP.
+   const size_t inspectBegin119=1167196;
+   const size_t inspectEnd119=std::min(d119.size(),size_t(1167216));
+   for(size_t p119=inspectBegin119;p119<inspectEnd119;++p119){
+    std::cout<<"RM_PALETTE_ENTRY_BYTE offset="<<p119
+             <<" hex="<<std::hex<<std::setw(2)<<std::setfill('0')
+             <<unsigned(d119[p119])<<std::dec<<std::setfill(' ')<<"\n";
+   }
+   // Find the complete CALL/JMP byte sequence in this bounded window.
+   // This reports the observed offsets, not an assumed one.
+   const std::vector<uint8_t> callJump119={
+    0xE8,0x69,0xF2,0x02,0x00,0xEB,0x6E
+   };
+   size_t matches119=0;
+   for(size_t p119=inspectBegin119;
+       p119+callJump119.size()<=inspectEnd119;++p119){
+    if(!match119(p119,callJump119))continue;
+    ++matches119;
+    const int64_t callTarget119=rel119(p119,1,5);
+    const int8_t jumpDisp119=int8_t(d119[p119+6]);
+    const int64_t jumpTarget119=int64_t(p119)+7+int64_t(jumpDisp119);
+    std::cout<<"RM_PALETTE_ENTRY_CALL_JUMP_MATCH callOffset="<<p119
+             <<" jumpOffset="<<(p119+5)
+             <<" callFlatTarget="<<callTarget119
+             <<" jumpFlatTarget="<<jumpTarget119
+             <<" copyPathSkippedByJump="<<(jumpTarget119>1167213?1:0)
+             <<" caution=staticByteSequenceNotPathFeasibilityProof\n";
+   }
+   std::cout<<"RM_PALETTE_ENTRY_CALL_JUMP_SUMMARY matches="<<matches119
+            <<" searchStart="<<inspectBegin119
+            <<" searchEndExclusive="<<inspectEnd119<<"\n";
    const bool prior119=match119(1167204,{0xE8,0x69,0xF2,0x02,0x00});
    const bool jump119=match119(1167209,{0xEB,0x6E});
    std::cout<<"RM_PALETTE_ENTRY_PRECEDING_CALL offset=1167204"
