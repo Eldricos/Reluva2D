@@ -2296,6 +2296,67 @@ int main(int argc,char** argv){
   }
  }
 
+
+ // Milestone 122: locate literal references to the candidate palette
+ // argument globals and possible pointer field. An absolute memory operand
+ // is not equivalent to an effective-address reference via a base register.
+ // This intentionally avoids claiming that a reference proves a write.
+ {
+  std::ifstream in122(std::filesystem::path(argv[1])/"STTNG.OVL",std::ios::binary);
+  if(!in122){
+   std::cout<<"RM_PALETTE_STRUCT_REF_STATUS read=0\n";
+  }else{
+   const std::vector<uint8_t> d122(
+    (std::istreambuf_iterator<char>(in122)),std::istreambuf_iterator<char>());
+   struct Address122{uint32_t value;const char* role;};
+   const Address122 addresses122[]={
+    {0x00099758u,"firstArgumentStructure"},
+    {0x00099764u,"candidateRgbPointerField"},
+    {0x00099750u,"secondArgument"}
+   };
+   std::cout<<"RM_PALETTE_STRUCT_REF_STATUS read=1 bytes="<<d122.size()
+            <<" scope=literalAddressSurveyNotInstructionDecoder\n";
+   for(const auto& address122:addresses122){
+    const uint32_t v122=address122.value;
+    const uint8_t bytes122[]={
+     uint8_t(v122&255),uint8_t((v122>>8)&255),
+     uint8_t((v122>>16)&255),uint8_t((v122>>24)&255)};
+    size_t matches122=0;
+    for(size_t p122=0;p122+4<=d122.size();++p122){
+     if(d122[p122]!=bytes122[0]||d122[p122+1]!=bytes122[1]||
+        d122[p122+2]!=bytes122[2]||d122[p122+3]!=bytes122[3])continue;
+     ++matches122;
+     const size_t start122=p122>=12?p122-12:0;
+     const size_t end122=std::min(d122.size(),p122+16);
+     std::cout<<"RM_PALETTE_STRUCT_REF_MATCH role="<<address122.role
+              <<" address=0x"<<std::hex<<std::setw(8)<<std::setfill('0')
+              <<v122<<std::dec<<std::setfill(' ')
+              <<" literalOffset="<<p122
+              <<" precedingOpcode=";
+     if(p122)std::cout<<std::hex<<std::setw(2)<<std::setfill('0')
+                      <<unsigned(d122[p122-1])<<std::dec<<std::setfill(' ');
+     else std::cout<<"none";
+     std::cout<<" caution=rawBytesNotConfirmedOperand\n";
+     std::cout<<"RM_PALETTE_STRUCT_REF_HEX role="<<address122.role
+              <<" literalOffset="<<p122<<" start="<<start122<<" hex=";
+     for(size_t j122=start122;j122<end122;++j122){
+      if(j122!=start122)std::cout<<" ";
+      std::cout<<std::hex<<std::setw(2)<<std::setfill('0')
+               <<unsigned(d122[j122]);
+     }
+     std::cout<<std::dec<<std::setfill(' ')<<"\n";
+    }
+    std::cout<<"RM_PALETTE_STRUCT_REF_SUMMARY role="<<address122.role
+             <<" address="<<v122<<" rawMatches="<<matches122<<"\n";
+   }
+   std::cout<<"RM_PALETTE_STRUCT_REF_LIMITATION"
+            <<" absoluteOperandWrites=unverified"
+            <<" computedAddressReferences=notEnumerated"
+            <<" runtimePointerValue=unknown"
+            <<" rmResourceProvenance=unverified\n";
+  }
+ }
+
  std::cout<<"NOTE: Trailer plausibility does not establish palette ownership.\n";
  std::cout<<"NOTE: Palette overlap is numerical only; it does not establish RM palette provenance.\n";
  return 0;
