@@ -1881,6 +1881,95 @@ int main(int argc,char** argv){
   }
  }
 
+
+ // Milestone 118: inspect the provenance of ESI and the RGB count field
+ // immediately before the verified memcpy path. The windows deliberately
+ // include both DAC call sites and the intervening control flow. They do
+ // not establish a complete reaching-definitions or runtime pointer trace.
+ {
+  const auto path118=std::filesystem::path(argv[1])/"STTNG.OVL";
+  std::ifstream input118(path118,std::ios::binary);
+  if(!input118){
+   std::cout<<"RM_PALETTE_SOURCE_TRACE_STATUS read=0\n";
+  }else{
+   const std::vector<uint8_t> data118(
+    (std::istreambuf_iterator<char>(input118)),std::istreambuf_iterator<char>());
+   const size_t anchors118[]={1166889,1167061,1167213};
+   std::cout<<"RM_PALETTE_SOURCE_TRACE_STATUS read=1 bytes="<<data118.size()
+            <<" anchors=3 scope=boundedStaticHexAndSelectedTemplates\n";
+   for(size_t anchor118:anchors118){
+    const size_t start118=anchor118>128?anchor118-128:0;
+    const size_t end118=std::min(data118.size(),anchor118+49);
+    std::cout<<"RM_PALETTE_SOURCE_TRACE_WINDOW anchor="<<anchor118
+             <<" start="<<start118<<" endExclusive="<<end118<<"\n";
+    for(size_t row118=start118;row118<end118;row118+=16){
+     std::cout<<"RM_PALETTE_SOURCE_TRACE_HEX anchor="<<anchor118
+              <<" offset="<<row118<<" hex=";
+     for(size_t j118=row118;j118<std::min(end118,row118+16);++j118){
+      if(j118!=row118)std::cout<<" ";
+      std::cout<<std::hex<<std::setw(2)<<std::setfill('0')
+               <<unsigned(data118[j118]);
+     }
+     std::cout<<std::dec<<std::setfill(' ')<<"\n";
+    }
+    size_t count118=0,source118=0,global118=0;
+    for(size_t p118=start118;p118<end118;++p118){
+     if(p118+5<=end118&&data118[p118]==0xA1&&
+        data118[p118+1]==0xF8&&data118[p118+2]==0x17&&
+        data118[p118+3]==0x12&&data118[p118+4]==0){
+      ++global118;
+      std::cout<<"RM_PALETTE_SOURCE_TRACE_GLOBAL anchor="<<anchor118
+               <<" offset="<<p118<<" kind=mov_eax_global_pointer\n";
+     }
+     if(p118+3<=end118&&data118[p118]==0x8A&&
+        data118[p118+1]==0x58&&data118[p118+2]==0x0F){
+      ++count118;
+      std::cout<<"RM_PALETTE_SOURCE_TRACE_COUNT anchor="<<anchor118
+               <<" offset="<<p118
+               <<" kind=mov_bl_byte_eax_plus_0F"
+               <<" countRuntimeUnknown=1\n";
+     }
+     if(p118+3<=end118&&data118[p118]==0x8B&&
+        data118[p118+1]==0x5E&&data118[p118+2]==0x0C){
+      ++source118;
+      std::cout<<"RM_PALETTE_SOURCE_TRACE_SOURCE anchor="<<anchor118
+               <<" offset="<<p118
+               <<" kind=mov_ebx_dword_esi_plus_0C"
+               <<" esiProvenanceUnknown=1\n";
+     }
+    }
+    std::cout<<"RM_PALETTE_SOURCE_TRACE_SUMMARY anchor="<<anchor118
+             <<" globalLoads="<<global118
+             <<" countLoads="<<count118
+             <<" sourceLoads="<<source118
+             <<" caution=overlappingWindowsAndNoControlFlowProof\n";
+   }
+   // Inspect a broader, contiguous context around the copy's predecessor.
+   const size_t begin118=1166600,end118=std::min(data118.size(),size_t(1167265));
+   for(size_t p118=begin118;p118+2<end118;++p118){
+    // ESI register assignments: MOV ESI,r/m32; LEA ESI,m; POP ESI;
+    // MOV ESI,imm32. These are candidates until decoded on instruction
+    // boundaries, and may occur on mutually exclusive paths.
+    const bool mov118=data118[p118]==0x8B&&
+                      (data118[p118+1]&0x38)==0x30;
+    const bool lea118=data118[p118]==0x8D&&
+                      (data118[p118+1]&0x38)==0x30;
+    const bool pop118=data118[p118]==0x5E;
+    const bool imm118=data118[p118]==0xBE&&p118+5<=end118;
+    if(mov118||lea118||pop118||imm118){
+     std::cout<<"RM_PALETTE_SOURCE_TRACE_ESI_CANDIDATE offset="<<p118
+              <<" opcode="<<std::hex<<unsigned(data118[p118])<<std::dec
+              <<" kind="<<(mov118?"mov":lea118?"lea":pop118?"pop":"immediate")
+              <<" scope=rawByteCandidateNotReachingDefinition\n";
+    }
+   }
+   std::cout<<"RM_PALETTE_SOURCE_TRACE_LIMITATION"
+            <<" runtimeRGBCount=unknown"
+            <<" resourceIdentity=unknown"
+            <<" esiReachingDefinition=unverified\n";
+  }
+ }
+
  std::cout<<"NOTE: Trailer plausibility does not establish palette ownership.\n";
  std::cout<<"NOTE: Palette overlap is numerical only; it does not establish RM palette provenance.\n";
  return 0;
