@@ -2673,6 +2673,74 @@ int main(int argc,char** argv){
   }
  }
 
+
+ // Milestone 127: inspect the producer of EAX before the owner-pointer write,
+ // and verify the nearby FVF signature comparison. Read-only raw evidence.
+ {
+  std::ifstream in127(std::filesystem::path(argv[1])/"STTNG.OVL",std::ios::binary);
+  if(!in127){
+   std::cout<<"RM_PALETTE_OWNER_PRODUCER_STATUS read=0\n";
+  }else{
+   const std::vector<uint8_t> d127(
+    (std::istreambuf_iterator<char>(in127)),std::istreambuf_iterator<char>());
+   auto match127=[&](size_t at,const std::vector<uint8_t>& b){
+    return at+b.size()<=d127.size()&&
+     std::equal(b.begin(),b.end(),d127.begin()+at);
+   };
+   auto dump127=[&](const char* label,size_t start,size_t end){
+    end=std::min(end,d127.size());
+    for(size_t p=start;p<end;p+=16){
+     std::cout<<"RM_PALETTE_OWNER_PRODUCER_HEX region="<<label
+              <<" offset="<<p<<" hex=";
+     for(size_t j=p;j<std::min(p+16,end);++j){
+      if(j!=p)std::cout<<" ";
+      std::cout<<std::hex<<std::setw(2)<<std::setfill('0')
+               <<unsigned(d127[j]);
+     }
+     std::cout<<std::dec<<std::setfill(' ')<<"\n";
+    }
+   };
+   std::cout<<"RM_PALETTE_OWNER_PRODUCER_STATUS read=1 bytes="<<d127.size()
+            <<" scope=boundedRawBytesAndAnchoredTemplates\n";
+   dump127("pre_assignment",522848,523024);
+   const bool assignment127=match127(522991,{0xA3,0xA4,0x97,0x09,0x00});
+   const bool nearby127=match127(522986,{0x68,0x98,0x02,0x00,0x00,0x50,0xA3,0xA4,0x97,0x09,0x00});
+   std::cout<<"RM_PALETTE_OWNER_PRODUCER_ASSIGNMENT offset=522991 match="
+            <<(assignment127?1:0)
+            <<" operation=storeEAXToGlobal caution=EAXProducerNotYetEstablished\n";
+   std::cout<<"RM_PALETTE_OWNER_PRODUCER_NEARBY offset=522986 match="
+            <<(nearby127?1:0)
+            <<" operation=push0x298_pushEAX_storeEAX caution=localSequenceOnly\n";
+   // Identify CALL rel32 candidates within the bounded upstream window.
+   size_t calls127=0;
+   for(size_t p=522848;p+5<=std::min(size_t(523024),d127.size());++p){
+    if(d127[p]!=0xE8)continue;
+    const uint32_t v=uint32_t(d127[p+1])|
+     (uint32_t(d127[p+2])<<8)|(uint32_t(d127[p+3])<<16)|
+     (uint32_t(d127[p+4])<<24);
+    const int32_t disp=static_cast<int32_t>(v);
+    ++calls127;
+    std::cout<<"RM_PALETTE_OWNER_PRODUCER_CALL offset="<<p
+             <<" flatTarget="<<(int64_t(p)+5+disp)
+             <<" caution=rawOpcodeCandidateNotDisassembled\n";
+   }
+   std::cout<<"RM_PALETTE_OWNER_PRODUCER_CALL_SUMMARY rawCandidates="<<calls127<<"\n";
+   const bool fvf127=match127(523142,{
+    0xA1,0xA4,0x97,0x09,0x00,0x81,0xB8,0xCC,0x01,0x00,0x00,
+    0x46,0x56,0x46,0x20,0x74,0x35});
+   std::cout<<"RM_PALETTE_OWNER_FVF_TEMPLATE offset=523142 match="<<(fvf127?1:0)
+            <<" signatureBytes=46564620 conditionalBranch=74_35"
+            <<" caution=signatureDoesNotProveRMOwnership\n";
+   dump127("fvf_branch",523120,523208);
+   std::cout<<"RM_PALETTE_OWNER_PRODUCER_LIMITATION"
+            <<" instructionBoundaries=notFullyDecoded"
+            <<" runtimeEAX=unknown"
+            <<" objectAllocation=unverified"
+            <<" resourceLoaderLink=unverified"
+            <<" rmPaletteProvenance=unverified\n";
+  }
+ }
+
  std::cout<<"NOTE: Trailer plausibility does not establish palette ownership.\n";
  std::cout<<"NOTE: Palette overlap is numerical only; it does not establish RM palette provenance.\n";
  return 0;
