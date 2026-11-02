@@ -1814,6 +1814,73 @@ int main(int argc,char** argv){
   }
  }
 
+
+ // Milestone 117: verify the complete memcpy call argument sequence.
+ // Register labels are based on the exact 32-bit x86 byte template below.
+ // This is static evidence only; pointer contents and runtime count are unknown.
+ {
+  const auto path117=std::filesystem::path(argv[1])/"STTNG.OVL";
+  std::ifstream input117(path117,std::ios::binary);
+  if(!input117){
+   std::cout<<"RM_PALETTE_COPY_ARGS_STATUS read=0\n";
+  }else{
+   const std::vector<uint8_t> data117(
+    (std::istreambuf_iterator<char>(input117)),std::istreambuf_iterator<char>());
+   const size_t start117=1167213;
+   // xor ebx,ebx; mov bl,[eax+0f]; lea eax,[ebx*4];
+   // sub eax,ebx; push eax; mov ebx,[esi+0c]; push ebx;
+   // mov ecx,[edx+84]; push ecx; call rel32
+   const std::vector<uint8_t> prefix117={
+    0x31,0xDB,0x8A,0x58,0x0F,0x8D,0x04,0x9D,0,0,0,0,
+    0x29,0xD8,0x50,0x8B,0x5E,0x0C,0x53,0x8B,0x8A,0x84,0,0,0,0,0x51,0xE8
+   };
+   bool matched117=start117+prefix117.size()+4<=data117.size();
+   if(matched117)
+    for(size_t i117=0;i117<prefix117.size();++i117)
+     if(data117[start117+i117]!=prefix117[i117]){matched117=false;break;}
+   std::cout<<"RM_PALETTE_COPY_ARGS_STATUS read=1 bytes="<<data117.size()
+            <<" sequenceOffset="<<start117<<" exactTemplateMatch="
+            <<(matched117?1:0)<<" scope=staticX86Template\n";
+   if(matched117){
+    const size_t call117=start117+prefix117.size()-1;
+    const uint32_t raw117=uint32_t(data117[call117+1])|
+      (uint32_t(data117[call117+2])<<8)|
+      (uint32_t(data117[call117+3])<<16)|
+      (uint32_t(data117[call117+4])<<24);
+    const int64_t target117=int64_t(call117)+5+int64_t(int32_t(raw117));
+    std::cout<<"RM_PALETTE_COPY_ARGS_COUNT expression=3*zeroExtendByte_at_EAX_plus_0F"
+             <<" derivation=lea_4x_then_subtract_1x"
+             <<" bytesPerEntry=3 countRuntimeUnknown=1\n";
+    std::cout<<"RM_PALETTE_COPY_ARGS_SOURCE expression=dword_at_ESI_plus_0C"
+             <<" pushedSecond=1\n";
+    std::cout<<"RM_PALETTE_COPY_ARGS_DEST expression=dword_at_EDX_plus_84"
+             <<" pushedThird=1\n";
+    std::cout<<"RM_PALETTE_COPY_ARGS_CALL offset="<<call117
+             <<" flatTarget="<<target117
+             <<" expectedMemcpyTarget=1157325"
+             <<" targetMatches="<<(target117==1157325?1:0)
+             <<" argumentOrder=destination_source_byteCount\n";
+    std::cout<<"RM_PALETTE_COPY_ARGS_RANGE countFieldBits=8"
+             <<" theoreticalMaxBytes=765"
+             <<" entries128Bytes=384 entries256Bytes=768"
+             <<" caution=actualCountAndPaletteOwnershipUnknown\n";
+    const size_t after117=call117+5;
+    const std::vector<uint8_t> post117={
+      0xA1,0xF8,0x17,0x12,0x00,0x83,0xC4,0x0C,
+      0x66,0xC7,0x80,0x82,0,0,0,0x01,0x00
+    };
+    bool postMatch117=after117+post117.size()<=data117.size();
+    if(postMatch117)
+     for(size_t i117=0;i117<post117.size();++i117)
+      if(data117[after117+i117]!=post117[i117]){postMatch117=false;break;}
+    std::cout<<"RM_PALETTE_COPY_ARGS_POST offset="<<after117
+             <<" exactTemplateMatch="<<(postMatch117?1:0)
+             <<" operation=globalPointer_load_stackCleanup_word82_set1"
+             <<" caution=stateMeaningUnknown\n";
+   }
+  }
+ }
+
  std::cout<<"NOTE: Trailer plausibility does not establish palette ownership.\n";
  std::cout<<"NOTE: Palette overlap is numerical only; it does not establish RM palette provenance.\n";
  return 0;
