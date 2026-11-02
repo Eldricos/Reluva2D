@@ -3174,8 +3174,8 @@ int main(int argc,char** argv){
     {"record_global_99758_store",522089,{0x89,0x0D,0x58,0x97,0x09,0x00},"storeComputedPointer"},
     {"record_relative_0a_read",522097,{0x8B,0x70,0x0A},"readRecordOffset0A"},
     {"record_global_99764_clear",522100,{0x89,0x0D,0x64,0x97,0x09,0x00},"clearOptionalPointer"},
-    {"record_relative_0a_add",522118,{0x01,0xF0},"addOptionalOffset"},
-    {"record_global_99764_store",522120,{0xA3,0x64,0x97,0x09,0x00},"storeOptionalPointer"}
+    {"record_relative_0a_add",522119,{0x01,0xF0},"addOptionalOffset"},
+    {"record_global_99764_store",522121,{0xA3,0x64,0x97,0x09,0x00},"storeOptionalPointer"}
    };
    std::cout<<"RM_PALETTE_RECORD_RELATIVE_STATUS read=1 bytes="<<d134.size()
             <<" scope=boundedExactTemplatesAndRawFieldSearch\n";
@@ -3317,6 +3317,76 @@ int main(int argc,char** argv){
    std::cout<<"RM_PALETTE_RECORD_PAYLOAD_LIMITATION"
             <<" callTargets=rawCandidates"
             <<" payloadOffsetWriters=unverified"
+            <<" resourceLoaderLink=unverified"
+            <<" rmUpperPaletteProvenance=unverified\n";
+  }
+ }
+
+
+ // Milestone 136: bounded helper entry evidence for record storage
+ // setup and cleanup. Calls are checked at their exact observed offsets.
+ {
+  std::ifstream in136(std::filesystem::path(argv[1])/"STTNG.OVL",std::ios::binary);
+  if(!in136){
+   std::cout<<"RM_PALETTE_RECORD_HELPERS_STATUS read=0\n";
+  }else{
+   const std::vector<uint8_t> d136(
+    (std::istreambuf_iterator<char>(in136)),std::istreambuf_iterator<char>());
+   auto match136=[&](size_t p,const std::vector<uint8_t>& b){
+    return p+b.size()<=d136.size()&&
+     std::equal(b.begin(),b.end(),d136.begin()+p);
+   };
+   struct Call136{const char* name;size_t offset;size_t expectedTarget;};
+   const std::vector<Call136> calls136={
+    {"storage_setup",518558,587664},
+    {"memory_helper",518608,645730},
+    {"cleanup_helper",518769,645799},
+    {"additional_cleanup",518799,587704}
+   };
+   std::cout<<"RM_PALETTE_RECORD_HELPERS_STATUS read=1 bytes="<<d136.size()
+            <<" scope=verifiedCallsAndBoundedHelperEntries\n";
+   size_t matched136=0;
+   for(const auto& call:calls136){
+    bool valid=false;int64_t target=-1;
+    if(call.offset+5<=d136.size()&&d136[call.offset]==0xE8){
+     const uint32_t u=uint32_t(d136[call.offset+1])|
+       (uint32_t(d136[call.offset+2])<<8)|
+       (uint32_t(d136[call.offset+3])<<16)|
+       (uint32_t(d136[call.offset+4])<<24);
+     target=int64_t(call.offset)+5+int64_t(int32_t(u));
+     valid=(target==int64_t(call.expectedTarget));
+    }
+    if(valid)++matched136;
+    std::cout<<"RM_PALETTE_RECORD_HELPERS_CALL name="<<call.name
+             <<" offset="<<call.offset<<" target="<<target
+             <<" expected="<<call.expectedTarget
+             <<" match="<<(valid?1:0)<<"\n";
+   }
+   std::cout<<"RM_PALETTE_RECORD_HELPERS_CALL_SUMMARY matched="
+            <<matched136<<" total="<<calls136.size()<<"\n";
+   struct Region136{const char* name;size_t start;size_t count;};
+   const std::vector<Region136> regions136={
+    {"storage_setup",587664,160},
+    {"memory_helper",645730,160},
+    {"cleanup_helper",645799,160},
+    {"additional_cleanup",587704,160}
+   };
+   for(const auto& region:regions136){
+    const size_t end=std::min(region.start+region.count,d136.size());
+    for(size_t p=region.start;p<end;p+=16){
+     std::cout<<"RM_PALETTE_RECORD_HELPERS_HEX name="<<region.name
+              <<" offset="<<p<<" hex=";
+     for(size_t j=p;j<std::min(p+16,end);++j){
+      if(j!=p)std::cout<<" ";
+      std::cout<<std::hex<<std::setw(2)<<std::setfill('0')<<unsigned(d136[j]);
+     }
+     std::cout<<std::dec<<std::setfill(' ')<<"\n";
+    }
+   }
+   std::cout<<"RM_PALETTE_RECORD_HELPERS_LIMITATION"
+            <<" functionExtents=unverified"
+            <<" helperSemantics=unverified"
+            <<" payloadWriters=unverified"
             <<" resourceLoaderLink=unverified"
             <<" rmUpperPaletteProvenance=unverified\n";
   }
