@@ -1970,6 +1970,109 @@ int main(int argc,char** argv){
   }
  }
 
+
+ // Milestone 119: anchored instruction sequences and control-flow evidence.
+ // Unlike raw opcode surveys, each report requires a complete byte template
+ // at a known offset. No general disassembly or reaching-definitions claim.
+ {
+  const auto path119=std::filesystem::path(argv[1])/"STTNG.OVL";
+  std::ifstream in119(path119,std::ios::binary);
+  if(!in119){
+   std::cout<<"RM_PALETTE_ENTRY_STATUS read=0\n";
+  }else{
+   const std::vector<uint8_t> d119(
+    (std::istreambuf_iterator<char>(in119)),std::istreambuf_iterator<char>());
+   auto match119=[&](size_t p119,const std::vector<uint8_t>& bytes119){
+    if(p119>d119.size()||bytes119.size()>d119.size()-p119)return false;
+    for(size_t i119=0;i119<bytes119.size();++i119)
+     if(d119[p119+i119]!=bytes119[i119])return false;
+    return true;
+   };
+   auto rel119=[&](size_t p119,size_t displacement119,size_t length119)->int64_t{
+    if(p119>d119.size()||length119>d119.size()-p119||
+       displacement119+4>length119)return -1;
+    const size_t q119=p119+displacement119;
+    const uint32_t v119=uint32_t(d119[q119])|
+      (uint32_t(d119[q119+1])<<8)|
+      (uint32_t(d119[q119+2])<<16)|
+      (uint32_t(d119[q119+3])<<24);
+    return int64_t(p119)+int64_t(length119)+int64_t(int32_t(v119));
+   };
+   std::cout<<"RM_PALETTE_ENTRY_STATUS read=1 bytes="<<d119.size()
+            <<" scope=anchoredInstructionTemplatesNotFullDecoder\n";
+   // The preceding ESI initialization must be sought at a function boundary,
+   // not inferred from arbitrary 5E or 8B bytes in the middle of instructions.
+   const size_t begin119=1166300,end119=std::min(d119.size(),size_t(1166800));
+   size_t prologues119=0;
+   for(size_t p119=begin119;p119+4<=end119;++p119){
+    const bool frame119=match119(p119,{0x55,0x89,0xE5})||
+                        match119(p119,{0x55,0x8B,0xEC});
+    const bool save119=match119(p119,{0x53,0x56,0x57,0x55})||
+                       match119(p119,{0x56,0x57,0x55});
+    if(frame119||save119){
+     ++prologues119;
+     std::cout<<"RM_PALETTE_ENTRY_PROLOGUE_CANDIDATE offset="<<p119
+              <<" kind="<<(frame119?"frame":"savedRegisters")
+              <<" caution=notProvenFunctionBoundary\n";
+    }
+   }
+   std::cout<<"RM_PALETTE_ENTRY_PROLOGUE_SUMMARY start="<<begin119
+            <<" endExclusive="<<end119<<" candidates="<<prologues119<<"\n";
+   // Known instruction-boundary candidates, validated as full templates.
+   struct Branch119{size_t offset;size_t displacement;size_t length;
+                    const char* kind;};
+   const Branch119 branches119[]={
+    {1166986,2,6,"jz"},{1166997,2,6,"jnz"},
+    {1167026,2,6,"jnz"},{1167160,2,6,"jnz"}
+   };
+   for(const auto& b119:branches119){
+    const bool valid119=b119.offset+6<=d119.size()&&
+      d119[b119.offset]==0x0F&&
+      d119[b119.offset+1]==(std::string(b119.kind)=="jz"?0x84:0x85);
+    std::cout<<"RM_PALETTE_ENTRY_BRANCH offset="<<b119.offset
+             <<" templateMatch="<<(valid119?1:0)
+             <<" kind="<<b119.kind;
+    if(valid119)std::cout<<" flatTarget="<<rel119(b119.offset,2,6);
+    std::cout<<" caution=pathFeasibilityUnknown\n";
+   }
+   const size_t copy119=1167213;
+   const bool count119=match119(copy119,{
+     0x31,0xDB,0x8A,0x58,0x0F,0x8D,0x04,0x9D,0,0,0,0,0x29,0xD8,0x50});
+   const bool source119=match119(1167228,{0x8B,0x5E,0x0C,0x53});
+   const bool dest119=match119(1167232,{0x8B,0x8A,0x84,0,0,0,0x51});
+   const bool call119=match119(1167239,{0xE8,0x41,0xD9,0xFF,0xFF});
+   std::cout<<"RM_PALETTE_ENTRY_COPY_PATH offset="<<copy119
+            <<" countTemplate="<<(count119?1:0)
+            <<" sourceTemplate="<<(source119?1:0)
+            <<" destinationTemplate="<<(dest119?1:0)
+            <<" callTemplate="<<(call119?1:0)
+            <<" countBaseRegister=EAX sourceBaseRegister=ESI"
+            <<" destinationBaseRegister=EDX\n";
+   // The call immediately preceding the copy path is on a distinct
+   // branch; it cannot be assumed to provide EAX for the copy.
+   const bool prior119=match119(1167204,{0xE8,0x69,0xF2,0x02,0x00});
+   const bool jump119=match119(1167209,{0xEB,0x6E});
+   std::cout<<"RM_PALETTE_ENTRY_PRECEDING_CALL offset=1167204"
+            <<" templateMatch="<<(prior119?1:0);
+   if(prior119)std::cout<<" flatTarget="<<rel119(1167204,1,5);
+   std::cout<<" followedByJump="<<(jump119?1:0)
+            <<" copyPathFallthrough="<<(jump119?0:1)
+            <<" caution=alternatePathNotCountProducerProof\n";
+   // Full known byte sequence: mov eax,[global]; mov edx,[esp+1c];
+   // movsx eax,byte [eax+2f]; mov [edx],eax. EAX is overwritten.
+   const bool overwrite119=match119(1167184,{
+     0xA1,0xF8,0x17,0x12,0x00,0x8B,0x54,0x24,0x1C,
+     0x0F,0xBE,0x40,0x2F,0x89,0x02});
+   std::cout<<"RM_PALETTE_ENTRY_EAX_OVERWRITE offset=1167184"
+            <<" templateMatch="<<(overwrite119?1:0)
+            <<" expression=signExtendByte_globalPlus2F"
+            <<" caution=doesNotEstablishEAXAtCopy\n";
+   std::cout<<"RM_PALETTE_ENTRY_LIMITATION"
+            <<" esiEntryDefinition=unknown eaxAtCopy=unknown"
+            <<" countRuntime=unknown rmResourceProvenance=unknown\n";
+  }
+ }
+
  std::cout<<"NOTE: Trailer plausibility does not establish palette ownership.\n";
  std::cout<<"NOTE: Palette overlap is numerical only; it does not establish RM palette provenance.\n";
  return 0;
