@@ -2843,9 +2843,9 @@ int main(int argc,char** argv){
     {"record_counter_reset",518516,{0xC7,0x83,0xB8,0x01,0x00,0x00,0x00,0x00,0x00,0x00},"recordCounterReset"},
     {"record_stride_16hex",518591,{0x6B,0x83,0xB8,0x01,0x00,0x00,0x16},"recordStride22"},
     {"record_state_7fff",518679,{0x6B,0x83,0xB8,0x01,0x00,0x00,0x16,0x66,0xC7,0x44,0x03,0x10,0xFF,0x7F},"stateInitialization"},
-    {"owner_record_head",518866,{0x89,0x9B,0xC4,0x01,0x00,0x00},"field1C4"},
-    {"owner_record_tail",518872,{0x89,0x9B,0xC8,0x01,0x00,0x00},"field1C8"},
-    {"return_owner",518878,{0x89,0xD8},"returnEBXAsEAX"}
+    {"owner_record_head",518871,{0x89,0x9B,0xC4,0x01,0x00,0x00},"field1C4"},
+    {"owner_record_tail",518877,{0x89,0x9B,0xC8,0x01,0x00,0x00},"field1C8"},
+    {"return_owner",518883,{0x89,0xD8},"returnEBXAsEAX"}
    };
    size_t passed129=0;
    for(const auto& t:checks129){
@@ -3147,6 +3147,94 @@ int main(int argc,char** argv){
             <<" runtimePointerValues=unknown"
             <<" recordPathReachability=unverified"
             <<" sourceBufferAllocation=unverified"
+            <<" resourceIdentity=unverified"
+            <<" rmUpperPaletteProvenance=unverified\n";
+  }
+ }
+
+
+ // Milestone 134: locate raw reads/writes of record-relative fields +06
+ // and +0A, with bounded initializer and traversal context. The search
+ // deliberately reports byte-pattern candidates, not proven instructions.
+ {
+  std::ifstream in134(std::filesystem::path(argv[1])/"STTNG.OVL",std::ios::binary);
+  if(!in134){
+   std::cout<<"RM_PALETTE_RECORD_RELATIVE_STATUS read=0\n";
+  }else{
+   const std::vector<uint8_t> d134(
+    (std::istreambuf_iterator<char>(in134)),std::istreambuf_iterator<char>());
+   auto match134=[&](size_t p,const std::vector<uint8_t>& b){
+    return p+b.size()<=d134.size()&&
+     std::equal(b.begin(),b.end(),d134.begin()+p);
+   };
+   struct T134{const char* name;size_t offset;std::vector<uint8_t> bytes;const char* interpretation;};
+   const std::vector<T134> checks134={
+    {"record_relative_06_read",522084,{0x8B,0x58,0x06},"readRecordOffset06"},
+    {"record_relative_06_add",522087,{0x8D,0x0C,0x18},"addRecordBase"},
+    {"record_global_99758_store",522090,{0x89,0x0D,0x58,0x97,0x09,0x00},"storeComputedPointer"},
+    {"record_relative_0a_read",522098,{0x8B,0x70,0x0A},"readRecordOffset0A"},
+    {"record_global_99764_clear",522101,{0x89,0x0D,0x64,0x97,0x09,0x00},"clearOptionalPointer"},
+    {"record_relative_0a_add",522117,{0x01,0xF0},"addOptionalOffset"},
+    {"record_global_99764_store",522119,{0xA3,0x64,0x97,0x09,0x00},"storeOptionalPointer"}
+   };
+   std::cout<<"RM_PALETTE_RECORD_RELATIVE_STATUS read=1 bytes="<<d134.size()
+            <<" scope=boundedExactTemplatesAndRawFieldSearch\n";
+   size_t matched134=0;
+   for(const auto& t:checks134){
+    const bool ok=match134(t.offset,t.bytes);
+    if(ok)++matched134;
+    std::cout<<"RM_PALETTE_RECORD_RELATIVE_TEMPLATE name="<<t.name
+             <<" offset="<<t.offset<<" match="<<(ok?1:0)
+             <<" interpretation="<<t.interpretation<<"\n";
+   }
+   std::cout<<"RM_PALETTE_RECORD_RELATIVE_TEMPLATE_SUMMARY matched="
+            <<matched134<<" total="<<checks134.size()<<"\n";
+   struct P134{const char* name;std::vector<uint8_t> bytes;};
+   const std::vector<P134> patterns134={
+    {"read_eax_plus_06",{0x8B,0x58,0x06}},
+    {"read_eax_plus_0a",{0x8B,0x70,0x0A}},
+    {"read_eax_plus_06_alternate",{0x8B,0x50,0x06}},
+    {"read_eax_plus_0a_alternate",{0x8B,0x50,0x0A}},
+    {"write_eax_plus_06",{0x89,0x50,0x06}},
+    {"write_eax_plus_0a",{0x89,0x50,0x0A}},
+    {"write_ebx_plus_06",{0x89,0x53,0x06}},
+    {"write_ebx_plus_0a",{0x89,0x53,0x0A}}
+   };
+   for(const auto& pattern:patterns134){
+    size_t count=0;
+    const size_t begin=518000,end=524000;
+    for(size_t p=begin;p<end&&p+pattern.bytes.size()<=d134.size();++p){
+     if(match134(p,pattern.bytes)){
+      ++count;
+      if(count<=24)
+       std::cout<<"RM_PALETTE_RECORD_RELATIVE_RAW_MATCH pattern="
+                <<pattern.name<<" offset="<<p
+                <<" caution=rawBytesNotDecoded\n";
+     }
+    }
+    std::cout<<"RM_PALETTE_RECORD_RELATIVE_RAW_SUMMARY pattern="
+             <<pattern.name<<" count="<<count
+             <<" displayedMax=24\n";
+   }
+   for(const auto& region:std::vector<std::pair<const char*,std::pair<size_t,size_t>>>{
+      {"record_helper",{521248,521504}},
+      {"pointer_initializer",{522048,522128}},
+      {"record_initializer",{518544,518704}}}){
+    for(size_t p=region.second.first;
+        p<std::min(region.second.second,d134.size());p+=16){
+     std::cout<<"RM_PALETTE_RECORD_RELATIVE_HEX region="<<region.first
+              <<" offset="<<p<<" hex=";
+     for(size_t j=p;j<std::min(p+16,std::min(region.second.second,d134.size()));++j){
+      if(j!=p)std::cout<<" ";
+      std::cout<<std::hex<<std::setw(2)<<std::setfill('0')<<unsigned(d134[j]);
+     }
+     std::cout<<std::dec<<std::setfill(' ')<<"\n";
+    }
+   }
+   std::cout<<"RM_PALETTE_RECORD_RELATIVE_LIMITATION"
+            <<" writersOutsideSurvey=possible"
+            <<" instructionBoundaries=notFullyDecoded"
+            <<" relativeOffsetMeaning=unknown"
             <<" resourceIdentity=unverified"
             <<" rmUpperPaletteProvenance=unverified\n";
   }
