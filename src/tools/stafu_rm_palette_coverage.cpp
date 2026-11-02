@@ -1738,6 +1738,82 @@ int main(int argc,char** argv){
   }
  }
 
+
+ // Milestone 116: bounded inspection of the alternate-path call target at
+ // flat file offset 1157325. The offset is a candidate, not a proven runtime
+ // address; raw opcode scans do not establish instruction boundaries.
+ {
+  const auto path116=std::filesystem::path(argv[1])/"STTNG.OVL";
+  std::ifstream input116(path116,std::ios::binary);
+  if(!input116){
+   std::cout<<"RM_PALETTE_BUFFER_STATUS read=0\n";
+  }else{
+   const std::vector<uint8_t> data116(
+    (std::istreambuf_iterator<char>(input116)),std::istreambuf_iterator<char>());
+   const size_t target116=1157325;
+   if(target116>=data116.size()){
+    std::cout<<"RM_PALETTE_BUFFER_STATUS read=1 targetAvailable=0 bytes="
+             <<data116.size()<<"\n";
+   }else{
+    const size_t start116=target116>64?target116-64:0;
+    const size_t end116=std::min(data116.size(),target116+257);
+    std::cout<<"RM_PALETTE_BUFFER_STATUS read=1 targetAvailable=1 bytes="
+             <<data116.size()<<" target="<<target116
+             <<" start="<<start116<<" endExclusive="<<end116
+             <<" scope=staticByteWindow\n";
+    for(size_t row116=start116;row116<end116;row116+=16){
+     std::cout<<"RM_PALETTE_BUFFER_HEX offset="<<row116<<" hex=";
+     for(size_t j116=row116;j116<std::min(end116,row116+16);++j116){
+      if(j116!=row116)std::cout<<" ";
+      std::cout<<std::hex<<std::setw(2)<<std::setfill('0')
+               <<unsigned(data116[j116]);
+     }
+     std::cout<<std::dec<<std::setfill(' ')<<"\n";
+    }
+    size_t ret116=0,call116=0,string116=0,rep116=0;
+    for(size_t p116=target116;p116<end116;++p116){
+     if(data116[p116]==0xC3||data116[p116]==0xC2){
+      ++ret116;
+      if(ret116<=12)
+       std::cout<<"RM_PALETTE_BUFFER_RET_CANDIDATE offset="<<p116
+                <<" opcode="<<(data116[p116]==0xC3?"C3":"C2")
+                <<" scope=rawBytePattern\n";
+     }
+     if(data116[p116]==0xE8&&p116+5<=end116){
+      ++call116;
+      const uint32_t raw116=uint32_t(data116[p116+1])|
+       (uint32_t(data116[p116+2])<<8)|
+       (uint32_t(data116[p116+3])<<16)|
+       (uint32_t(data116[p116+4])<<24);
+      if(call116<=12)
+       std::cout<<"RM_PALETTE_BUFFER_CALL_CANDIDATE offset="<<p116
+                <<" flatTarget="<<(int64_t(p116)+5+int64_t(int32_t(raw116)))
+                <<" scope=unvalidatedFlatFileOffset\n";
+     }
+     if(data116[p116]==0xAC||data116[p116]==0xAA||
+        data116[p116]==0xA4||data116[p116]==0xA5){
+      ++string116;
+      if(string116<=12)
+       std::cout<<"RM_PALETTE_BUFFER_STRING_CANDIDATE offset="<<p116
+                <<" opcode="<<std::hex<<unsigned(data116[p116])<<std::dec
+                <<" scope=rawBytePattern\n";
+     }
+     if(data116[p116]==0xF3){
+      ++rep116;
+      if(rep116<=12)
+       std::cout<<"RM_PALETTE_BUFFER_REP_CANDIDATE offset="<<p116
+                <<" scope=rawBytePattern\n";
+     }
+    }
+    std::cout<<"RM_PALETTE_BUFFER_SUMMARY rawReturnBytes="<<ret116
+             <<" rawCallBytes="<<call116
+             <<" rawStringOpBytes="<<string116
+             <<" rawRepPrefixBytes="<<rep116
+             <<" caution=noInstructionBoundaryOrDataFlowProof\n";
+   }
+  }
+ }
+
  std::cout<<"NOTE: Trailer plausibility does not establish palette ownership.\n";
  std::cout<<"NOTE: Palette overlap is numerical only; it does not establish RM palette provenance.\n";
  return 0;
