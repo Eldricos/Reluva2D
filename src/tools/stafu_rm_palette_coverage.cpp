@@ -1552,6 +1552,84 @@ int main(int argc,char** argv){
   }
  }
 
+
+ // Milestone 114: bounded instruction-oriented inspection of the two palette
+ // call paths. Opcode labels are limited to verified local byte templates;
+ // this is not a complete disassembler or a runtime data-flow analysis.
+ {
+  const auto path114=std::filesystem::path(argv[1])/"STTNG.OVL";
+  std::ifstream input114(path114,std::ios::binary);
+  if(!input114){
+   std::cout<<"RM_PALETTE_FLOW_STATUS read=0\n";
+  }else{
+   const std::vector<uint8_t> data114(
+    (std::istreambuf_iterator<char>(input114)),std::istreambuf_iterator<char>());
+   const size_t sites114[]={1166889,1167061};
+   std::cout<<"RM_PALETTE_FLOW_STATUS read=1 bytes="<<data114.size()
+            <<" callerSites=2 scope=selectedInstructionTemplates\n";
+   for(size_t site114:sites114){
+    const size_t begin114=site114>96?site114-96:0;
+    const size_t end114=std::min(data114.size(),site114+65);
+    size_t global114=0,fields114=0,branches114=0;
+    std::cout<<"RM_PALETTE_FLOW_CALLER site="<<site114
+             <<" start="<<begin114<<" endExclusive="<<end114<<"\n";
+    for(size_t p114=begin114;p114<end114;++p114){
+     // A1 imm32: MOV EAX, moffs32, with exact global address.
+     if(p114+5<=end114&&data114[p114]==0xA1&&
+        data114[p114+1]==0xF8&&data114[p114+2]==0x17&&
+        data114[p114+3]==0x12&&data114[p114+4]==0x00){
+      ++global114;
+      std::cout<<"RM_PALETTE_FLOW_GLOBAL_LOAD site="<<site114
+               <<" offset="<<p114<<" instruction=mov_eax_moffs32"
+               <<" address=001217F8\n";
+     }
+     // Match displacement bytes only in the observed 32-bit ModRM forms:
+     // 0F BF /r disp8, 66 8B /r disp32, 8B /r disp32.
+     if(p114+4<=end114&&data114[p114]==0x0F&&data114[p114+1]==0xBF&&
+        (data114[p114+2]&0xC0)==0x40&&
+        (data114[p114+3]==0x7E||data114[p114+3]==0x80||
+         data114[p114+3]==0x84)){
+      ++fields114;
+      std::cout<<"RM_PALETTE_FLOW_FIELD site="<<site114
+               <<" offset="<<p114<<" opcode=movsx_r32_rm16_disp8"
+               <<" displacementSigned="<<int(int8_t(data114[p114+3]))<<"\n";
+     }
+     if(p114+7<=end114&&
+        ((data114[p114]==0x66&&data114[p114+1]==0x8B&&
+          (data114[p114+2]&0xC0)==0x80&&
+          data114[p114+3]==0x80&&data114[p114+4]==0&&
+          data114[p114+5]==0&&data114[p114+6]==0)||
+         (data114[p114]==0x8B&&(data114[p114+1]&0xC0)==0x80&&
+          (data114[p114+2]==0x80||data114[p114+2]==0x84)&&
+          data114[p114+3]==0&&data114[p114+4]==0&&
+          data114[p114+5]==0))){
+      ++fields114;
+      std::cout<<"RM_PALETTE_FLOW_FIELD site="<<site114
+               <<" offset="<<p114<<" opcode=mov_register_memory_disp32"
+               <<" scope=observedByteTemplate\n";
+     }
+     if(p114+6<=end114&&data114[p114]==0x0F&&
+        (data114[p114+1]==0x84||data114[p114+1]==0x85)){
+      ++branches114;
+      const uint32_t raw114=uint32_t(data114[p114+2])|
+       (uint32_t(data114[p114+3])<<8)|
+       (uint32_t(data114[p114+4])<<16)|
+       (uint32_t(data114[p114+5])<<24);
+      std::cout<<"RM_PALETTE_FLOW_BRANCH site="<<site114
+               <<" offset="<<p114
+               <<" condition="<<(data114[p114+1]==0x84?"JZ":"JNZ")
+               <<" flatTarget="<<(int64_t(p114)+6+int64_t(int32_t(raw114)))
+               <<" scope=unvalidatedFlatFileOffset\n";
+     }
+    }
+    std::cout<<"RM_PALETTE_FLOW_SUMMARY site="<<site114
+             <<" globalLoads="<<global114<<" fieldCandidates="<<fields114
+             <<" conditionalBranchCandidates="<<branches114
+             <<" caution=noRuntimeControlFlowProof\n";
+   }
+  }
+ }
+
  std::cout<<"NOTE: Trailer plausibility does not establish palette ownership.\n";
  std::cout<<"NOTE: Palette overlap is numerical only; it does not establish RM palette provenance.\n";
  return 0;
