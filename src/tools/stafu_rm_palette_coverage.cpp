@@ -2810,6 +2810,72 @@ int main(int argc,char** argv){
   }
  }
 
+
+ // Milestone 129: bounded caller-side record-owner provenance survey.
+ // All instruction templates are exact-byte checks; raw bytes elsewhere
+ // are evidence for subsequent analysis, not a disassembly.
+ {
+  std::ifstream in129(std::filesystem::path(argv[1])/"STTNG.OVL",std::ios::binary);
+  if(!in129){
+   std::cout<<"RM_PALETTE_OWNER_ORIGIN_STATUS read=0\n";
+  }else{
+   const std::vector<uint8_t> d129(
+    (std::istreambuf_iterator<char>(in129)),std::istreambuf_iterator<char>());
+   auto match129=[&](size_t p,const std::vector<uint8_t>& b){
+    return p+b.size()<=d129.size()&&
+     std::equal(b.begin(),b.end(),d129.begin()+p);
+   };
+   std::cout<<"RM_PALETTE_OWNER_ORIGIN_STATUS read=1 bytes="<<d129.size()
+            <<" scope=boundedCallerAndRecordTemplates\n";
+   const size_t begin129=522688,end129=523024;
+   for(size_t p=begin129;p<std::min(end129,d129.size());p+=16){
+    std::cout<<"RM_PALETTE_OWNER_ORIGIN_HEX region=caller offset="<<p<<" hex=";
+    for(size_t j=p;j<std::min(p+16,std::min(end129,d129.size()));++j){
+     if(j!=p)std::cout<<" ";
+     std::cout<<std::hex<<std::setw(2)<<std::setfill('0')<<unsigned(d129[j]);
+    }
+    std::cout<<std::dec<<std::setfill(' ')<<"\n";
+   }
+   struct T129{const char* name;size_t offset;std::vector<uint8_t> bytes;const char* interpretation;};
+   const std::vector<T129> checks129={
+    {"caller_call_518504",522977,{0xE8,0x82,0xEE,0xFF,0xFF},"directCall"},
+    {"caller_store_global",522991,{0xA3,0xA4,0x97,0x09,0x00},"storeReturnedEAX"},
+    {"record_counter_reset",518516,{0xC7,0x83,0xB8,0x01,0x00,0x00,0x00,0x00,0x00,0x00},"recordCounterReset"},
+    {"record_stride_16hex",518586,{0x6B,0x83,0xB8,0x01,0x00,0x00,0x16},"recordStride22"},
+    {"record_state_7fff",518680,{0x6B,0x83,0xB8,0x01,0x00,0x00,0x16,0x66,0xC7,0x44,0x03,0x10,0xFF,0x7F},"stateInitialization"},
+    {"owner_record_head",518868,{0x89,0x9B,0xC4,0x01,0x00,0x00},"field1C4"},
+    {"owner_record_tail",518874,{0x89,0x9B,0xC8,0x01,0x00,0x00},"field1C8"},
+    {"return_owner",518880,{0x89,0xD8},"returnEBXAsEAX"}
+   };
+   size_t passed129=0;
+   for(const auto& t:checks129){
+    const bool matched=match129(t.offset,t.bytes);
+    if(matched)++passed129;
+    std::cout<<"RM_PALETTE_OWNER_ORIGIN_TEMPLATE name="<<t.name
+             <<" offset="<<t.offset<<" match="<<(matched?1:0)
+             <<" interpretation="<<t.interpretation<<"\n";
+   }
+   std::cout<<"RM_PALETTE_OWNER_ORIGIN_TEMPLATE_SUMMARY matched="<<passed129
+            <<" total="<<checks129.size()<<"\n";
+   // Show the immediate upstream operation that supplies the pointer passed
+   // to 518504, without assigning ownership or allocation semantics.
+   for(size_t p=522928;p<522985&&p<d129.size();p+=16){
+    std::cout<<"RM_PALETTE_OWNER_ORIGIN_PRECALL_HEX offset="<<p<<" hex=";
+    for(size_t j=p;j<std::min(p+16,std::min(size_t(522985),d129.size()));++j){
+     if(j!=p)std::cout<<" ";
+     std::cout<<std::hex<<std::setw(2)<<std::setfill('0')<<unsigned(d129[j]);
+    }
+    std::cout<<std::dec<<std::setfill(' ')<<"\n";
+   }
+   std::cout<<"RM_PALETTE_OWNER_ORIGIN_LIMITATION"
+            <<" callerArgumentOrigin=unverified"
+            <<" functionBoundaries=notFullyDecoded"
+            <<" allocationSemantics=unknown"
+            <<" resourceLoaderLink=unverified"
+            <<" rmPaletteProvenance=unverified\n";
+  }
+ }
+
  std::cout<<"NOTE: Trailer plausibility does not establish palette ownership.\n";
  std::cout<<"NOTE: Palette overlap is numerical only; it does not establish RM palette provenance.\n";
  return 0;
