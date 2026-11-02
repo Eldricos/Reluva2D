@@ -2600,6 +2600,79 @@ int main(int argc,char** argv){
   }
  }
 
+
+ // Milestone 126: survey direct literal references to the upstream owner
+ // pointer (0x000997A4), plus bounded context and likely instruction shapes.
+ // Literal references are not proof of ownership or decoded instruction flow.
+ {
+  std::ifstream in126(std::filesystem::path(argv[1])/"STTNG.OVL",std::ios::binary);
+  if(!in126){
+   std::cout<<"RM_PALETTE_OWNER_STATUS read=0\n";
+  }else{
+   const std::vector<uint8_t> d126(
+    (std::istreambuf_iterator<char>(in126)),std::istreambuf_iterator<char>());
+   const std::vector<uint8_t> address126={0xA4,0x97,0x09,0x00};
+   size_t matches126=0,printed126=0;
+   std::cout<<"RM_PALETTE_OWNER_STATUS read=1 bytes="<<d126.size()
+            <<" address=0x000997A4 scope=rawLiteralAddressSurvey\n";
+   for(size_t p126=0;p126+address126.size()<=d126.size();++p126){
+    if(!std::equal(address126.begin(),address126.end(),d126.begin()+p126))
+     continue;
+    ++matches126;
+    if(printed126>=96)continue;
+    ++printed126;
+    const size_t begin126=p126>=12?p126-12:0;
+    const size_t end126=std::min(d126.size(),p126+24);
+    std::cout<<"RM_PALETTE_OWNER_MATCH literalOffset="<<p126
+             <<" precedingByte="<<(p126?unsigned(d126[p126-1]):0)
+             <<" caution=rawLiteralNotDecodedOperand\n";
+    for(size_t row126=begin126;row126<end126;row126+=16){
+     std::cout<<"RM_PALETTE_OWNER_HEX literalOffset="<<p126
+              <<" offset="<<row126<<" hex=";
+     for(size_t j126=row126;j126<std::min(end126,row126+16);++j126){
+      if(j126!=row126)std::cout<<" ";
+      std::cout<<std::hex<<std::setw(2)<<std::setfill('0')
+               <<unsigned(d126[j126]);
+     }
+     std::cout<<std::dec<<std::setfill(' ')<<"\n";
+    }
+   }
+   std::cout<<"RM_PALETTE_OWNER_SUMMARY rawMatches="<<matches126
+            <<" printed="<<printed126<<" truncated="<<(matches126>printed126?1:0)<<"\n";
+   // Known caller access and the offset applied to its loaded pointer.
+   const size_t known126=522048;
+   const std::vector<uint8_t> knownBytes126={
+    0xA1,0xA4,0x97,0x09,0x00,0x05,0xC4,0x01,0x00,0x00,
+    0x50,0xE8,0xD0,0xFC,0xFF,0xFF};
+   const bool knownMatch126=known126+knownBytes126.size()<=d126.size()&&
+    std::equal(knownBytes126.begin(),knownBytes126.end(),d126.begin()+known126);
+   std::cout<<"RM_PALETTE_OWNER_KNOWN_ACCESS offset="<<known126
+            <<" templateMatch="<<(knownMatch126?1:0)
+            <<" operation=loadGlobalThenAdd0x1C4AndCall521248\n";
+   // Survey literal displacement 0x1C4 in the same overlay. This alone
+   // cannot associate a field access with the owner pointer.
+   const std::vector<uint8_t> disp126={0xC4,0x01,0x00,0x00};
+   size_t dispCount126=0,dispPrinted126=0;
+   for(size_t p126=0;p126+disp126.size()<=d126.size();++p126){
+    if(!std::equal(disp126.begin(),disp126.end(),d126.begin()+p126))continue;
+    ++dispCount126;
+    if(dispPrinted126>=64)continue;
+    ++dispPrinted126;
+    std::cout<<"RM_PALETTE_OWNER_FIELD_CANDIDATE literalOffset="<<p126
+             <<" precedingByte="<<(p126?unsigned(d126[p126-1]):0)
+             <<" caution=rawDisplacementNotOwnerAssociation\n";
+   }
+   std::cout<<"RM_PALETTE_OWNER_FIELD_SUMMARY rawMatches="<<dispCount126
+            <<" printed="<<dispPrinted126
+            <<" truncated="<<(dispCount126>dispPrinted126?1:0)<<"\n";
+   std::cout<<"RM_PALETTE_OWNER_LIMITATION directWrites=notDecoded"
+            <<" computedReferences=notEnumerated"
+            <<" structureAllocation=unknown"
+            <<" resourceLoaderLink=unverified"
+            <<" rmPaletteProvenance=unverified\n";
+  }
+ }
+
  std::cout<<"NOTE: Trailer plausibility does not establish palette ownership.\n";
  std::cout<<"NOTE: Palette overlap is numerical only; it does not establish RM palette provenance.\n";
  return 0;
