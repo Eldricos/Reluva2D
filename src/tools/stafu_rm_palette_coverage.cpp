@@ -2243,6 +2243,59 @@ int main(int argc,char** argv){
   }
  }
 
+
+ // Milestone 121: enumerate raw direct near CALL targets of the candidate
+ // palette function. x86 rel32 targets are computed in flat file offsets.
+ // Raw E8 patterns are NOT proof of instruction boundaries or reachability.
+ {
+  std::ifstream in121(std::filesystem::path(argv[1])/"STTNG.OVL",std::ios::binary);
+  if(!in121){
+   std::cout<<"RM_PALETTE_CALLER_STATUS read=0\n";
+  }else{
+   const std::vector<uint8_t> d121(
+    (std::istreambuf_iterator<char>(in121)),std::istreambuf_iterator<char>());
+   const int64_t target121=1166740;
+   size_t count121=0;
+   std::cout<<"RM_PALETTE_CALLER_STATUS read=1 bytes="<<d121.size()
+            <<" target="<<target121
+            <<" scope=rawRel32CandidateSearchNotInstructionDecoder\n";
+   for(size_t p121=0;p121+5<=d121.size();++p121){
+    if(d121[p121]!=0xE8)continue;
+    const uint32_t raw121=uint32_t(d121[p121+1])|
+      (uint32_t(d121[p121+2])<<8)|
+      (uint32_t(d121[p121+3])<<16)|
+      (uint32_t(d121[p121+4])<<24);
+    const int64_t destination121=int64_t(p121)+5+int64_t(int32_t(raw121));
+    if(destination121!=target121)continue;
+    ++count121;
+    std::cout<<"RM_PALETTE_CALLER_CANDIDATE offset="<<p121
+             <<" flatTarget="<<destination121
+             <<" caution=rawOpcodeNotVerifiedCallBoundary\n";
+    const size_t start121=p121>=48?p121-48:0;
+    const size_t end121=std::min(d121.size(),p121+17);
+    std::cout<<"RM_PALETTE_CALLER_WINDOW callOffset="<<p121
+             <<" start="<<start121<<" endExclusive="<<end121<<"\n";
+    for(size_t row121=start121;row121<end121;row121+=16){
+     std::cout<<"RM_PALETTE_CALLER_HEX callOffset="<<p121
+              <<" offset="<<row121<<" hex=";
+     for(size_t j121=row121;j121<std::min(row121+16,end121);++j121){
+      if(j121!=row121)std::cout<<" ";
+      std::cout<<std::hex<<std::setw(2)<<std::setfill('0')
+               <<unsigned(d121[j121]);
+     }
+     std::cout<<std::dec<<std::setfill(' ')<<"\n";
+    }
+   }
+   std::cout<<"RM_PALETTE_CALLER_SUMMARY target="<<target121
+            <<" candidates="<<count121<<"\n";
+   std::cout<<"RM_PALETTE_CALLER_LIMITATION"
+            <<" indirectCallsNotCovered=1"
+            <<" callBoundariesUnverified=1"
+            <<" callerArgumentProvenance=unknown"
+            <<" rmResourceLink=unverified\n";
+  }
+ }
+
  std::cout<<"NOTE: Trailer plausibility does not establish palette ownership.\n";
  std::cout<<"NOTE: Palette overlap is numerical only; it does not establish RM palette provenance.\n";
  return 0;
