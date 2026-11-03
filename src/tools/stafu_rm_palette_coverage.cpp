@@ -5597,6 +5597,82 @@ int main(int argc,char** argv){
   }
  }
 
+
+ // Milestone 161: bounded executable/overlay address-mapping evidence.
+ {
+  const auto installed161=std::filesystem::path(argv[1]);
+  const auto inspect161=[&](const char* name){
+   std::ifstream in(installed161/name,std::ios::binary);
+   if(!in){std::cout<<"RM_PALETTE_FVF_ADDRESS_FILE name="<<name<<" read=0\n";return;}
+   const std::vector<uint8_t> d((std::istreambuf_iterator<char>(in)),std::istreambuf_iterator<char>());
+   std::cout<<"RM_PALETTE_FVF_ADDRESS_FILE name="<<name<<" read=1 bytes="<<d.size()<<"\n";
+   const auto u16=[&](size_t at)->uint32_t{
+    return at+2<=d.size()?uint32_t(d[at])|(uint32_t(d[at+1])<<8):0;
+   };
+   if(d.size()>=64&&d[0]=='M'&&d[1]=='Z'){
+    const uint32_t last=u16(2),pages=u16(4),relocations=u16(6),
+      headerParagraphs=u16(8),relocTable=u16(24);
+    const uint64_t headerBytes=uint64_t(headerParagraphs)*16;
+    const uint64_t declaredBytes=pages?uint64_t(pages-1)*512+(last?last:512):0;
+    std::cout<<"RM_PALETTE_FVF_ADDRESS_MZ name="<<name
+             <<" headerBytes="<<headerBytes<<" declaredBytes="<<declaredBytes
+             <<" relocationCount="<<relocations<<" relocationTableOffset="<<relocTable
+             <<" initialCS="<<u16(22)<<" initialIP="<<u16(20)
+             <<" initialSS="<<u16(14)<<" initialSP="<<u16(16)
+             <<" headerWithinFile="<<(headerBytes<=d.size()?1:0)
+             <<" declaredWithinFile="<<(declaredBytes<=d.size()?1:0)
+             <<" mappingToRuntime=unverified\n";
+    const size_t count=std::min<size_t>(relocations,8);
+    for(size_t i=0;i<count&&uint64_t(relocTable)+4*(i+1)<=d.size();++i){
+     const size_t at=relocTable+4*i;
+     std::cout<<"RM_PALETTE_FVF_ADDRESS_RELOCATION name="<<name
+              <<" index="<<i<<" offset="<<u16(at)<<" segment="<<u16(at+2)
+              <<" sampleOnly=1\n";
+    }
+   }else{
+    std::cout<<"RM_PALETTE_FVF_ADDRESS_MZ name="<<name
+             <<" mzHeader=0 mappingToRuntime=unverified\n";
+   }
+   for(size_t begin:std::vector<size_t>{0,0xF70}){
+    if(begin>=d.size())continue;
+    const size_t end=std::min(begin+64,d.size());
+    for(size_t p=begin;p<end;p+=16){
+     std::cout<<"RM_PALETTE_FVF_ADDRESS_HEX name="<<name<<" offset="<<p<<" hex=";
+     for(size_t j=p;j<std::min(p+16,end);++j){
+      if(j!=p)std::cout<<" ";
+      std::cout<<std::hex<<std::setw(2)<<std::setfill('0')<<unsigned(d[j]);
+     }
+     std::cout<<std::dec<<std::setfill(' ')<<"\n";
+    }
+   }
+   if(std::string(name)=="STTNG.OVL"){
+    const size_t at=516157;
+    int64_t target=-1;
+    if(at+5<=d.size()&&d[at]==0xe8){
+     const uint32_t v=uint32_t(d[at+1])|(uint32_t(d[at+2])<<8)|
+       (uint32_t(d[at+3])<<16)|(uint32_t(d[at+4])<<24);
+     target=int64_t(at)+5+int64_t(int32_t(v));
+    }
+    std::cout<<"RM_PALETTE_FVF_ADDRESS_HASH_CALL offset="<<at
+             <<" target="<<target<<" expected=516076 match="
+             <<(target==516076?1:0)<<"\n";
+    std::cout<<"RM_PALETTE_FVF_ADDRESS_IMMEDIATE value=3972"
+             <<" overlayFileOffsetReadableString=0"
+             <<" runtimePointerMeaning=unverified"
+             <<" relocationMapping=unverified\n";
+   }
+  };
+  inspect161("STTNG.EXE");
+  inspect161("STTNG.OVL");
+  std::cout<<"RM_PALETTE_FVF_ADDRESS_LIMITATION"
+           <<" executableFormatBeyondMZ=unverified"
+           <<" runtimeSegmentBases=unknown"
+           <<" relocationApplication=notPerformed"
+           <<" immediate0xF84Meaning=unverified"
+           <<" resourceName=unidentified"
+           <<" rmUpperPaletteProvenance=unverified\n";
+ }
+
  std::cout<<"NOTE: Trailer plausibility does not establish palette ownership.\n";
  std::cout<<"NOTE: Palette overlap is numerical only; it does not establish RM palette provenance.\n";
  return 0;
