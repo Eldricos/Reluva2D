@@ -6852,6 +6852,165 @@ int main(int argc,char** argv){
   }
  }
 
+
+ // Milestone 172: bounded common LE internal fixups and embedded-MZ-relative data base.
+ {
+  std::ifstream in172(std::filesystem::path(argv[1])/"STTNG.OVL",std::ios::binary);
+  if(!in172){
+   std::cout<<"RM_PALETTE_FVF_LE_FIXUP_DECODE_STATUS read=0\n";
+  }else{
+   const std::vector<uint8_t> d((std::istreambuf_iterator<char>(in172)),
+                                 std::istreambuf_iterator<char>());
+   const auto u16=[&](uint64_t p)->uint32_t{
+    return p+2<=d.size()?uint32_t(d[size_t(p)])|
+      (uint32_t(d[size_t(p)+1])<<8):0;
+   };
+   const auto u32=[&](uint64_t p)->uint32_t{
+    return p+4<=d.size()?uint32_t(d[size_t(p)])|
+      (uint32_t(d[size_t(p)+1])<<8)|
+      (uint32_t(d[size_t(p)+2])<<16)|
+      (uint32_t(d[size_t(p)+3])<<24):0;
+   };
+   const uint64_t first=u16(4)?uint64_t(u16(4)-1)*512+(u16(2)?u16(2):512):0;
+   const bool firstOk=first+36<=d.size()&&d[size_t(first)]=='B'&&d[size_t(first)+1]=='W';
+   const uint64_t second=firstOk?first+u32(first+32):0;
+   const bool secondOk=firstOk&&second+36<=d.size()&&
+     d[size_t(second)]=='B'&&d[size_t(second)+1]=='W';
+   const uint64_t mz=secondOk?second+u32(second+32):0;
+   const bool mzOk=secondOk&&mz+64<=d.size()&&d[size_t(mz)]=='M'&&d[size_t(mz)+1]=='Z';
+   const uint64_t mzBytes=mzOk&&u16(mz+4)?
+     uint64_t(u16(mz+4)-1)*512+(u16(mz+2)?u16(mz+2):512):0;
+   const uint64_t le=mz+mzBytes+2;
+   const bool leOk=mzOk&&le+0xAC<=d.size()&&d[size_t(le)]=='L'&&d[size_t(le)+1]=='E';
+   std::cout<<"RM_PALETTE_FVF_LE_FIXUP_DECODE_STATUS read=1 le="<<le
+            <<" mz="<<mz<<" leSignature="<<(leOk?1:0)
+            <<" analysis=readOnly\n";
+   if(leOk){
+    const uint32_t pages=u32(le+0x14),pageSize=u32(le+0x28);
+    const uint32_t lastPage=u32(le+0x2C),objects=u32(le+0x44);
+    const uint32_t objectRel=u32(le+0x40),fixPageRel=u32(le+0x68);
+    const uint32_t fixRecordRel=u32(le+0x6C),dataField=u32(le+0x80);
+    const uint64_t obj=le+objectRel,pt=le+fixPageRel,rt=le+fixRecordRel;
+    const uint64_t base=mz+uint64_t(dataField);
+    const uint64_t dataEnd=base+uint64_t(pages-1)*pageSize+lastPage;
+    const bool valid=pages>0&&pages<=1000000&&objects>0&&objects<=65536&&
+      pageSize>=512&&pageSize<=65536&&(pageSize&(pageSize-1))==0&&
+      lastPage>0&&lastPage<=pageSize&&obj<=d.size()&&
+      uint64_t(objects)*24<=d.size()-obj&&pt<=d.size()&&
+      uint64_t(pages+1)*4<=d.size()-pt&&rt<=d.size()&&pt<=rt;
+    const uint64_t total=valid?u32(pt+uint64_t(pages)*4):0;
+    const bool recordsValid=valid&&total<=d.size()-rt;
+    std::cout<<"RM_PALETTE_FVF_LE_FIXUP_DECODE_BASE dataField="<<dataField
+             <<" embeddedMZ="<<mz<<" candidateDataBase="<<base
+             <<" fixupRecordEnd="<<(recordsValid?rt+total:0)
+             <<" gapAfterFixups="<<(recordsValid&&base>=rt+total?base-(rt+total):0)
+             <<" candidateDataEnd="<<dataEnd<<" fileSize="<<d.size()
+             <<" exactEndMatch="<<(dataEnd==d.size()?1:0)
+             <<" validTables="<<(valid?1:0)
+             <<" recordsValid="<<(recordsValid?1:0)
+             <<" dataBaseInterpretation=embeddedMZRelativeCandidate\n";
+    if(recordsValid){
+     uint64_t decoded=0,unsupportedPages=0,invalidSources=0,invalidTargets=0;
+     uint64_t target1=0,target2=0,otherTargets=0,nearLookup=0;
+     uint64_t type07flag10=0,type07flag00=0;
+     const uint32_t lookupPage=uint32_t((531027>=base)?(531027-base)/pageSize+1:0);
+     const uint32_t lookupInPage=uint32_t((531027>=base)?(531027-base)%pageSize:0);
+     const uint32_t correctedKnownPage=uint32_t((531027>=base)?(531027-base)/pageSize+1:0);
+     std::cout<<"RM_PALETTE_FVF_LE_FIXUP_DECODE_LOOKUP fileOffset=531027"
+              <<" correctedPhysicalPage="<<correctedKnownPage
+              <<" correctedInPage="<<lookupInPage
+              <<" pageInRange="<<(lookupPage>=1&&lookupPage<=pages?1:0)
+              <<" priorPage63Mapping=superseded\n";
+     for(uint32_t page=1;page<=pages;++page){
+      const uint64_t start=u32(pt+uint64_t(page-1)*4);
+      const uint64_t end=u32(pt+uint64_t(page)*4);
+      if(end<start||end>total){++unsupportedPages;continue;}
+      uint64_t at=rt+start,limit=rt+end,pageDecoded=0,pageNear=0;
+      bool unsupported=false;
+      while(at<limit){
+       // Supported subset: 0x07 source=32-bit offset, flags 0x00 or 0x10,
+       // internal target object byte, 16/32-bit target offset.
+       if(limit-at<5){unsupported=true;break;}
+       const uint8_t source=d[size_t(at)],flags=d[size_t(at+1)];
+       if(source!=0x07||(flags!=0x00&&flags!=0x10)){
+        unsupported=true;
+        std::cout<<"RM_PALETTE_FVF_LE_FIXUP_DECODE_UNSUPPORTED page="<<page
+                 <<" recordOffset="<<at<<" source="<<unsigned(source)
+                 <<" flags="<<unsigned(flags)
+                 <<" remaining="<<limit-at<<"\n";
+        break;
+       }
+       const uint64_t length=flags==0x10?9:7;
+       if(limit-at<length){unsupported=true;break;}
+       const uint32_t sourceOffset=u16(at+2);
+       const uint32_t targetObject=unsigned(d[size_t(at+4)]);
+       const uint32_t targetOffset=flags==0x10?u32(at+5):u16(at+5);
+       const bool sourceOk=sourceOffset<pageSize;
+       const bool targetOk=targetObject>=1&&targetObject<=objects&&
+         targetOffset<u32(obj+uint64_t(targetObject-1)*24);
+       if(!sourceOk)++invalidSources;
+       if(!targetOk)++invalidTargets;
+       if(targetObject==1)++target1;
+       else if(targetObject==2)++target2;
+       else ++otherTargets;
+       if(flags==0x10)++type07flag10;else ++type07flag00;
+       if(page==lookupPage&&sourceOffset+8>=lookupInPage&&
+          sourceOffset<=lookupInPage+8){
+        ++nearLookup;++pageNear;
+        std::cout<<"RM_PALETTE_FVF_LE_FIXUP_DECODE_NEAR_LOOKUP"
+                 <<" page="<<page<<" sourceOffset="<<sourceOffset
+                 <<" targetObject="<<targetObject<<" targetOffset="<<targetOffset
+                 <<" recordOffset="<<at<<" sourceValid="<<(sourceOk?1:0)
+                 <<" targetValid="<<(targetOk?1:0)<<"\n";
+       }
+       if(page==lookupPage&&pageDecoded<12){
+        std::cout<<"RM_PALETTE_FVF_LE_FIXUP_DECODE_LOOKUP_SAMPLE"
+                 <<" page="<<page<<" sourceOffset="<<sourceOffset
+                 <<" targetObject="<<targetObject<<" targetOffset="<<targetOffset
+                 <<" flags="<<unsigned(flags)
+                 <<" recordOffset="<<at<<"\n";
+       }
+       ++decoded;++pageDecoded;at+=length;
+      }
+      if(unsupported)++unsupportedPages;
+      if(page==lookupPage||page==63||page==1||page==217||page==218||page==371){
+       std::cout<<"RM_PALETTE_FVF_LE_FIXUP_DECODE_PAGE page="<<page
+                <<" recordBytes="<<end-start<<" decoded="<<pageDecoded
+                <<" unsupported="<<(unsupported?1:0)
+                <<" nearLookup="<<pageNear
+                <<" unparsedBytes="<<(unsupported&&at<=limit?limit-at:0)<<"\n";
+      }
+     }
+     std::cout<<"RM_PALETTE_FVF_LE_FIXUP_DECODE_SUMMARY decoded="<<decoded
+              <<" type07Flag10="<<type07flag10
+              <<" type07Flag00="<<type07flag00
+              <<" targetObject1="<<target1<<" targetObject2="<<target2
+              <<" otherTargets="<<otherTargets
+              <<" invalidSourceOffsets="<<invalidSources
+              <<" invalidTargetOffsets="<<invalidTargets
+              <<" unsupportedPages="<<unsupportedPages
+              <<" nearLookup="<<nearLookup
+              <<" grammarCoverage=partial\n";
+     const uint64_t entryPage=uint64_t(u32(le+0x1C))/pageSize+1;
+     const uint64_t entryFile=base+(entryPage-1)*pageSize+
+       uint64_t(u32(le+0x1C))%pageSize;
+     std::cout<<"RM_PALETTE_FVF_LE_FIXUP_DECODE_ENTRY"
+              <<" entryObject="<<u32(le+0x18)
+              <<" entryOffset="<<u32(le+0x1C)
+              <<" object1PageAssumed=1"
+              <<" candidateFile="<<entryFile
+              <<" inFile="<<(entryFile<d.size()?1:0)<<"\n";
+    }
+   }
+   std::cout<<"RM_PALETTE_FVF_LE_FIXUP_DECODE_LIMITATION"
+            <<" onlySource07Flags00or10=1"
+            <<" unsupportedRecordsStopPage=1"
+            <<" runtimeRelocations=notApplied"
+            <<" immediate0xF84Meaning=unverified"
+            <<" rmUpperPaletteProvenance=unverified\n";
+  }
+ }
+
  std::cout<<"NOTE: Trailer plausibility does not establish palette ownership.\n";
  std::cout<<"NOTE: Palette overlap is numerical only; it does not establish RM palette provenance.\n";
  return 0;
