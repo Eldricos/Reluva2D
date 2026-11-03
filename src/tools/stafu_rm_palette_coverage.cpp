@@ -4440,6 +4440,95 @@ int main(int argc,char** argv){
   }
  }
 
+
+ // Milestone 149: bounded trace of the FVF owner's lookup-key provenance.
+ {
+  std::ifstream in149(std::filesystem::path(argv[1])/"STTNG.OVL",std::ios::binary);
+  if(!in149){
+   std::cout<<"RM_PALETTE_FVF_KEY_TRACE_STATUS read=0\n";
+  }else{
+   const std::vector<uint8_t> d149(
+    (std::istreambuf_iterator<char>(in149)),std::istreambuf_iterator<char>());
+   std::cout<<"RM_PALETTE_FVF_KEY_TRACE_STATUS read=1 bytes="
+            <<d149.size()<<" scope=ownerArgumentLookupKeyAndRegistration\n";
+   struct Region149{const char* name;size_t start;size_t end;};
+   const std::vector<Region149> regions149={
+    {"fvf_owner_caller_preparation",522816,523104},
+    {"fvf_owner_setup_entry",518960,519136},
+    {"fvf_owner_setup_continuation",519120,519296},
+    {"setup_lookup_arguments",517136,517248},
+    {"lookup_hash_and_compare",516064,516232},
+    {"registry_registration_entry",516304,516448},
+    {"registry_name_and_link",516720,516952},
+    {"fvf_signature_context",523104,523200}
+   };
+   for(const auto& region:regions149){
+    for(size_t p=region.start;p<std::min(region.end,d149.size());p+=16){
+     std::cout<<"RM_PALETTE_FVF_KEY_TRACE_HEX region="<<region.name
+              <<" offset="<<p<<" hex=";
+     for(size_t j=p;j<std::min(p+16,std::min(region.end,d149.size()));++j){
+      if(j!=p)std::cout<<" ";
+      std::cout<<std::hex<<std::setw(2)<<std::setfill('0')<<unsigned(d149[j]);
+     }
+     std::cout<<std::dec<<std::setfill(' ')<<"\n";
+    }
+   }
+   struct Call149{const char* name;size_t offset;int64_t expected;};
+   const std::vector<Call149> calls149={
+    {"setup_to_descriptor_lookup",517209,516148},
+    {"owner_to_setup_wrapper",519007,563005},
+    {"setup_wrapper_to_setup",563031,517136},
+    {"owner_factory_to_initializer",523016,518988}
+   };
+   size_t matched149=0;
+   for(const auto& call:calls149){
+    int64_t target=-1;
+    if(call.offset+5<=d149.size()&&d149[call.offset]==0xE8){
+     const uint32_t u=uint32_t(d149[call.offset+1])|
+       (uint32_t(d149[call.offset+2])<<8)|
+       (uint32_t(d149[call.offset+3])<<16)|
+       (uint32_t(d149[call.offset+4])<<24);
+     target=int64_t(call.offset)+5+int64_t(int32_t(u));
+    }
+    const bool match=target==call.expected;
+    matched149+=match?1:0;
+    std::cout<<"RM_PALETTE_FVF_KEY_TRACE_CALL name="<<call.name
+             <<" offset="<<call.offset<<" target="<<target
+             <<" expected="<<call.expected<<" match="<<(match?1:0)<<"\n";
+   }
+   std::cout<<"RM_PALETTE_FVF_KEY_TRACE_CALL_SUMMARY matched="
+            <<matched149<<" total="<<calls149.size()<<"\n";
+   struct Pattern149{const char* name;size_t begin;size_t end;
+                     std::vector<uint8_t> bytes;};
+   const std::vector<Pattern149> patterns149={
+    {"owner_setup_argument_push",518992,519016,{0x8b,0x54,0x24,0x20,0x52}},
+    {"owner_factory_argument_push",523000,523024,{0x8b,0x4c,0x24,0x14,0x51}},
+    {"setup_lookup_two_pushes",517192,517216,{0x51,0x55,0xe8}},
+    {"lookup_hash_call",516144,516176,{0x56,0xe8,0xaa,0xff,0xff,0xff}},
+    {"lookup_link_step",516192,516224,{0x8b,0x7b,0x1c}},
+    {"registry_inline_name_threshold",516736,516768,{0x83,0xff,0x0e}}
+   };
+   for(const auto& pat:patterns149){
+    bool found=false;size_t where=0;
+    const size_t limit=std::min(pat.end,d149.size());
+    for(size_t p=pat.begin;p+pat.bytes.size()<=limit;++p){
+     if(std::equal(pat.bytes.begin(),pat.bytes.end(),d149.begin()+p)){
+      found=true;where=p;break;
+     }
+    }
+    std::cout<<"RM_PALETTE_FVF_KEY_TRACE_PATTERN name="<<pat.name
+             <<" found="<<(found?1:0)
+             <<" offset="<<(found?int64_t(where):-1)<<"\n";
+   }
+   std::cout<<"RM_PALETTE_FVF_KEY_TRACE_LIMITATION"
+            <<" ownerLookupKeyValue=unverified"
+            <<" ownerLookupKeyOrigin=unverified"
+            <<" nameComparisonSemantics=unverified"
+            <<" fvfResourceIdentity=unverified"
+            <<" rmUpperPaletteProvenance=unverified\n";
+  }
+ }
+
  std::cout<<"NOTE: Trailer plausibility does not establish palette ownership.\n";
  std::cout<<"NOTE: Palette overlap is numerical only; it does not establish RM palette provenance.\n";
  return 0;
