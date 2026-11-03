@@ -5755,6 +5755,95 @@ int main(int argc,char** argv){
   }
  }
 
+
+ // Milestone 163: bounded BWP boundary/header relationship probes (read-only).
+ {
+  std::ifstream in163(std::filesystem::path(argv[1])/"STTNG.OVL",std::ios::binary);
+  if(!in163){
+   std::cout<<"RM_PALETTE_FVF_BWP_STATUS read=0\n";
+  }else{
+   const std::vector<uint8_t> d163((std::istreambuf_iterator<char>(in163)),
+                                   std::istreambuf_iterator<char>());
+   const auto w163=[&](size_t p)->uint32_t{
+    return p+2<=d163.size()?uint32_t(d163[p])|(uint32_t(d163[p+1])<<8):0;
+   };
+   const auto dw163=[&](size_t p)->uint32_t{
+    return p+4<=d163.size()?uint32_t(d163[p])|(uint32_t(d163[p+1])<<8)|
+      (uint32_t(d163[p+2])<<16)|(uint32_t(d163[p+3])<<24):0;
+   };
+   const uint32_t pages163=w163(4),last163=w163(2);
+   const size_t boundary163=pages163?size_t(uint64_t(pages163-1)*512+
+     (last163?last163:512)):0;
+   const bool bwp163=boundary163+4<=d163.size()&&
+     d163[boundary163]=='B'&&d163[boundary163+1]=='W'&&
+     d163[boundary163+2]=='P'&&d163[boundary163+3]==0;
+   std::cout<<"RM_PALETTE_FVF_BWP_STATUS read=1 bytes="<<d163.size()
+            <<" boundary="<<boundary163<<" bwpSignature="<<(bwp163?1:0)
+            <<" headerFormat=unverified\n";
+   if(bwp163){
+    const size_t headerEnd=std::min(boundary163+128,d163.size());
+    for(size_t p=boundary163;p+4<=headerEnd;p+=4){
+     const uint32_t v=dw163(p);
+     std::cout<<"RM_PALETTE_FVF_BWP_FIELD relative="<<(p-boundary163)
+              <<" absolute="<<p<<" u32="<<v
+              <<" asAbsoluteInFile="<<(v<d163.size()?1:0)
+              <<" asRelativeInFile="<<(uint64_t(boundary163)+v<d163.size()?1:0)
+              <<" meaning=unverified\n";
+    }
+    const std::vector<size_t> regions163={
+      boundary163,boundary163+64,boundary163+112,
+      boundary163+128,boundary163+176,boundary163+256,
+      boundary163+512,boundary163+1024
+    };
+    for(size_t start:regions163){
+     if(start>=d163.size())continue;
+     const size_t end=std::min(start+64,d163.size());
+     for(size_t p=start;p<end;p+=16){
+      std::cout<<"RM_PALETTE_FVF_BWP_HEX offset="<<p<<" hex=";
+      for(size_t j=p;j<std::min(p+16,end);++j){
+       if(j!=p)std::cout<<" ";
+       std::cout<<std::hex<<std::setw(2)<<std::setfill('0')<<unsigned(d163[j]);
+      }
+      std::cout<<std::dec<<std::setfill(' ')<<"\n";
+     }
+    }
+    const std::vector<uint8_t> vmm163={'V','M','M','.','E','X','P',0};
+    size_t count163=0,first163=0;
+    const size_t limit163=std::min(d163.size(),boundary163+65536);
+    for(size_t p=boundary163;p+vmm163.size()<=limit163;++p){
+     if(std::equal(vmm163.begin(),vmm163.end(),d163.begin()+p)){
+      if(!count163)first163=p;
+      ++count163;
+     }
+    }
+    std::cout<<"RM_PALETTE_FVF_BWP_VMM_EXP countFirst64KiBAfterBoundary="
+             <<count163<<" firstOffset="<<(count163?int64_t(first163):-1)
+             <<" relative="<<(count163?int64_t(first163-boundary163):-1)
+             <<" linkageVerified=0\n";
+    const uint32_t candidates163[]={dw163(boundary163+4),
+      dw163(boundary163+8),dw163(boundary163+12),
+      dw163(boundary163+16),dw163(boundary163+20),
+      dw163(boundary163+24),dw163(boundary163+28)};
+    for(size_t i=0;i<sizeof(candidates163)/sizeof(candidates163[0]);++i){
+     const uint64_t v=candidates163[i];
+     std::cout<<"RM_PALETTE_FVF_BWP_OFFSET_CANDIDATE fieldRelative="
+              <<4+4*i<<" value="<<v
+              <<" absoluteInFile="<<(v<d163.size()?1:0)
+              <<" relativeInFile="<<(uint64_t(boundary163)+v<d163.size()?1:0)
+              <<" interpretation=unverified\n";
+    }
+   }
+   std::cout<<"RM_PALETTE_FVF_BWP_LIMITATION"
+            <<" bwpHeaderSchema=unknown"
+            <<" vmmExpRelationship=unverified"
+            <<" segmentDirectory=unidentified"
+            <<" relocationDirectory=unidentified"
+            <<" runtimeMapping=unverified"
+            <<" immediate0xF84Meaning=unverified"
+            <<" rmUpperPaletteProvenance=unverified\n";
+  }
+ }
+
  std::cout<<"NOTE: Trailer plausibility does not establish palette ownership.\n";
  std::cout<<"NOTE: Palette overlap is numerical only; it does not establish RM palette provenance.\n";
  return 0;
