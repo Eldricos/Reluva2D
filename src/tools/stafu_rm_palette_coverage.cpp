@@ -3495,13 +3495,13 @@ int main(int argc,char** argv){
             <<d138.size()<<" scope=boundedExactAnchorsAndHex\n";
    struct Anchor138{const char* name;size_t offset;std::vector<uint8_t> bytes;};
    const std::vector<Anchor138> anchors138={
-    {"third_relative_read",522128,{0x8B,0x6A,0x0E}},
-    {"third_pointer_zero",522131,{0x89,0x3D,0x88,0x97,0x09,0x00}},
-    {"third_relative_add",522141,{0x01,0xEA}},
-    {"third_pointer_store",522143,{0x89,0x15,0x88,0x97,0x09,0x00}},
+    {"third_relative_read",522129,{0x8B,0x6A,0x0E}},
+    {"third_pointer_zero",522132,{0x89,0x3D,0x88,0x97,0x09,0x00}},
+    {"third_relative_add",522142,{0x01,0xEA}},
+    {"third_pointer_store",522144,{0x89,0x15,0x88,0x97,0x09,0x00}},
     {"owner_global_load",523009,{0x8B,0x2D,0xA4,0x97,0x09,0x00}},
-    {"owner_push",523014,{0x55}},
-    {"setup_call",523015,{0xE8,0x3F,0xF0,0xFF,0xFF}}
+    {"owner_push",523015,{0x55}},
+    {"setup_call",523016,{0xE8,0x3F,0xF0,0xFF,0xFF}}
    };
    size_t anchorMatched138=0;
    for(const auto& a:anchors138){
@@ -3514,7 +3514,7 @@ int main(int argc,char** argv){
             <<anchorMatched138<<" total="<<anchors138.size()<<"\n";
    struct Call138{const char* name;size_t offset;int64_t expected;};
    const std::vector<Call138> calls138={
-    {"owner_setup",523015,518724},
+    {"owner_setup",523016,518724},
     {"payload_traversal",522059,521248},
     {"payload_initializer",522730,522044}
    };
@@ -3556,6 +3556,86 @@ int main(int argc,char** argv){
             <<" setupFunctionSemantics=unverified"
             <<" transformInputFormat=unverified"
             <<" rmUpperPaletteProvenance=unverified\n";
+  }
+ }
+
+
+ // Milestone 139: investigate the third-pointer table and the
+ // byte-expansion predecessor without assigning resource semantics.
+ {
+  std::ifstream in139(std::filesystem::path(argv[1])/"STTNG.OVL",std::ios::binary);
+  if(!in139){
+   std::cout<<"RM_PALETTE_TABLE_TRANSFORM_STATUS read=0\n";
+  }else{
+   const std::vector<uint8_t> d139(
+    (std::istreambuf_iterator<char>(in139)),std::istreambuf_iterator<char>());
+   std::cout<<"RM_PALETTE_TABLE_TRANSFORM_STATUS read=1 bytes="
+            <<d139.size()<<" scope=boundedTableConsumerAndTransformEvidence\n";
+   struct Region139{const char* name;size_t start;size_t end;};
+   const std::vector<Region139> regions139={
+    {"table_header_consumer",522144,522320},
+    {"table_iteration_continuation",522304,522480},
+    {"table_consumer_tail",522464,522624},
+    {"transform_entry_context",521488,521696},
+    {"transform_expansion",521680,521824},
+    {"transform_copy_paths",521816,522044},
+    {"record_setup_callsite",522992,523040},
+    {"record_setup_target_context",518688,518784}
+   };
+   for(const auto& region:regions139){
+    for(size_t p=region.start;p<std::min(region.end,d139.size());p+=16){
+     std::cout<<"RM_PALETTE_TABLE_TRANSFORM_HEX region="<<region.name
+              <<" offset="<<p<<" hex=";
+     for(size_t j=p;j<std::min(p+16,std::min(region.end,d139.size()));++j){
+      if(j!=p)std::cout<<" ";
+      std::cout<<std::hex<<std::setw(2)<<std::setfill('0')<<unsigned(d139[j]);
+     }
+     std::cout<<std::dec<<std::setfill(' ')<<"\n";
+    }
+   }
+   struct Anchor139{const char* name;size_t offset;std::vector<uint8_t> bytes;};
+   const std::vector<Anchor139> anchors139={
+    {"table_pointer_load",522166,{0xA1,0x88,0x97,0x09,0x00}},
+    {"table_header_read",522180,{0x8B,0x18}},
+    {"table_index_global_read",522182,{0x66,0x8B,0x15,0x94,0x97,0x09,0x00}},
+    {"transform_copy_dwords",521835,{0xF2,0xA5}},
+    {"transform_copy_bytes",521843,{0xF2,0xA4}}
+   };
+   size_t matched139=0;
+   for(const auto& a:anchors139){
+    bool ok=a.offset+a.bytes.size()<=d139.size()&&
+       std::equal(a.bytes.begin(),a.bytes.end(),d139.begin()+a.offset);
+    if(ok)++matched139;
+    std::cout<<"RM_PALETTE_TABLE_TRANSFORM_TEMPLATE name="<<a.name
+             <<" offset="<<a.offset<<" match="<<(ok?1:0)<<"\n";
+   }
+   std::cout<<"RM_PALETTE_TABLE_TRANSFORM_TEMPLATE_SUMMARY matched="
+            <<matched139<<" total="<<anchors139.size()<<"\n";
+   // Search for CALL rel32 bytes targeting the bounded transform
+   // region. Byte matches are not proof of instruction boundaries.
+   size_t count139=0;
+   for(size_t p=518000;p<524000&&p+5<=d139.size();++p){
+    if(d139[p]!=0xE8)continue;
+    const uint32_t u=uint32_t(d139[p+1])|
+       (uint32_t(d139[p+2])<<8)|
+       (uint32_t(d139[p+3])<<16)|
+       (uint32_t(d139[p+4])<<24);
+    const int64_t target=int64_t(p)+5+int64_t(int32_t(u));
+    if(target<521488||target>=522044)continue;
+    ++count139;
+    if(count139<=32)
+     std::cout<<"RM_PALETTE_TABLE_TRANSFORM_RAW_CALL offset="<<p
+              <<" target="<<target
+              <<" caution=rawCandidateNotDecoded\n";
+   }
+   std::cout<<"RM_PALETTE_TABLE_TRANSFORM_RAW_CALL_SUMMARY count="
+            <<count139<<" displayedMax=32\n";
+   std::cout<<"RM_PALETTE_TABLE_TRANSFORM_LIMITATION"
+            <<" tableEntryFormat=unverified"
+            <<" transformSourceWidth=unverified"
+            <<" transformDestinationWidth=unverified"
+            <<" transformCallers=rawCandidates"
+            <<" rmPaletteLink=unverified\n";
   }
  }
 
