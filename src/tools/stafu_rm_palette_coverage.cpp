@@ -3514,7 +3514,7 @@ int main(int argc,char** argv){
             <<anchorMatched138<<" total="<<anchors138.size()<<"\n";
    struct Call138{const char* name;size_t offset;int64_t expected;};
    const std::vector<Call138> calls138={
-    {"owner_setup",523016,518724},
+    {"owner_setup",523016,518988},
     {"payload_traversal",522059,521248},
     {"payload_initializer",522730,522044}
    };
@@ -3595,11 +3595,11 @@ int main(int argc,char** argv){
    }
    struct Anchor139{const char* name;size_t offset;std::vector<uint8_t> bytes;};
    const std::vector<Anchor139> anchors139={
-    {"table_pointer_load",522166,{0xA1,0x88,0x97,0x09,0x00}},
-    {"table_header_read",522180,{0x8B,0x18}},
-    {"table_index_global_read",522182,{0x66,0x8B,0x15,0x94,0x97,0x09,0x00}},
-    {"transform_copy_dwords",521835,{0xF2,0xA5}},
-    {"transform_copy_bytes",521843,{0xF2,0xA4}}
+    {"table_pointer_load",522167,{0xA1,0x88,0x97,0x09,0x00}},
+    {"table_header_read",522181,{0x8B,0x18}},
+    {"table_index_global_read",522183,{0x66,0x8B,0x15,0x94,0x97,0x09,0x00}},
+    {"transform_copy_dwords",521837,{0xF2,0xA5}},
+    {"transform_copy_bytes",521845,{0xF2,0xA4}}
    };
    size_t matched139=0;
    for(const auto& a:anchors139){
@@ -3636,6 +3636,73 @@ int main(int argc,char** argv){
             <<" transformDestinationWidth=unverified"
             <<" transformCallers=rawCandidates"
             <<" rmPaletteLink=unverified\n";
+  }
+ }
+
+
+ // Milestone 140: bounded call-site argument and record-setup evidence.
+ {
+  std::ifstream in140(std::filesystem::path(argv[1])/"STTNG.OVL",std::ios::binary);
+  if(!in140){
+   std::cout<<"RM_PALETTE_TRANSFORM_INPUT_STATUS read=0\n";
+  }else{
+   const std::vector<uint8_t> d140(
+    (std::istreambuf_iterator<char>(in140)),std::istreambuf_iterator<char>());
+   std::cout<<"RM_PALETTE_TRANSFORM_INPUT_STATUS read=1 bytes="
+            <<d140.size()<<" scope=boundedCallsitesAndOwnerSetup\n";
+   struct Call140{const char* name;size_t offset;int64_t expected;};
+   const std::vector<Call140> calls140={
+    {"transform_from_table",522322,521488},
+    {"transform_other_caller",520257,521488},
+    {"owner_setup",523016,518988}
+   };
+   size_t callMatched140=0;
+   for(const auto& call:calls140){
+    int64_t target=-1;
+    if(call.offset+5<=d140.size()&&d140[call.offset]==0xE8){
+     const uint32_t u=uint32_t(d140[call.offset+1])|
+       (uint32_t(d140[call.offset+2])<<8)|
+       (uint32_t(d140[call.offset+3])<<16)|
+       (uint32_t(d140[call.offset+4])<<24);
+     target=int64_t(call.offset)+5+int64_t(int32_t(u));
+    }
+    const bool ok=target==call.expected;
+    if(ok)++callMatched140;
+    std::cout<<"RM_PALETTE_TRANSFORM_INPUT_CALL name="<<call.name
+             <<" offset="<<call.offset<<" target="<<target
+             <<" expected="<<call.expected
+             <<" match="<<(ok?1:0)<<"\n";
+   }
+   std::cout<<"RM_PALETTE_TRANSFORM_INPUT_CALL_SUMMARY matched="
+            <<callMatched140<<" total="<<calls140.size()<<"\n";
+   struct Region140{const char* name;size_t start;size_t end;};
+   const std::vector<Region140> regions140={
+    {"table_transform_arguments",522264,522336},
+    {"other_transform_arguments",520192,520288},
+    {"transform_function_prologue",521488,521616},
+    {"transform_expand_branch",521600,521808},
+    {"transform_copy_branch",521800,522044},
+    {"owner_setup_entry",518960,519184},
+    {"owner_setup_continuation",519184,519376},
+    {"owner_setup_call_arguments",522976,523056}
+   };
+   for(const auto& region:regions140){
+    for(size_t p=region.start;p<std::min(region.end,d140.size());p+=16){
+     std::cout<<"RM_PALETTE_TRANSFORM_INPUT_HEX region="<<region.name
+              <<" offset="<<p<<" hex=";
+     for(size_t j=p;j<std::min(p+16,std::min(region.end,d140.size()));++j){
+      if(j!=p)std::cout<<" ";
+      std::cout<<std::hex<<std::setw(2)<<std::setfill('0')<<unsigned(d140[j]);
+     }
+     std::cout<<std::dec<<std::setfill(' ')<<"\n";
+    }
+   }
+   std::cout<<"RM_PALETTE_TRANSFORM_INPUT_LIMITATION"
+            <<" callerArguments=requiresInstructionDecode"
+            <<" expansionPurpose=unverified"
+            <<" ownerSetupRole=unverified"
+            <<" resourceIdentity=unverified"
+            <<" rmUpperPaletteProvenance=unverified\n";
   }
  }
 
