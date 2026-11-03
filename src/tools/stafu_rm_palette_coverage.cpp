@@ -6700,6 +6700,158 @@ int main(int argc,char** argv){
   }
  }
 
+
+ // Milestone 171: bound LE fixup-page intervals and inspect resource-lookup vicinity.
+ {
+  std::ifstream in171(std::filesystem::path(argv[1])/"STTNG.OVL",std::ios::binary);
+  if(!in171){
+   std::cout<<"RM_PALETTE_FVF_LE_FIXUP_STATUS read=0\n";
+  }else{
+   const std::vector<uint8_t> d((std::istreambuf_iterator<char>(in171)),
+                                 std::istreambuf_iterator<char>());
+   const auto u16=[&](uint64_t p)->uint32_t{
+    return p+2<=d.size()?uint32_t(d[size_t(p)])|
+      (uint32_t(d[size_t(p)+1])<<8):0;
+   };
+   const auto u32=[&](uint64_t p)->uint32_t{
+    return p+4<=d.size()?uint32_t(d[size_t(p)])|
+      (uint32_t(d[size_t(p)+1])<<8)|
+      (uint32_t(d[size_t(p)+2])<<16)|
+      (uint32_t(d[size_t(p)+3])<<24):0;
+   };
+   const uint64_t first=u16(4)?uint64_t(u16(4)-1)*512+(u16(2)?u16(2):512):0;
+   const bool firstOk=first+36<=d.size()&&d[size_t(first)]=='B'&&d[size_t(first)+1]=='W';
+   const uint64_t second=firstOk?first+u32(first+32):0;
+   const bool secondOk=firstOk&&second+36<=d.size()&&
+     d[size_t(second)]=='B'&&d[size_t(second)+1]=='W';
+   const uint64_t mz=secondOk?second+u32(second+32):0;
+   const bool mzOk=secondOk&&mz+64<=d.size()&&d[size_t(mz)]=='M'&&d[size_t(mz)+1]=='Z';
+   const uint64_t mzBytes=mzOk&&u16(mz+4)?
+     uint64_t(u16(mz+4)-1)*512+(u16(mz+2)?u16(mz+2):512):0;
+   const uint64_t le=mz+mzBytes+2;
+   const bool leOk=mzOk&&le+0xAC<=d.size()&&d[size_t(le)]=='L'&&d[size_t(le)+1]=='E';
+   std::cout<<"RM_PALETTE_FVF_LE_FIXUP_STATUS read=1 bytes="<<d.size()
+            <<" le="<<le<<" leSignature="<<(leOk?1:0)
+            <<" analysis=readOnly\n";
+   if(leOk){
+    const uint32_t pages=u32(le+0x14),pageSize=u32(le+0x28);
+    const uint32_t objectCount=u32(le+0x44),objectRel=u32(le+0x40);
+    const uint32_t mapRel=u32(le+0x48),dataBase=u32(le+0x80);
+    const uint32_t fixupSize=u32(le+0x30);
+    const uint32_t fixupPageRel=u32(le+0x68),fixupRecordRel=u32(le+0x6C);
+    const uint64_t fixupPages=le+fixupPageRel,fixupRecords=le+fixupRecordRel;
+    const uint64_t objectTable=le+objectRel,pageMap=le+mapRel;
+    const bool tableOk=pages>0&&pages<=1000000&&pageSize>0&&
+      objectCount>0&&objectCount<=65536&&
+      objectTable<=d.size()&&uint64_t(objectCount)*24<=d.size()-objectTable&&
+      pageMap<=d.size()&&uint64_t(pages)*4<=d.size()-pageMap&&
+      fixupPages<=d.size()&&uint64_t(pages+1)*4<=d.size()-fixupPages&&
+      fixupRecords<=d.size()&&fixupPages<=fixupRecords;
+    std::cout<<"RM_PALETTE_FVF_LE_FIXUP_HEADER pages="<<pages
+             <<" pageSize="<<pageSize<<" objectCount="<<objectCount
+             <<" fixupSectionSize="<<fixupSize
+             <<" fixupPageTable="<<fixupPages
+             <<" fixupRecordTable="<<fixupRecords
+             <<" fixupPageEntriesExpected="<<uint64_t(pages)+1
+             <<" tablesInFile="<<(tableOk?1:0)
+             <<" recordEncoding=notDecoded\n";
+    if(tableOk){
+     uint32_t descending=0,nonempty=0,empty=0;
+     uint64_t largest=0,lastOffset=0;
+     for(uint32_t i=0;i<=pages;++i){
+      const uint64_t off=u32(fixupPages+uint64_t(i)*4);
+      if(i&&off<lastOffset)++descending;
+      if(i<pages){
+       const uint64_t next=u32(fixupPages+uint64_t(i+1)*4);
+       if(next>off){++nonempty;largest=std::max(largest,next-off);}
+       else if(next==off)++empty;
+      }
+      lastOffset=off;
+     }
+     const uint64_t recordBytes=u32(fixupPages+uint64_t(pages)*4);
+     const bool recordsInFile=recordBytes<=d.size()-fixupRecords;
+     const bool recordsBeforeData=fixupRecords<=dataBase&&
+       recordBytes<=uint64_t(dataBase)-fixupRecords;
+     std::cout<<"RM_PALETTE_FVF_LE_FIXUP_PAGE_SUMMARY nonemptyPages="<<nonempty
+              <<" emptyPages="<<empty<<" descendingIntervals="<<descending
+              <<" largestRecordInterval="<<largest
+              <<" recordBytesFromSentinel="<<recordBytes
+              <<" recordsInFile="<<(recordsInFile?1:0)
+              <<" recordsBeforeDataBase="<<(recordsBeforeData?1:0)
+              <<" recordTypes=unverified\n";
+     const uint64_t knownFile=531027;
+     const uint64_t knownPhysical=knownFile>=dataBase?
+       (knownFile-dataBase)/pageSize+1:0;
+     const uint64_t knownInPage=knownFile>=dataBase?
+       (knownFile-dataBase)%pageSize:0;
+     std::cout<<"RM_PALETTE_FVF_LE_FIXUP_KNOWN fileOffset="<<knownFile
+              <<" physicalPageCandidate="<<knownPhysical
+              <<" withinPage="<<knownInPage
+              <<" physicalPageInRange="<<(knownPhysical>=1&&knownPhysical<=pages?1:0)
+              <<" lookupInstructionRelocation=unverified\n";
+     const std::vector<uint64_t> probes={uint64_t(1),uint64_t(2),
+       uint64_t(62),uint64_t(63),uint64_t(64),uint64_t(217),
+       uint64_t(218),uint64_t(371)};
+     for(uint64_t page:probes){
+      if(page<1||page>pages)continue;
+      const uint64_t start=u32(fixupPages+(page-1)*4);
+      const uint64_t end=u32(fixupPages+page*4);
+      const bool bounded=end>=start&&end<=recordBytes&&recordsInFile;
+      std::cout<<"RM_PALETTE_FVF_LE_FIXUP_PAGE page="<<page
+               <<" startRelative="<<start<<" endRelative="<<end
+               <<" intervalBytes="<<(end>=start?end-start:0)
+               <<" bounded="<<(bounded?1:0)
+               <<" containsKnownCodePage="<<(page==knownPhysical?1:0)
+               <<" decodedRecords=0\n";
+      if(!bounded)continue;
+      const uint64_t at=fixupRecords+start;
+      const uint64_t limit=fixupRecords+std::min(end,start+64);
+      for(uint64_t p=at;p<limit;p+=16){
+       std::cout<<"RM_PALETTE_FVF_LE_FIXUP_HEX page="<<page
+                <<" offset="<<p<<" hex=";
+       for(uint64_t j=p;j<std::min(p+16,limit);++j){
+        if(j!=p)std::cout<<" ";
+        std::cout<<std::hex<<std::setw(2)<<std::setfill('0')
+                 <<unsigned(d[size_t(j)]);
+       }
+       std::cout<<std::dec<<std::setfill(' ')<<"\n";
+      }
+     }
+     for(uint32_t i=0;i<std::min(objectCount,uint32_t(8));++i){
+      const uint64_t p=objectTable+uint64_t(i)*24;
+      const uint32_t base=u32(p+4),firstPage=u32(p+12),count=u32(p+16);
+      uint32_t pagesWithRecords=0;
+      if(firstPage>=1&&uint64_t(firstPage-1)+count<=pages){
+       for(uint64_t j=firstPage;j<uint64_t(firstPage)+count;++j){
+        if(u32(fixupPages+j*4)>u32(fixupPages+(j-1)*4))++pagesWithRecords;
+       }
+      }
+      std::cout<<"RM_PALETTE_FVF_LE_FIXUP_OBJECT index="<<i+1
+               <<" preferredBase="<<base
+               <<" virtualSize="<<u32(p)
+               <<" firstPage="<<firstPage<<" pageCount="<<count
+               <<" pagesWithFixupRecords="<<pagesWithRecords
+               <<" runtimeBase=unverified\n";
+     }
+     // The 0xF84 immediate is probed as data only; it is not assigned a semantic role.
+     const uint64_t candidate=0xF84;
+     std::cout<<"RM_PALETTE_FVF_LE_FIXUP_IMMEDIATE value="<<candidate
+              <<" asObject1OffsetWithinVirtual="<<(objectCount>=1&&
+                  candidate<u32(objectTable)?1:0)
+              <<" asAbsoluteFileOffsetInLEData="<<(candidate>=dataBase?1:0)
+              <<" asResourceIdentifier=unverified"
+              <<" asSelectorOffset=unverified\n";
+    }
+   }
+   std::cout<<"RM_PALETTE_FVF_LE_FIXUP_LIMITATION"
+            <<" fixupRecordGrammar=notDecoded"
+            <<" runtimeRelocations=notApplied"
+            <<" lookupSiteFixup=unverified"
+            <<" immediate0xF84Meaning=unverified"
+            <<" rmUpperPaletteProvenance=unverified\n";
+  }
+ }
+
  std::cout<<"NOTE: Trailer plausibility does not establish palette ownership.\n";
  std::cout<<"NOTE: Palette overlap is numerical only; it does not establish RM palette provenance.\n";
  return 0;
