@@ -8167,6 +8167,168 @@ int main(int argc,char** argv){
   }
  }
 
+
+ // Milestone 180: read-only branch and call evidence for RM flag variants.
+ {
+  std::ifstream in180(std::filesystem::path(argv[1])/"STTNG.OVL",std::ios::binary);
+  if(!in180)std::cout<<"RM_PALETTE_FVF_LE_FLAG_TRACE_STATUS read=0\n";
+  else{
+   const std::vector<uint8_t> d((std::istreambuf_iterator<char>(in180)),
+                                 std::istreambuf_iterator<char>());
+   const auto u16=[&](uint64_t p)->uint32_t{
+    return p+2<=d.size()?uint32_t(d[size_t(p)])|
+      (uint32_t(d[size_t(p)+1])<<8):0;
+   };
+   const auto u32=[&](uint64_t p)->uint32_t{
+    return p+4<=d.size()?uint32_t(d[size_t(p)])|
+      (uint32_t(d[size_t(p)+1])<<8)|
+      (uint32_t(d[size_t(p)+2])<<16)|
+      (uint32_t(d[size_t(p)+3])<<24):0;
+   };
+   const uint64_t first=u16(4)?uint64_t(u16(4)-1)*512+(u16(2)?u16(2):512):0;
+   const bool firstOk=first+36<=d.size()&&d[size_t(first)]=='B'&&d[size_t(first)+1]=='W';
+   const uint64_t second=firstOk?first+u32(first+32):0;
+   const bool secondOk=firstOk&&second+36<=d.size()&&
+     d[size_t(second)]=='B'&&d[size_t(second)+1]=='W';
+   const uint64_t mz=secondOk?second+u32(second+32):0;
+   const bool mzOk=secondOk&&mz+64<=d.size()&&d[size_t(mz)]=='M'&&d[size_t(mz)+1]=='Z';
+   const uint64_t mzBytes=mzOk&&u16(mz+4)?
+     uint64_t(u16(mz+4)-1)*512+(u16(mz+2)?u16(mz+2):512):0;
+   const uint64_t le=mz+mzBytes+2;
+   const bool leOk=mzOk&&le+0xAC<=d.size()&&d[size_t(le)]=='L'&&d[size_t(le)+1]=='E';
+   std::cout<<"RM_PALETTE_FVF_LE_FLAG_TRACE_STATUS read=1 le="<<le
+            <<" leSignature="<<(leOk?1:0)<<" readOnly=1\n";
+   if(leOk){
+    const uint64_t base=mz+uint64_t(u32(le+0x80));
+    const uint64_t obj=le+u32(le+0x40),map=le+u32(le+0x48);
+    const uint32_t pages=u32(le+0x14),size=u32(le+0x28),objects=u32(le+0x44);
+    const bool valid=pages>0&&pages<=1000000&&size==4096&&
+      objects>=2&&objects<=65536&&obj<=d.size()&&
+      uint64_t(objects)*24<=d.size()-obj&&map<=d.size()&&
+      uint64_t(pages)*4<=d.size()-map;
+    std::cout<<"RM_PALETTE_FVF_LE_FLAG_TRACE_TABLES valid="<<(valid?1:0)
+             <<" dataBase="<<base<<"\n";
+    if(valid){
+     const uint64_t firstPage=u32(obj+12),objectPages=u32(obj+16),virtualSize=u32(obj);
+     const auto mapCode=[&](int64_t offset)->int64_t{
+      if(offset<0||uint64_t(offset)>=virtualSize)return -1;
+      const uint64_t logical=uint64_t(offset)/size;
+      if(logical>=objectPages)return -1;
+      const uint64_t index=firstPage+logical;
+      if(index<1||index>pages)return -1;
+      const uint64_t p=map+(index-1)*4;
+      const uint32_t physical=(uint32_t(d[size_t(p)])<<16)|
+        (uint32_t(d[size_t(p)+1])<<8)|uint32_t(d[size_t(p)+2]);
+      if(physical<1||physical>pages)return -1;
+      const uint64_t file=base+uint64_t(physical-1)*size+uint64_t(offset)%size;
+      return file<d.size()?int64_t(file):-1;
+     };
+     const auto hex=[&](const char* region,uint64_t from,uint64_t to){
+      to=std::min(to,uint64_t(d.size()));
+      for(uint64_t p=from;p<to;p+=16){
+       std::cout<<"RM_PALETTE_FVF_LE_FLAG_TRACE_HEX region="<<region
+                <<" file="<<p<<" hex=";
+       for(uint64_t j=p;j<std::min(p+16,to);++j){
+        if(j!=p)std::cout<<" ";
+        std::cout<<std::hex<<std::setw(2)<<std::setfill('0')
+                 <<unsigned(d[size_t(j)]);
+       }
+       std::cout<<std::dec<<std::setfill(' ')<<"\n";
+      }
+     };
+     hex("rmLoader",510528,510960);
+     hex("flag21Caller",1010610,1010780);
+     hex("flag23Caller",827140,827235);
+     hex("preRmHelper",510340,510388);
+     // Decode only the known, fixed-width TEST r/m8,imm8 encodings.
+     // This does not establish that each branch executes at runtime.
+     uint64_t tests=0,branches=0,calls=0;
+     for(uint64_t p=510528;p+5<=std::min(uint64_t(d.size()),uint64_t(510960));++p){
+      const uint8_t op=d[size_t(p)];
+      uint64_t len=0,mask=0;
+      const char* operand="unknown";
+      if(op==0xF6&&d[size_t(p+1)]==0x44&&
+         d[size_t(p+2)]==0x24&&p+5<=d.size()){
+       len=5;mask=d[size_t(p+4)];operand="stackByte";
+      }else if(op==0xF6&&d[size_t(p+1)]==0xC2){
+       len=3;mask=d[size_t(p+2)];operand="DL";
+      }else if(op==0xF6&&d[size_t(p+1)]==0xC6){
+       len=3;mask=d[size_t(p+2)];operand="DH";
+      }else if(op==0xF6&&d[size_t(p+1)]==0xC4){
+       len=3;mask=d[size_t(p+2)];operand="AH";
+      }
+      if(len&&p+len<=d.size()){
+       ++tests;
+       std::cout<<"RM_PALETTE_FVF_LE_FLAG_TRACE_TEST file="<<p
+                <<" operand="<<operand<<" mask="<<mask
+                <<" flag21BitSet="<<((0x21&mask)?1:0)
+                <<" flag23BitSet="<<((0x23&mask)?1:0)
+                <<" registerOrigin=notProven\n";
+       const uint64_t b=p+len;
+       if(b+2<=d.size()&&
+          (d[size_t(b)]==0x74||d[size_t(b)]==0x75)){
+        const int32_t rel=d[size_t(b+1)]>=128?
+          int32_t(d[size_t(b+1)])-256:int32_t(d[size_t(b+1)]);
+        ++branches;
+        std::cout<<"RM_PALETTE_FVF_LE_FLAG_TRACE_BRANCH testFile="<<p
+                 <<" branchFile="<<b
+                 <<" branchOpcode="<<unsigned(d[size_t(b)])
+                 <<" targetFile="<<int64_t(b+2)+rel
+                 <<" conditional=1 targetMappedByRawFileAssumption=1\n";
+       }
+      }
+      if(op==0xE8){
+       const uint64_t raw=u32(p+1);
+       const int64_t rel=raw>=0x80000000ULL?
+         int64_t(raw)-0x100000000LL:int64_t(raw);
+       const int64_t target=mapCode(int64_t(p+5-base)+rel);
+       if(target>=0){
+        ++calls;
+        std::cout<<"RM_PALETTE_FVF_LE_FLAG_TRACE_CALL_CANDIDATE"
+                 <<" sourceFile="<<p<<" targetFile="<<target
+                 <<" decodedInstruction=0\n";
+       }
+      }
+     }
+     struct Caller{const char* name;uint64_t start;uint64_t end;};
+     const Caller callers[]={
+       {"flag21",1010610,1010780},{"flag23",827140,827235}};
+     for(const auto& s:callers){
+      uint64_t candidateCalls=0;
+      for(uint64_t p=s.start;p+5<=s.end&&p+5<=d.size();++p){
+       if(d[size_t(p)]!=0xE8)continue;
+       const uint64_t raw=u32(p+1);
+       const int64_t rel=raw>=0x80000000ULL?
+         int64_t(raw)-0x100000000LL:int64_t(raw);
+       const int64_t target=mapCode(int64_t(p+5-base)+rel);
+       if(target<0)continue;
+       ++candidateCalls;
+       if(candidateCalls<=16)
+        std::cout<<"RM_PALETTE_FVF_LE_FLAG_TRACE_CALLER_CALL"
+                 <<" name="<<s.name<<" sourceFile="<<p
+                 <<" targetFile="<<target
+                 <<" decodedInstruction=0\n";
+      }
+      std::cout<<"RM_PALETTE_FVF_LE_FLAG_TRACE_CALLER_SUMMARY"
+               <<" name="<<s.name<<" callCandidates="<<candidateCalls<<"\n";
+     }
+     std::cout<<"RM_PALETTE_FVF_LE_FLAG_TRACE_SUMMARY"
+              <<" tests="<<tests<<" shortBranches="<<branches
+              <<" rmLoaderCallCandidates="<<calls
+              <<" flag21=33 flag23=35 differingBit=2"
+              <<" paletteBufferUseAfterRm=unverified"
+              <<" vgaDacLink=unverified\n";
+    }
+   }
+   std::cout<<"RM_PALETTE_FVF_LE_FLAG_TRACE_LIMITATION"
+            <<" fixedPatternTestsOnly=1"
+            <<" rawCallScan=1"
+            <<" fullControlFlow=notDecoded"
+            <<" runtimeFlagSemantics=unverified"
+            <<" upperPaletteProvenance=unverified\n";
+  }
+ }
+
  std::cout<<"NOTE: Trailer plausibility does not establish palette ownership.\n";
  std::cout<<"NOTE: Palette overlap is numerical only; it does not establish RM palette provenance.\n";
  return 0;
