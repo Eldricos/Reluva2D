@@ -5391,6 +5391,102 @@ int main(int argc,char** argv){
   }
  }
 
+
+ // Milestone 159: trace the resource key into descriptor lookup and backing selection.
+ {
+  std::ifstream in159(std::filesystem::path(argv[1])/"STTNG.OVL",std::ios::binary);
+  if(!in159){
+   std::cout<<"RM_PALETTE_FVF_RESOURCE_KEY_STATUS read=0\n";
+  }else{
+   const std::vector<uint8_t> d159(
+    (std::istreambuf_iterator<char>(in159)),std::istreambuf_iterator<char>());
+   std::cout<<"RM_PALETTE_FVF_RESOURCE_KEY_STATUS read=1 bytes="
+            <<d159.size()<<" resourceArgument=0xF84"
+            <<" operation=513376 descriptorLookup=516148"
+            <<" scope=keyAndBackingPath\n";
+   struct Region159{const char* name;size_t begin;size_t end;};
+   const std::vector<Region159> regions159={
+    {"operation_argument_setup",513376,513440},
+    {"descriptor_result_and_negative_backing",513424,513632},
+    {"descriptor_nonnegative_backing",513632,513832},
+    {"operation_result",513824,513912},
+    {"descriptor_lookup_predecessor",516064,516148},
+    {"descriptor_lookup_entry",516148,516340},
+    {"descriptor_lookup_followthrough",516340,516496},
+    {"resource_wrapper",562864,562936}
+   };
+   for(const auto& region:regions159){
+    for(size_t p=region.begin;p<std::min(region.end,d159.size());p+=16){
+     std::cout<<"RM_PALETTE_FVF_RESOURCE_KEY_HEX region="<<region.name
+              <<" offset="<<p<<" hex=";
+     for(size_t j=p;j<std::min(p+16,std::min(region.end,d159.size()));++j){
+      if(j!=p)std::cout<<" ";
+      std::cout<<std::hex<<std::setw(2)<<std::setfill('0')<<unsigned(d159[j]);
+     }
+     std::cout<<std::dec<<std::setfill(' ')<<"\n";
+    }
+   }
+   struct Call159{const char* name;size_t offset;int64_t expected;};
+   const std::vector<Call159> calls159={
+    {"wrapper_to_resource_operation",562901,513376},
+    {"operation_to_descriptor_lookup",513400,516148}
+   };
+   size_t matchedCalls159=0;
+   for(const auto& call:calls159){
+    int64_t target=-1;
+    if(call.offset+5<=d159.size()&&d159[call.offset]==0xe8){
+     const uint32_t u=uint32_t(d159[call.offset+1])|
+       (uint32_t(d159[call.offset+2])<<8)|
+       (uint32_t(d159[call.offset+3])<<16)|
+       (uint32_t(d159[call.offset+4])<<24);
+     target=int64_t(call.offset)+5+int64_t(int32_t(u));
+    }
+    const bool match=target==call.expected;
+    matchedCalls159+=match?1:0;
+    std::cout<<"RM_PALETTE_FVF_RESOURCE_KEY_CALL name="<<call.name
+             <<" offset="<<call.offset<<" target="<<target
+             <<" expected="<<call.expected<<" match="<<(match?1:0)
+             <<" instructionBoundaryVerified=0\n";
+   }
+   std::cout<<"RM_PALETTE_FVF_RESOURCE_KEY_CALL_SUMMARY matched="
+            <<matchedCalls159<<" total="<<calls159.size()<<"\n";
+   struct Pattern159{const char* name;size_t begin;size_t end;
+                     std::vector<uint8_t> bytes;};
+   const std::vector<Pattern159> patterns159={
+    {"wrapper_context",562880,562912,{0xb8,0xfc,0xaa,0x09,0x00}},
+    {"operation_argument_pair",513384,513408,{0x56,0x57,0xe8}},
+    {"descriptor_backing_field_10",513408,513440,{0x8b,0x50,0x10}},
+    {"descriptor_backing_field_14",513488,513536,{0x8b,0x43,0x14}},
+    {"descriptor_backing_field_18",513624,513648,{0x8b,0x48,0x18}},
+    {"resource_key_high_word",513768,513800,{0xc1,0xf8,0x10}},
+    {"result_pointer_store",513864,513888,{0x89,0x03}},
+    {"result_length_store",513880,513904,{0x89,0x03}}
+   };
+   size_t matchedPatterns159=0;
+   for(const auto& pat:patterns159){
+    bool found=false;size_t where=0;
+    const size_t limit=std::min(pat.end,d159.size());
+    for(size_t p=pat.begin;p+pat.bytes.size()<=limit;++p){
+     if(std::equal(pat.bytes.begin(),pat.bytes.end(),d159.begin()+p)){
+      found=true;where=p;break;
+     }
+    }
+    matchedPatterns159+=found?1:0;
+    std::cout<<"RM_PALETTE_FVF_RESOURCE_KEY_PATTERN name="<<pat.name
+             <<" found="<<(found?1:0)
+             <<" offset="<<(found?int64_t(where):-1)<<"\n";
+   }
+   std::cout<<"RM_PALETTE_FVF_RESOURCE_KEY_PATTERN_SUMMARY matched="
+            <<matchedPatterns159<<" total="<<patterns159.size()<<"\n";
+   std::cout<<"RM_PALETTE_FVF_RESOURCE_KEY_LIMITATION"
+            <<" descriptorRuntimeContents=unavailable"
+            <<" resourceArgumentSemantics=unverified"
+            <<" sourceTextIdentity=unverified"
+            <<" fvfResourceIdentity=unverified"
+            <<" rmUpperPaletteProvenance=unverified\n";
+  }
+ }
+
  std::cout<<"NOTE: Trailer plausibility does not establish palette ownership.\n";
  std::cout<<"NOTE: Palette overlap is numerical only; it does not establish RM palette provenance.\n";
  return 0;
