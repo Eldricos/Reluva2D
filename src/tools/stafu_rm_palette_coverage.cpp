@@ -6028,6 +6028,96 @@ int main(int argc,char** argv){
   }
  }
 
+
+ // Milestone 166: inspect the third candidate boundary without assuming a BW header.
+ {
+  std::ifstream in166(std::filesystem::path(argv[1])/"STTNG.OVL",std::ios::binary);
+  if(!in166){
+   std::cout<<"RM_PALETTE_FVF_BW_BOUNDARY_STATUS read=0\n";
+  }else{
+   const std::vector<uint8_t> d166((std::istreambuf_iterator<char>(in166)),
+                                   std::istreambuf_iterator<char>());
+   const auto u16_166=[&](size_t p)->uint32_t{
+    return p+2<=d166.size()?uint32_t(d166[p])|(uint32_t(d166[p+1])<<8):0;
+   };
+   const auto u32_166=[&](size_t p)->uint32_t{
+    return p+4<=d166.size()?uint32_t(d166[p])|(uint32_t(d166[p+1])<<8)|
+      (uint32_t(d166[p+2])<<16)|(uint32_t(d166[p+3])<<24):0;
+   };
+   const uint32_t pages166=u16_166(4),last166=u16_166(2);
+   const size_t base166=pages166?size_t(uint64_t(pages166-1)*512+
+     (last166?last166:512)):0;
+   const bool first166=base166+36<=d166.size()&&
+     d166[base166]=='B'&&d166[base166+1]=='W';
+   const uint64_t second166=first166?
+     uint64_t(base166)+u32_166(base166+32):0;
+   const bool secondValid166=first166&&second166+36<=d166.size()&&
+     d166[size_t(second166)]=='B'&&d166[size_t(second166)+1]=='W';
+   const uint64_t third166=secondValid166?
+     second166+u32_166(size_t(second166)+32):0;
+   const bool thirdValid166=secondValid166&&third166<d166.size();
+   std::cout<<"RM_PALETTE_FVF_BW_BOUNDARY_STATUS read=1 bytes="<<d166.size()
+            <<" first="<<base166<<" firstBW="<<(first166?1:0)
+            <<" second="<<second166<<" secondBW="<<(secondValid166?1:0)
+            <<" third="<<third166<<" thirdInFile="<<(thirdValid166?1:0)
+            <<" thirdHasBW="<<(thirdValid166&&third166+2<=d166.size()&&
+             d166[size_t(third166)]=='B'&&d166[size_t(third166)+1]=='W'?1:0)
+            <<" formatValidated=0\n";
+   if(secondValid166){
+    const uint32_t firstAbs166=u32_166(base166+28);
+    const uint32_t secondAbs166=u32_166(size_t(second166)+28);
+    std::cout<<"RM_PALETTE_FVF_BW_BOUNDARY_RELATION firstRelative="
+             <<u32_166(base166+32)<<" firstAbsoluteField="<<firstAbs166
+             <<" firstComputed="<<second166
+             <<" firstMatch="<<(firstAbs166==second166?1:0)
+             <<" secondRelative="<<u32_166(size_t(second166)+32)
+             <<" secondAbsoluteField="<<secondAbs166
+             <<" secondComputed="<<third166
+             <<" secondMatch="<<(secondAbs166==third166?1:0)
+             <<" semantics=unverified\n";
+   }
+   if(thirdValid166){
+    const size_t p=size_t(third166);
+    std::cout<<"RM_PALETTE_FVF_BW_BOUNDARY_THIRD offset="<<p
+             <<" u16="<<u16_166(p)<<" u32="<<u32_166(p)
+             <<" aligned16="<<(p%16==0?1:0)
+             <<" aligned4="<<(p%4==0?1:0)
+             <<" structuralValidation=0\n";
+    const size_t start=p>=128?p-128:0;
+    const size_t end=std::min(p+256,d166.size());
+    for(size_t at=start;at<end;at+=16){
+     std::cout<<"RM_PALETTE_FVF_BW_BOUNDARY_HEX offset="<<at
+              <<" relative="<<int64_t(at)-int64_t(p)<<" hex=";
+     for(size_t j=at;j<std::min(at+16,end);++j){
+      if(j!=at)std::cout<<" ";
+      std::cout<<std::hex<<std::setw(2)<<std::setfill('0')
+               <<unsigned(d166[j]);
+     }
+     std::cout<<std::dec<<std::setfill(' ')<<"\n";
+    }
+    for(size_t delta=0;delta<=128;delta+=16){
+     const size_t at=p+delta;
+     if(at+16>d166.size())break;
+     size_t zeroCount=0,printableCount=0;
+     for(size_t j=at;j<at+16;++j){
+      zeroCount+=(d166[j]==0);
+      printableCount+=(d166[j]>=32&&d166[j]<=126);
+     }
+     std::cout<<"RM_PALETTE_FVF_BW_BOUNDARY_WINDOW offset="<<at
+              <<" zeroBytes="<<zeroCount<<" printableBytes="<<printableCount
+              <<" u32AtStart="<<u32_166(at)
+              <<" classification=unverified\n";
+    }
+   }
+   std::cout<<"RM_PALETTE_FVF_BW_BOUNDARY_LIMITATION"
+            <<" thirdBoundaryMeaning=unverified"
+            <<" sectionLayout=unverified"
+            <<" runtimeMapping=unverified"
+            <<" immediate0xF84Meaning=unverified"
+            <<" rmUpperPaletteProvenance=unverified\n";
+  }
+ }
+
  std::cout<<"NOTE: Trailer plausibility does not establish palette ownership.\n";
  std::cout<<"NOTE: Palette overlap is numerical only; it does not establish RM palette provenance.\n";
  return 0;
