@@ -5673,6 +5673,88 @@ int main(int argc,char** argv){
            <<" rmUpperPaletteProvenance=unverified\n";
  }
 
+
+ // Milestone 162: inspect the MZ-declared boundary and extended overlay bytes.
+ {
+  std::ifstream in162(std::filesystem::path(argv[1])/"STTNG.OVL",std::ios::binary);
+  if(!in162){
+   std::cout<<"RM_PALETTE_FVF_OVERLAY_EXT_STATUS read=0\n";
+  }else{
+   const std::vector<uint8_t> d162((std::istreambuf_iterator<char>(in162)),
+                                    std::istreambuf_iterator<char>());
+   const auto word162=[&](size_t p)->uint32_t{
+    return p+2<=d162.size()?uint32_t(d162[p])|(uint32_t(d162[p+1])<<8):0;
+   };
+   const auto dword162=[&](size_t p)->uint32_t{
+    return p+4<=d162.size()?uint32_t(d162[p])|(uint32_t(d162[p+1])<<8)|
+      (uint32_t(d162[p+2])<<16)|(uint32_t(d162[p+3])<<24):0;
+   };
+   const bool mz162=d162.size()>=64&&d162[0]=='M'&&d162[1]=='Z';
+   const uint32_t pages162=mz162?word162(4):0;
+   const uint32_t last162=mz162?word162(2):0;
+   const uint64_t declared162=pages162?uint64_t(pages162-1)*512+
+     (last162?last162:512):0;
+   std::cout<<"RM_PALETTE_FVF_OVERLAY_EXT_STATUS read=1 bytes="<<d162.size()
+            <<" mz="<<(mz162?1:0)<<" declaredBytes="<<declared162
+            <<" trailingBytes="<<(declared162<=d162.size()?d162.size()-declared162:0)
+            <<" boundaryInFile="<<(declared162<=d162.size()?1:0)<<"\n";
+   struct Region162{const char* name;size_t begin;size_t end;};
+   const size_t boundary162=static_cast<size_t>(std::min<uint64_t>(declared162,d162.size()));
+   const std::vector<Region162> regions162={
+    {"mz_header",0,128},
+    {"mz_header_tail",448,576},
+    {"declared_boundary_before",boundary162>=128?boundary162-128:0,boundary162},
+    {"declared_boundary_after",boundary162,std::min(boundary162+256,d162.size())},
+    {"extended_64k",65536,65792},
+    {"extended_128k",131072,131200}
+   };
+   for(const auto& region:regions162){
+    const size_t end=std::min(region.end,d162.size());
+    for(size_t p=region.begin;p<end;p+=16){
+     std::cout<<"RM_PALETTE_FVF_OVERLAY_EXT_HEX region="<<region.name
+              <<" offset="<<p<<" hex=";
+     for(size_t j=p;j<std::min(p+16,end);++j){
+      if(j!=p)std::cout<<" ";
+      std::cout<<std::hex<<std::setw(2)<<std::setfill('0')<<unsigned(d162[j]);
+     }
+     std::cout<<std::dec<<std::setfill(' ')<<"\n";
+    }
+   }
+   // Enumerate only candidate signatures; their presence alone proves no format.
+   struct Signature162{const char* name;std::vector<uint8_t> bytes;};
+   const std::vector<Signature162> signatures162={
+    {"MZ",{'M','Z'}},{"NE",{'N','E'}},{"LE",{'L','E'}},
+    {"LX",{'L','X'}},{"PE",{'P','E',0,0}},
+    {"BW",{'B','W'}},{"FBOV",{'F','B','O','V'}}
+   };
+   for(const auto& sig:signatures162){
+    size_t count=0;size_t first=0;
+    const size_t limit=std::min<size_t>(d162.size(),262144);
+    for(size_t p=0;p+sig.bytes.size()<=limit;++p){
+     if(std::equal(sig.bytes.begin(),sig.bytes.end(),d162.begin()+p)){
+      if(!count)first=p;
+      ++count;
+     }
+    }
+    std::cout<<"RM_PALETTE_FVF_OVERLAY_EXT_SIGNATURE name="<<sig.name
+             <<" countFirst256KiB="<<count
+             <<" firstOffset="<<(count?int64_t(first):-1)
+             <<" structuralValidation=0\n";
+   }
+   const uint32_t newHeader162=mz162?dword162(0x3c):0;
+   std::cout<<"RM_PALETTE_FVF_OVERLAY_EXT_NEW_HEADER"
+            <<" e_lfanew="<<newHeader162
+            <<" inFile="<<(newHeader162<d162.size()?1:0)
+            <<" signatureValidated=0\n";
+   std::cout<<"RM_PALETTE_FVF_OVERLAY_EXT_LIMITATION"
+            <<" appendedFormat=unidentified"
+            <<" runtimeAddressMapping=unverified"
+            <<" resourceName=unidentified"
+            <<" immediate0xF84Meaning=unverified"
+            <<" rmUpperPaletteProvenance=unverified\n";
+  }
+ }
+
  std::cout<<"NOTE: Trailer plausibility does not establish palette ownership.\n";
  std::cout<<"NOTE: Palette overlap is numerical only; it does not establish RM palette provenance.\n";
  return 0;
