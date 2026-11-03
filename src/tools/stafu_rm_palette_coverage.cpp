@@ -3980,6 +3980,98 @@ int main(int argc,char** argv){
   }
  }
 
+
+ // Milestone 144: bounded inspection of backing modes, cursor updates,
+ // and setup/intermediate helpers. These are raw evidence, not a format claim.
+ {
+  std::ifstream in144(std::filesystem::path(argv[1])/"STTNG.OVL",std::ios::binary);
+  if(!in144){
+   std::cout<<"RM_PALETTE_BACKING_TRACE_STATUS read=0\n";
+  }else{
+   const std::vector<uint8_t> d144(
+    (std::istreambuf_iterator<char>(in144)),std::istreambuf_iterator<char>());
+   std::cout<<"RM_PALETTE_BACKING_TRACE_STATUS read=1 bytes="
+            <<d144.size()<<" scope=boundedBackingAndCursorEvidence\n";
+   struct Region144{const char* name;size_t start;size_t end;};
+   const std::vector<Region144> regions144={
+    {"setup_target",517536,517688},
+    {"intermediate_target",517664,517764},
+    {"reader_memory_branch",517764,517856},
+    {"reader_external_branch",517848,517968},
+    {"reader_cursor_branch",517960,518112},
+    {"setup_wrapper_call",563008,563056},
+    {"intermediate_wrapper_call",563128,563168},
+    {"source_context_creator",518480,518608}
+   };
+   for(const auto& region:regions144){
+    for(size_t p=region.start;p<std::min(region.end,d144.size());p+=16){
+     std::cout<<"RM_PALETTE_BACKING_TRACE_HEX region="<<region.name
+              <<" offset="<<p<<" hex=";
+     for(size_t j=p;j<std::min(p+16,std::min(region.end,d144.size()));++j){
+      if(j!=p)std::cout<<" ";
+      std::cout<<std::hex<<std::setw(2)<<std::setfill('0')<<unsigned(d144[j]);
+     }
+     std::cout<<std::dec<<std::setfill(' ')<<"\n";
+    }
+   }
+   struct Call144{const char* name;size_t offset;int64_t expected;};
+   const std::vector<Call144> calls144={
+    {"setup_wrapper_forward",563031,-1},
+    {"intermediate_wrapper_forward",563153,517688},
+    {"transfer_wrapper_forward",563092,517764},
+    {"owner_initial_setup",519007,563005},
+    {"owner_intermediate",519076,563123}
+   };
+   size_t matches144=0;
+   for(const auto& call:calls144){
+    int64_t target=-1;
+    if(call.offset+5<=d144.size()&&d144[call.offset]==0xE8){
+     const uint32_t u=uint32_t(d144[call.offset+1])|
+       (uint32_t(d144[call.offset+2])<<8)|
+       (uint32_t(d144[call.offset+3])<<16)|
+       (uint32_t(d144[call.offset+4])<<24);
+     target=int64_t(call.offset)+5+int64_t(int32_t(u));
+    }
+    const bool match=call.expected<0?target>=0:target==call.expected;
+    matches144+=match?1:0;
+    std::cout<<"RM_PALETTE_BACKING_TRACE_CALL name="<<call.name
+             <<" offset="<<call.offset<<" target="<<target
+             <<" expected="<<call.expected<<" match="<<(match?1:0)<<"\n";
+   }
+   std::cout<<"RM_PALETTE_BACKING_TRACE_CALL_SUMMARY matched="
+            <<matches144<<" total="<<calls144.size()<<"\n";
+   // Presence of these byte patterns is a limited structural observation.
+   // Do not label +0x409C as a file handle without tracing its writes.
+   struct Pattern144{const char* name;size_t begin;size_t end;
+                     std::vector<uint8_t> bytes;};
+   const std::vector<Pattern144> patterns144={
+    {"mode_minus_one",517788,517832,{0x8b,0x96,0x9c,0x40,0x00,0x00,0x83,0xfa,0xff}},
+    {"memory_copy_dwords",517824,517856,{0xf2,0xa5}},
+    {"memory_copy_bytes",517832,517856,{0xf2,0xa4}},
+    {"cursor_update",518064,518112,{0x01,0x9c,0xc5,0xa4,0x40,0x00,0x00}}
+   };
+   for(const auto& pat:patterns144){
+    bool found=false;size_t where=0;
+    const size_t limit=std::min(pat.end,d144.size());
+    for(size_t p=pat.begin;p+pat.bytes.size()<=limit;++p){
+     if(std::equal(pat.bytes.begin(),pat.bytes.end(),d144.begin()+p)){
+      found=true;where=p;break;
+     }
+    }
+    std::cout<<"RM_PALETTE_BACKING_TRACE_PATTERN name="<<pat.name
+             <<" found="<<(found?1:0)
+             <<" offset="<<(found?int64_t(where):-1)<<"\n";
+   }
+   std::cout<<"RM_PALETTE_BACKING_TRACE_LIMITATION"
+            <<" modeMeaning=unverified"
+            <<" externalBackend=unverified"
+            <<" cursorContract=unverified"
+            <<" sourceContextOrigin=unverified"
+            <<" fvfResourceIdentity=unverified"
+            <<" rmUpperPaletteProvenance=unverified\n";
+  }
+ }
+
  std::cout<<"NOTE: Trailer plausibility does not establish palette ownership.\n";
  std::cout<<"NOTE: Palette overlap is numerical only; it does not establish RM palette provenance.\n";
  return 0;
