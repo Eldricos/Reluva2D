@@ -5201,6 +5201,100 @@ int main(int argc,char** argv){
   }
  }
 
+
+ // Milestone 157: corrected source CALL sites and bounded acquisition-helper inspection.
+ {
+  std::ifstream in157(std::filesystem::path(argv[1])/"STTNG.OVL",std::ios::binary);
+  if(!in157){
+   std::cout<<"RM_PALETTE_FVF_SOURCE_HELPER_STATUS read=0\n";
+  }else{
+   const std::vector<uint8_t> d157(
+    (std::istreambuf_iterator<char>(in157)),std::istreambuf_iterator<char>());
+   std::cout<<"RM_PALETTE_FVF_SOURCE_HELPER_STATUS read=1 bytes="
+            <<d157.size()<<" helper=563079 argumentConstant=0xF84"
+            <<" scope=correctedCallsAndHelperBoundary\n";
+   struct Call157{const char* name;size_t offset;int64_t expected;};
+   const std::vector<Call157> calls157={
+    {"source_acquisition",531032,563079},
+    {"record_count_line_advance",531288,1157213},
+    {"table_allocation",531354,587664},
+    {"first_field_conversion",531542,1169324},
+    {"next_record_line_advance",531787,1157213},
+    {"source_release",531808,562815}
+   };
+   size_t matched157=0;
+   for(const auto& call:calls157){
+    int64_t target=-1;
+    if(call.offset+5<=d157.size()&&d157[call.offset]==0xe8){
+     const uint32_t u=uint32_t(d157[call.offset+1])|
+       (uint32_t(d157[call.offset+2])<<8)|
+       (uint32_t(d157[call.offset+3])<<16)|
+       (uint32_t(d157[call.offset+4])<<24);
+     target=int64_t(call.offset)+5+int64_t(int32_t(u));
+    }
+    const bool match=target==call.expected;
+    matched157+=match?1:0;
+    std::cout<<"RM_PALETTE_FVF_SOURCE_HELPER_CALL name="<<call.name
+             <<" offset="<<call.offset<<" target="<<target
+             <<" expected="<<call.expected<<" match="<<(match?1:0)
+             <<" instructionBoundaryVerified=0\n";
+   }
+   std::cout<<"RM_PALETTE_FVF_SOURCE_HELPER_CALL_SUMMARY matched="
+            <<matched157<<" total="<<calls157.size()<<"\n";
+   struct Region157{const char* name;size_t begin;size_t end;};
+   const std::vector<Region157> regions157={
+    {"acquisition_callsite",531008,531072},
+    {"helper_predecessor",562944,563080},
+    {"helper_entry",563072,563264},
+    {"helper_body",563264,563520},
+    {"helper_followthrough",563520,563712},
+    {"release_entry",562784,562960}
+   };
+   for(const auto& region:regions157){
+    for(size_t p=region.begin;p<std::min(region.end,d157.size());p+=16){
+     std::cout<<"RM_PALETTE_FVF_SOURCE_HELPER_HEX region="<<region.name
+              <<" offset="<<p<<" hex=";
+     for(size_t j=p;j<std::min(p+16,std::min(region.end,d157.size()));++j){
+      if(j!=p)std::cout<<" ";
+      std::cout<<std::hex<<std::setw(2)<<std::setfill('0')<<unsigned(d157[j]);
+     }
+     std::cout<<std::dec<<std::setfill(' ')<<"\n";
+    }
+   }
+   struct Pattern157{const char* name;size_t begin;size_t end;
+                     std::vector<uint8_t> bytes;};
+   const std::vector<Pattern157> patterns157={
+    {"caller_length_out_address",531016,531040,{0x8d,0x45,0xe4,0x50}},
+    {"caller_resource_constant",531016,531040,{0xb8,0x84,0x0f,0x00,0x00}},
+    {"caller_two_argument_cleanup",531032,531048,{0x83,0xc4,0x08}},
+    {"caller_source_pointer_store",531032,531056,{0x89,0x45,0xec}},
+    {"caller_source_end_add",531040,531060,{0x03,0x45,0xe4}}
+   };
+   size_t patternsMatched157=0;
+   for(const auto& pat:patterns157){
+    bool found=false;size_t where=0;
+    const size_t limit=std::min(pat.end,d157.size());
+    for(size_t p=pat.begin;p+pat.bytes.size()<=limit;++p){
+     if(std::equal(pat.bytes.begin(),pat.bytes.end(),d157.begin()+p)){
+      found=true;where=p;break;
+     }
+    }
+    patternsMatched157+=found?1:0;
+    std::cout<<"RM_PALETTE_FVF_SOURCE_HELPER_PATTERN name="<<pat.name
+             <<" found="<<(found?1:0)
+             <<" offset="<<(found?int64_t(where):-1)<<"\n";
+   }
+   std::cout<<"RM_PALETTE_FVF_SOURCE_HELPER_PATTERN_SUMMARY matched="
+            <<patternsMatched157<<" total="<<patterns157.size()<<"\n";
+   std::cout<<"RM_PALETTE_FVF_SOURCE_HELPER_LIMITATION"
+            <<" helperDisassembly=partial"
+            <<" constant0xF84Meaning=unverified"
+            <<" sourceTextIdentity=unverified"
+            <<" fvfResourceIdentity=unverified"
+            <<" rmUpperPaletteProvenance=unverified\n";
+  }
+ }
+
  std::cout<<"NOTE: Trailer plausibility does not establish palette ownership.\n";
  std::cout<<"NOTE: Palette overlap is numerical only; it does not establish RM palette provenance.\n";
  return 0;
