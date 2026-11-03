@@ -3774,6 +3774,138 @@ int main(int argc,char** argv){
   }
  }
 
+
+ // Milestone 142: exact reader-call verification, wrapper target,
+ // FVF signature instruction and bounded resource candidates.
+ {
+  std::ifstream in142(std::filesystem::path(argv[1])/"STTNG.OVL",std::ios::binary);
+  if(!in142){
+   std::cout<<"RM_PALETTE_FVF_READER_STATUS read=0\n";
+  }else{
+   const std::vector<uint8_t> d142(
+    (std::istreambuf_iterator<char>(in142)),std::istreambuf_iterator<char>());
+   std::cout<<"RM_PALETTE_FVF_READER_STATUS read=1 bytes="
+            <<d142.size()<<" scope=exactCallsWrapperAndCandidateResources\n";
+   struct Call142{const char* name;size_t offset;};
+   const std::vector<Call142> calls142={
+    {"owner_initial_setup",519007},
+    {"header_96",519037},
+    {"intermediate_read",519076},
+    {"header_44",519100},
+    {"header_16",519166},
+    {"variable_read",519249},
+    {"followup_read",519293},
+    {"reader_wrapper_forward",563089}
+   };
+   for(const auto& call:calls142){
+    int64_t target=-1;
+    if(call.offset+5<=d142.size()&&d142[call.offset]==0xE8){
+     const uint32_t u=uint32_t(d142[call.offset+1])|
+       (uint32_t(d142[call.offset+2])<<8)|
+       (uint32_t(d142[call.offset+3])<<16)|
+       (uint32_t(d142[call.offset+4])<<24);
+     target=int64_t(call.offset)+5+int64_t(int32_t(u));
+    }
+    std::cout<<"RM_PALETTE_FVF_READER_CALL name="<<call.name
+             <<" offset="<<call.offset<<" target="<<target
+             <<" opcodeE8="<<(target>=0?1:0)<<"\n";
+   }
+   const std::vector<uint8_t> signature142={
+    0x81,0xB8,0xCC,0x01,0x00,0x00,0x46,0x56,0x46,0x20
+   };
+   size_t signatureOffset142=523146;
+   bool signatureMatch142=signatureOffset142+signature142.size()<=d142.size()&&
+     std::equal(signature142.begin(),signature142.end(),d142.begin()+signatureOffset142);
+   std::cout<<"RM_PALETTE_FVF_READER_SIGNATURE offset="
+            <<signatureOffset142<<" match="<<(signatureMatch142?1:0)
+            <<" text=FVF_ ownerField=0x1CC\n";
+   struct Region142{const char* name;size_t start;size_t end;};
+   const std::vector<Region142> regions142={
+    {"wrapper_entry",563056,563136},
+    {"wrapper_underlying_target",542720,543008},
+    {"fvf_header_check",523128,523216},
+    {"fvf_owner_initialization",518984,519112},
+    {"fvf_owner_followup",519360,519568}
+   };
+   for(const auto& region:regions142){
+    for(size_t p=region.start;p<std::min(region.end,d142.size());p+=16){
+     std::cout<<"RM_PALETTE_FVF_READER_HEX region="<<region.name
+              <<" offset="<<p<<" hex=";
+     for(size_t j=p;j<std::min(p+16,std::min(region.end,d142.size()));++j){
+      if(j!=p)std::cout<<" ";
+      std::cout<<std::hex<<std::setw(2)<<std::setfill('0')<<unsigned(d142[j]);
+     }
+     std::cout<<std::dec<<std::setfill(' ')<<"\n";
+    }
+   }
+  }
+  // Installed loose files: bounded signature scan, excluding executables
+  // so that a reference in STTNG.OVL is not mistaken for resource content.
+  size_t scanned142=0,found142=0,skipped142=0;
+  std::error_code ec142;
+  const auto root142=std::filesystem::path(argv[1]);
+  if(std::filesystem::is_directory(root142,ec142)){
+   for(std::filesystem::directory_iterator it(root142,ec142),end;
+       !ec142&&it!=end;it.increment(ec142)){
+    std::error_code fe;
+    if(!it->is_regular_file(fe)||fe)continue;
+    auto ext=it->path().extension().string();
+    std::transform(ext.begin(),ext.end(),ext.begin(),[](unsigned char ch){
+     return static_cast<char>(std::tolower(ch));
+    });
+    if(ext==".exe"||ext==".ovl")continue;
+    const auto sz=it->file_size(fe);
+    if(fe||sz>16ull*1024*1024){++skipped142;continue;}
+    std::ifstream source(it->path(),std::ios::binary);
+    if(!source){++skipped142;continue;}
+    const std::vector<uint8_t> bytes(
+      (std::istreambuf_iterator<char>(source)),std::istreambuf_iterator<char>());
+    ++scanned142;
+    size_t hits=0;
+    for(size_t p=0;p+4<=bytes.size();++p)
+     if(bytes[p]=='F'&&bytes[p+1]=='V'&&bytes[p+2]=='F'&&bytes[p+3]==' '){
+      if(hits<4)
+       std::cout<<"RM_PALETTE_FVF_RESOURCE_HIT source=installedLoose name="
+                <<it->path().filename().string()<<" offset="<<p<<"\n";
+      ++hits;
+     }
+    found142+=hits;
+   }
+  }
+  std::cout<<"RM_PALETTE_FVF_RESOURCE_SCAN source=installedLoose files="
+           <<scanned142<<" hits="<<found142<<" skipped="<<skipped142
+           <<" scope=topLevelNonExecutableMax16MiB\n";
+  // Archive discovery by name only; compressed entry bytes are not
+  // searched, so absence of filename candidates is not absence of FVF.
+  reluva::stafu::ZipArchive zip142;
+  std::string zipError142;
+  if(zip142.open(std::filesystem::path(argv[2])/"STTNG.ZIP",zipError142)){
+   size_t candidates142=0;
+   for(const auto& entry:zip142.entries()){
+    auto name=entry.name;
+    std::transform(name.begin(),name.end(),name.begin(),[](unsigned char ch){
+     return static_cast<char>(std::tolower(ch));
+    });
+    if(name.find("fvf")==std::string::npos)continue;
+    ++candidates142;
+    if(candidates142<=40)
+     std::cout<<"RM_PALETTE_FVF_RESOURCE_CANDIDATE source=archiveName name="
+              <<entry.name<<" bytes="<<entry.uncompressedSize<<"\n";
+   }
+   std::cout<<"RM_PALETTE_FVF_RESOURCE_SCAN source=archiveNames entries="
+            <<zip142.size()<<" candidates="<<candidates142
+            <<" contentScanned=0\n";
+  }else{
+   std::cout<<"RM_PALETTE_FVF_RESOURCE_SCAN source=archiveNames unavailable="
+            <<zipError142<<"\n";
+  }
+  std::cout<<"RM_PALETTE_FVF_READER_LIMITATION"
+           <<" wrapperSemantics=requiresInstructionDecode"
+           <<" archiveCompressedContent=notScanned"
+           <<" fvfResourceIdentity=unverified"
+           <<" rmUpperPaletteProvenance=unverified\n";
+ }
+
  std::cout<<"NOTE: Trailer plausibility does not establish palette ownership.\n";
  std::cout<<"NOTE: Palette overlap is numerical only; it does not establish RM palette provenance.\n";
  return 0;
