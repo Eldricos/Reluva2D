@@ -4216,7 +4216,7 @@ int main(int argc,char** argv){
    const std::vector<Call146> calls146={
     {"owner_to_setup_wrapper",519007,563005},
     {"setup_wrapper_to_setup",563031,517136},
-    {"setup_descriptor_lookup",517209,516216}
+    {"setup_descriptor_lookup",517209,516148}
    };
    size_t matched146=0;
    for(const auto& call:calls146){
@@ -4299,7 +4299,7 @@ int main(int argc,char** argv){
    }
    struct Call147{const char* name;size_t offset;int64_t expected;};
    const std::vector<Call147> calls147={
-    {"setup_to_descriptor_lookup",517209,516216},
+    {"setup_to_descriptor_lookup",517209,516148},
     {"owner_to_setup_wrapper",519007,563005},
     {"setup_wrapper_to_setup",563031,517136}
    };
@@ -4346,6 +4346,95 @@ int main(int argc,char** argv){
             <<" lookupKeyType=unverified"
             <<" registryRecordIdentity=unverified"
             <<" descriptorCreation=unverified"
+            <<" fvfResourceIdentity=unverified"
+            <<" rmUpperPaletteProvenance=unverified\n";
+  }
+ }
+
+
+ // Milestone 148: inspect complete lookup entry and name handling.
+ {
+  std::ifstream in148(std::filesystem::path(argv[1])/"STTNG.OVL",std::ios::binary);
+  if(!in148){
+   std::cout<<"RM_PALETTE_LOOKUP_ENTRY_STATUS read=0\n";
+  }else{
+   const std::vector<uint8_t> d148(
+    (std::istreambuf_iterator<char>(in148)),std::istreambuf_iterator<char>());
+   std::cout<<"RM_PALETTE_LOOKUP_ENTRY_STATUS read=1 bytes="
+            <<d148.size()<<" scope=lookupEntryNameComparisonAndRegistryChains\n";
+   struct Region148{const char* name;size_t start;size_t end;};
+   const std::vector<Region148> regions148={
+    {"lookup_entry_full",516096,516240},
+    {"lookup_predecessor",515968,516160},
+    {"lookup_chain",516144,516232},
+    {"name_storage_helper",516224,516304},
+    {"registry_creation",516304,516448},
+    {"registry_name_writer",516624,516864},
+    {"lookup_callsite",517192,517232},
+    {"owner_setup_callsite",518984,519040},
+    {"owner_factory_callsite",522968,523032}
+   };
+   for(const auto& region:regions148){
+    for(size_t p=region.start;p<std::min(region.end,d148.size());p+=16){
+     std::cout<<"RM_PALETTE_LOOKUP_ENTRY_HEX region="<<region.name
+              <<" offset="<<p<<" hex=";
+     for(size_t j=p;j<std::min(p+16,std::min(region.end,d148.size()));++j){
+      if(j!=p)std::cout<<" ";
+      std::cout<<std::hex<<std::setw(2)<<std::setfill('0')<<unsigned(d148[j]);
+     }
+     std::cout<<std::dec<<std::setfill(' ')<<"\n";
+    }
+   }
+   struct Call148{const char* name;size_t offset;int64_t expected;};
+   const std::vector<Call148> calls148={
+    {"setup_to_lookup_entry",517209,516148},
+    {"owner_to_setup_wrapper",519007,563005},
+    {"setup_wrapper_to_setup",563031,517136}
+   };
+   size_t matched148=0;
+   for(const auto& call:calls148){
+    int64_t target=-1;
+    if(call.offset+5<=d148.size()&&d148[call.offset]==0xE8){
+     const uint32_t u=uint32_t(d148[call.offset+1])|
+       (uint32_t(d148[call.offset+2])<<8)|
+       (uint32_t(d148[call.offset+3])<<16)|
+       (uint32_t(d148[call.offset+4])<<24);
+     target=int64_t(call.offset)+5+int64_t(int32_t(u));
+    }
+    const bool match=target==call.expected;
+    matched148+=match?1:0;
+    std::cout<<"RM_PALETTE_LOOKUP_ENTRY_CALL name="<<call.name
+             <<" offset="<<call.offset<<" target="<<target
+             <<" expected="<<call.expected<<" match="<<(match?1:0)<<"\n";
+   }
+   std::cout<<"RM_PALETTE_LOOKUP_ENTRY_CALL_SUMMARY matched="
+            <<matched148<<" total="<<calls148.size()<<"\n";
+   struct Pattern148{const char* name;size_t begin;size_t end;
+                     std::vector<uint8_t> bytes;};
+   const std::vector<Pattern148> patterns148={
+    {"lookup_null_return",516144,516232,{0x31,0xc0,0x5d,0x5f,0x5e,0x5b,0xc3}},
+    {"lookup_link_step",516144,516232,{0x8b,0x7b,0x1c}},
+    {"name_inline_copy",516744,516808,{0x8a,0x06,0x88,0x07}},
+    {"name_inline_threshold",516736,516768,{0x83,0xff,0x0e}},
+    {"name_terminator_write",516832,516864,{0xc6,0x44,0x02,0x0d,0x00}},
+    {"record_capacity_read",516304,516352,{0x8b,0x93,0x08,0x40,0x00,0x00}}
+   };
+   for(const auto& pat:patterns148){
+    bool found=false;size_t where=0;
+    const size_t limit=std::min(pat.end,d148.size());
+    for(size_t p=pat.begin;p+pat.bytes.size()<=limit;++p){
+     if(std::equal(pat.bytes.begin(),pat.bytes.end(),d148.begin()+p)){
+      found=true;where=p;break;
+     }
+    }
+    std::cout<<"RM_PALETTE_LOOKUP_ENTRY_PATTERN name="<<pat.name
+             <<" found="<<(found?1:0)
+             <<" offset="<<(found?int64_t(where):-1)<<"\n";
+   }
+   std::cout<<"RM_PALETTE_LOOKUP_ENTRY_LIMITATION"
+            <<" lookupKeySource=unverified"
+            <<" nameCompareHelper=notYetDecoded"
+            <<" registryChainSelection=notYetDecoded"
             <<" fvfResourceIdentity=unverified"
             <<" rmUpperPaletteProvenance=unverified\n";
   }
