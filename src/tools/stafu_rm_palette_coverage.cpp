@@ -4637,6 +4637,84 @@ int main(int argc,char** argv){
   }
  }
 
+
+ // Milestone 151: full-overlay raw CALL and pointer-reference candidates.
+ {
+  std::ifstream in151(std::filesystem::path(argv[1])/"STTNG.OVL",std::ios::binary);
+  if(!in151){
+   std::cout<<"RM_PALETTE_FVF_XREF_STATUS read=0\n";
+  }else{
+   const std::vector<uint8_t> d151(
+    (std::istreambuf_iterator<char>(in151)),std::istreambuf_iterator<char>());
+   constexpr int64_t target151=522820;
+   std::cout<<"RM_PALETTE_FVF_XREF_STATUS read=1 bytes="<<d151.size()
+            <<" target="<<target151<<" scope=fullOverlayRawCandidates\n";
+   size_t calls151=0;
+   for(size_t p=0;p+5<=d151.size();++p){
+    if(d151[p]!=0xe8)continue;
+    const uint32_t u=uint32_t(d151[p+1])|
+      (uint32_t(d151[p+2])<<8)|
+      (uint32_t(d151[p+3])<<16)|
+      (uint32_t(d151[p+4])<<24);
+    const int64_t destination=int64_t(p)+5+int64_t(int32_t(u));
+    if(destination!=target151)continue;
+    ++calls151;
+    std::cout<<"RM_PALETTE_FVF_XREF_CALL offset="<<p
+             <<" target="<<destination<<" candidate="<<calls151
+             <<" boundaryVerified=0\n";
+    const size_t start=p>48?p-48:0;
+    const size_t end=std::min(p+32,d151.size());
+    for(size_t q=start;q<end;q+=16){
+     std::cout<<"RM_PALETTE_FVF_XREF_HEX kind=directCall"
+              <<" callOffset="<<p<<" offset="<<q<<" hex=";
+     for(size_t j=q;j<std::min(q+16,end);++j){
+      if(j!=q)std::cout<<" ";
+      std::cout<<std::hex<<std::setw(2)<<std::setfill('0')<<unsigned(d151[j]);
+     }
+     std::cout<<std::dec<<std::setfill(' ')<<"\n";
+    }
+   }
+   std::cout<<"RM_PALETTE_FVF_XREF_CALL_SUMMARY candidates="<<calls151
+            <<" scanBegin=0 scanEnd="<<d151.size()
+            <<" limitation=rawOpcodeNotInstructionBoundaryVerified\n";
+   const uint32_t t151=uint32_t(target151);
+   const uint8_t pointer151[4]={
+    uint8_t(t151&255),uint8_t((t151>>8)&255),
+    uint8_t((t151>>16)&255),uint8_t((t151>>24)&255)};
+   size_t pointerCount151=0;
+   for(size_t p=0;p+4<=d151.size();++p){
+    if(d151[p]!=pointer151[0]||d151[p+1]!=pointer151[1]||
+       d151[p+2]!=pointer151[2]||d151[p+3]!=pointer151[3])continue;
+    ++pointerCount151;
+    if(pointerCount151<=32){
+     std::cout<<"RM_PALETTE_FVF_XREF_POINTER offset="<<p
+              <<" value="<<target151<<" candidate="<<pointerCount151
+              <<" addressMappingUnverified=1\n";
+     const size_t start=p>16?p-16:0;
+     const size_t end=std::min(p+20,d151.size());
+     for(size_t q=start;q<end;q+=16){
+      std::cout<<"RM_PALETTE_FVF_XREF_HEX kind=absoluteValue"
+               <<" pointerOffset="<<p<<" offset="<<q<<" hex=";
+      for(size_t j=q;j<std::min(q+16,end);++j){
+       if(j!=q)std::cout<<" ";
+       std::cout<<std::hex<<std::setw(2)<<std::setfill('0')<<unsigned(d151[j]);
+      }
+      std::cout<<std::dec<<std::setfill(' ')<<"\n";
+     }
+    }
+   }
+   std::cout<<"RM_PALETTE_FVF_XREF_POINTER_SUMMARY candidates="
+            <<pointerCount151<<" displayed="<<std::min<size_t>(pointerCount151,32)
+            <<" limitation=rawLittleEndianValueNotRelocationVerified\n";
+   std::cout<<"RM_PALETTE_FVF_XREF_LIMITATION"
+            <<" incomingCallSemantics=unverified"
+            <<" indirectCallTargets=unresolved"
+            <<" callerResourceKeyOrigin=unverified"
+            <<" fvfResourceIdentity=unverified"
+            <<" rmUpperPaletteProvenance=unverified\n";
+  }
+ }
+
  std::cout<<"NOTE: Trailer plausibility does not establish palette ownership.\n";
  std::cout<<"NOTE: Palette overlap is numerical only; it does not establish RM palette provenance.\n";
  return 0;
