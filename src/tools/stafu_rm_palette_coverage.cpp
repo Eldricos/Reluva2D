@@ -7336,6 +7336,171 @@ int main(int argc,char** argv){
   }
  }
 
+
+ // Milestone 175: correlate relevant Object 2 filename strings with LE fixups.
+ {
+  std::ifstream in175(std::filesystem::path(argv[1])/"STTNG.OVL",std::ios::binary);
+  if(!in175){
+   std::cout<<"RM_PALETTE_FVF_LE_FILENAME_STATUS read=0\n";
+  }else{
+   const std::vector<uint8_t> d((std::istreambuf_iterator<char>(in175)),
+                                 std::istreambuf_iterator<char>());
+   const auto u16=[&](uint64_t p)->uint32_t{
+    return p+2<=d.size()?uint32_t(d[size_t(p)])|
+      (uint32_t(d[size_t(p)+1])<<8):0;
+   };
+   const auto u32=[&](uint64_t p)->uint32_t{
+    return p+4<=d.size()?uint32_t(d[size_t(p)])|
+      (uint32_t(d[size_t(p)+1])<<8)|
+      (uint32_t(d[size_t(p)+2])<<16)|
+      (uint32_t(d[size_t(p)+3])<<24):0;
+   };
+   const uint64_t first=u16(4)?uint64_t(u16(4)-1)*512+(u16(2)?u16(2):512):0;
+   const bool firstOk=first+36<=d.size()&&d[size_t(first)]=='B'&&d[size_t(first)+1]=='W';
+   const uint64_t second=firstOk?first+u32(first+32):0;
+   const bool secondOk=firstOk&&second+36<=d.size()&&
+     d[size_t(second)]=='B'&&d[size_t(second)+1]=='W';
+   const uint64_t mz=secondOk?second+u32(second+32):0;
+   const bool mzOk=secondOk&&mz+64<=d.size()&&d[size_t(mz)]=='M'&&d[size_t(mz)+1]=='Z';
+   const uint64_t mzBytes=mzOk&&u16(mz+4)?
+     uint64_t(u16(mz+4)-1)*512+(u16(mz+2)?u16(mz+2):512):0;
+   const uint64_t le=mz+mzBytes+2;
+   const bool leOk=mzOk&&le+0xAC<=d.size()&&d[size_t(le)]=='L'&&d[size_t(le)+1]=='E';
+   std::cout<<"RM_PALETTE_FVF_LE_FILENAME_STATUS read=1 le="<<le
+            <<" mz="<<mz<<" leSignature="<<(leOk?1:0)
+            <<" analysis=readOnly\n";
+   if(leOk){
+    const uint32_t pages=u32(le+0x14),size=u32(le+0x28);
+    const uint32_t last=u32(le+0x2C),objects=u32(le+0x44);
+    const uint64_t obj=le+u32(le+0x40),map=le+u32(le+0x48);
+    const uint64_t pt=le+u32(le+0x68),rt=le+u32(le+0x6C);
+    const uint64_t base=mz+uint64_t(u32(le+0x80));
+    const bool valid=pages>0&&pages<=1000000&&size==4096&&
+      objects>=2&&objects<=65536&&last>0&&last<=size&&
+      obj<=d.size()&&uint64_t(objects)*24<=d.size()-obj&&
+      map<=d.size()&&uint64_t(pages)*4<=d.size()-map&&
+      pt<=d.size()&&uint64_t(pages+1)*4<=d.size()-pt&&rt<=d.size();
+    const uint64_t recordBytes=valid?u32(pt+uint64_t(pages)*4):0;
+    const bool recordsValid=valid&&recordBytes<=d.size()-rt;
+    std::cout<<"RM_PALETTE_FVF_LE_FILENAME_TABLES valid="<<(recordsValid?1:0)
+             <<" dataBase="<<base<<" pages="<<pages
+             <<" objects="<<objects<<"\n";
+    if(recordsValid){
+     const uint64_t object2=obj+24;
+     const uint64_t firstPage=u32(object2+12);
+     const uint64_t count=u32(object2+16);
+     const uint64_t virtualSize=u32(object2);
+     const std::vector<std::string> names={
+       "BRIDGE.RM","VIEWSCR.RM","STANDARD.PAL","TRANSP.RM",
+       "HOLODECK.RM","ENDGAME.RM","movie.map"};
+     struct Hit175{std::string name;uint32_t offset;uint64_t file;uint64_t refs;};
+     std::vector<Hit175> hits;
+     for(const auto& name:names){
+      uint64_t matches=0;
+      for(uint64_t logical=0;logical<count&&logical*size<virtualSize;++logical){
+       const uint64_t index=firstPage+logical;
+       if(index<1||index>pages)continue;
+       const uint64_t mp=map+(index-1)*4;
+       const uint32_t physical=(uint32_t(d[size_t(mp)])<<16)|
+         (uint32_t(d[size_t(mp)+1])<<8)|uint32_t(d[size_t(mp)+2]);
+       if(physical<1||physical>pages)continue;
+       const uint64_t file=base+uint64_t(physical-1)*size;
+       const uint64_t bytes=std::min(uint64_t(size),
+         std::min(virtualSize-logical*size,
+           uint64_t(physical==pages?last:size)));
+       if(file>d.size()||bytes>d.size()-file)continue;
+       for(uint64_t i=0;i+name.size()<bytes;++i){
+        bool equal=true;
+        for(uint64_t j=0;j<name.size();++j){
+         const unsigned a=d[size_t(file+i+j)];
+         const unsigned b=static_cast<unsigned char>(name[size_t(j)]);
+         if((a>='a'&&a<='z'?a-32:a)!=
+            (b>='a'&&b<='z'?b-32:b)){equal=false;break;}
+        }
+        if(!equal||d[size_t(file+i+name.size())]!=0)continue;
+        const uint64_t offset=logical*size+i;
+        if(offset>0xffffffffULL)continue;
+        hits.push_back({name,uint32_t(offset),file+i,0});
+        ++matches;
+        std::cout<<"RM_PALETTE_FVF_LE_FILENAME_STRING name="<<name
+                 <<" object=2 offset="<<offset<<" fileOffset="<<file+i
+                 <<" pageMapIndex="<<index<<" physicalPage="<<physical
+                 <<" nullTerminated=1 caseInsensitive=1\n";
+       }
+      }
+      std::cout<<"RM_PALETTE_FVF_LE_FILENAME_COUNT name="<<name
+               <<" object2Matches="<<matches<<"\n";
+     }
+     uint64_t decoded=0,matched=0,negative=0,unsupported=0;
+     for(uint32_t page=1;page<=pages;++page){
+      const uint64_t start=u32(pt+uint64_t(page-1)*4);
+      const uint64_t end=u32(pt+uint64_t(page)*4);
+      if(end<start||end>recordBytes){++unsupported;continue;}
+      uint64_t at=rt+start;
+      while(at<rt+end){
+       if(rt+end-at<7){++unsupported;break;}
+       const uint8_t source=d[size_t(at)],flags=d[size_t(at+1)];
+       if(source!=7||(flags!=0&&flags!=16)){++unsupported;break;}
+       const uint64_t length=flags==16?9:7;
+       if(rt+end-at<length){++unsupported;break;}
+       const uint32_t raw=u16(at+2);
+       const int32_t signedOffset=raw>=32768?int32_t(raw)-65536:int32_t(raw);
+       const uint32_t targetObject=unsigned(d[size_t(at+4)]);
+       const uint32_t targetOffset=flags==16?u32(at+5):u16(at+5);
+       if(signedOffset<0)++negative;
+       ++decoded;
+       if(targetObject==2){
+        for(auto& hit:hits){
+         if(hit.offset!=targetOffset)continue;
+         ++hit.refs;++matched;
+         const int64_t sourceFile=int64_t(base)+int64_t(page-1)*size+signedOffset;
+         std::cout<<"RM_PALETTE_FVF_LE_FILENAME_REFERENCE name="<<hit.name
+                  <<" targetOffset="<<hit.offset
+                  <<" sourcePage="<<page<<" sourceSigned="<<signedOffset
+                  <<" sourceFile="<<sourceFile
+                  <<" recordOffset="<<at<<" flags="<<unsigned(flags)
+                  <<" sourceInFile="<<(sourceFile>=0&&uint64_t(sourceFile)+4<=d.size()?1:0)
+                  <<"\n";
+         if(sourceFile>=0&&uint64_t(sourceFile)<d.size()){
+          const uint64_t p=uint64_t(sourceFile);
+          const uint64_t from=p>=12?p-12:0;
+          const uint64_t to=std::min(uint64_t(d.size()),p+16);
+          std::cout<<"RM_PALETTE_FVF_LE_FILENAME_SOURCE_HEX name="<<hit.name
+                   <<" sourceFile="<<p<<" start="<<from<<" hex=";
+          for(uint64_t j=from;j<to;++j){
+           if(j!=from)std::cout<<" ";
+           std::cout<<std::hex<<std::setw(2)<<std::setfill('0')
+                    <<unsigned(d[size_t(j)]);
+          }
+          std::cout<<std::dec<<std::setfill(' ')<<"\n";
+         }
+        }
+       }
+       at+=length;
+      }
+     }
+     for(const auto& hit:hits){
+      std::cout<<"RM_PALETTE_FVF_LE_FILENAME_RESULT name="<<hit.name
+               <<" object2Offset="<<hit.offset<<" fileOffset="<<hit.file
+               <<" directFixupReferences="<<hit.refs<<"\n";
+     }
+     std::cout<<"RM_PALETTE_FVF_LE_FILENAME_SUMMARY"
+              <<" stringsFound="<<hits.size()<<" decodedFixups="<<decoded
+              <<" matchingFixups="<<matched<<" negativeSourceFixups="<<negative
+              <<" unsupportedPageIntervals="<<unsupported
+              <<" callTargets=notDecoded"
+              <<" upperPaletteSource=unverified\n";
+    }
+   }
+   std::cout<<"RM_PALETTE_FVF_LE_FILENAME_LIMITATION"
+            <<" searchesOnlyNullTerminatedWithinObject2Pages=1"
+            <<" stringsAcrossPageBoundary=notSearched"
+            <<" fixupsToInteriorStringOffsets=notMatched"
+            <<" instructionAndCallSemantics=unverified"
+            <<" rmUpperPaletteProvenance=unverified\n";
+  }
+ }
+
  std::cout<<"NOTE: Trailer plausibility does not establish palette ownership.\n";
  std::cout<<"NOTE: Palette overlap is numerical only; it does not establish RM palette provenance.\n";
  return 0;
