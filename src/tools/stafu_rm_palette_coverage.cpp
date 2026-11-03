@@ -7662,6 +7662,160 @@ int main(int argc,char** argv){
   }
  }
 
+
+ // Milestone 177: inspect loader entries, local direct calls and the unusual palette site.
+ {
+  std::ifstream in177(std::filesystem::path(argv[1])/"STTNG.OVL",std::ios::binary);
+  if(!in177)std::cout<<"RM_PALETTE_FVF_LE_LOADER_TRACE_STATUS read=0\n";
+  else{
+   const std::vector<uint8_t> d((std::istreambuf_iterator<char>(in177)),
+                                 std::istreambuf_iterator<char>());
+   const auto u16=[&](uint64_t p)->uint32_t{
+    return p+2<=d.size()?uint32_t(d[size_t(p)])|
+      (uint32_t(d[size_t(p)+1])<<8):0;
+   };
+   const auto u32=[&](uint64_t p)->uint32_t{
+    return p+4<=d.size()?uint32_t(d[size_t(p)])|
+      (uint32_t(d[size_t(p)+1])<<8)|
+      (uint32_t(d[size_t(p)+2])<<16)|
+      (uint32_t(d[size_t(p)+3])<<24):0;
+   };
+   const uint64_t first=u16(4)?uint64_t(u16(4)-1)*512+(u16(2)?u16(2):512):0;
+   const bool firstOk=first+36<=d.size()&&d[size_t(first)]=='B'&&d[size_t(first)+1]=='W';
+   const uint64_t second=firstOk?first+u32(first+32):0;
+   const bool secondOk=firstOk&&second+36<=d.size()&&
+     d[size_t(second)]=='B'&&d[size_t(second)+1]=='W';
+   const uint64_t mz=secondOk?second+u32(second+32):0;
+   const bool mzOk=secondOk&&mz+64<=d.size()&&d[size_t(mz)]=='M'&&d[size_t(mz)+1]=='Z';
+   const uint64_t mzBytes=mzOk&&u16(mz+4)?
+     uint64_t(u16(mz+4)-1)*512+(u16(mz+2)?u16(mz+2):512):0;
+   const uint64_t le=mz+mzBytes+2;
+   const bool leOk=mzOk&&le+0xAC<=d.size()&&d[size_t(le)]=='L'&&d[size_t(le)+1]=='E';
+   std::cout<<"RM_PALETTE_FVF_LE_LOADER_TRACE_STATUS read=1 le="<<le
+            <<" leSignature="<<(leOk?1:0)<<" readOnly=1\n";
+   if(leOk){
+    const uint64_t base=mz+uint64_t(u32(le+0x80));
+    const uint64_t obj=le+u32(le+0x40),map=le+u32(le+0x48);
+    const uint32_t pages=u32(le+0x14),size=u32(le+0x28),objects=u32(le+0x44);
+    const bool valid=pages>0&&pages<=1000000&&size==4096&&
+      objects>=2&&objects<=65536&&obj<=d.size()&&
+      uint64_t(objects)*24<=d.size()-obj&&map<=d.size()&&
+      uint64_t(pages)*4<=d.size()-map;
+    std::cout<<"RM_PALETTE_FVF_LE_LOADER_TRACE_TABLES valid="<<(valid?1:0)
+             <<" dataBase="<<base<<"\n";
+    if(valid){
+     const uint64_t object1First=u32(obj+12),object1Pages=u32(obj+16);
+     const uint64_t object1Virtual=u32(obj);
+     const auto mapObject1=[&](int64_t offset)->int64_t{
+      if(offset<0||uint64_t(offset)>=object1Virtual)return -1;
+      const uint64_t logical=uint64_t(offset)/size;
+      if(logical>=object1Pages)return -1;
+      const uint64_t index=object1First+logical;
+      if(index<1||index>pages)return -1;
+      const uint64_t p=map+(index-1)*4;
+      const uint32_t physical=(uint32_t(d[size_t(p)])<<16)|
+        (uint32_t(d[size_t(p)+1])<<8)|uint32_t(d[size_t(p)+2]);
+      if(physical<1||physical>pages)return -1;
+      const uint64_t file=base+uint64_t(physical-1)*size+uint64_t(offset)%size;
+      return file<d.size()?int64_t(file):-1;
+     };
+     struct Target177{const char* name;uint64_t file;};
+     const std::vector<Target177> targets={
+       {"RM_LOADER",510528},{"GENERAL_LOADER",562864},
+       {"KNOWN_RESOURCE_OPERATION",513376},
+       {"KNOWN_DESCRIPTOR_LOOKUP",516148}};
+     for(const auto& target:targets){
+      const bool backed=target.file>=base&&target.file<d.size()&&
+        mapObject1(int64_t(target.file-base))==int64_t(target.file);
+      std::cout<<"RM_PALETTE_FVF_LE_LOADER_TRACE_ENTRY name="<<target.name
+               <<" file="<<target.file<<" object1Mapped="<<(backed?1:0)
+               <<" entryMeaning=provisional\n";
+      if(!backed)continue;
+      const uint64_t end=std::min(uint64_t(d.size()),target.file+160);
+      for(uint64_t p=target.file;p<end;p+=16){
+       std::cout<<"RM_PALETTE_FVF_LE_LOADER_TRACE_HEX name="<<target.name
+                <<" file="<<p<<" hex=";
+       for(uint64_t j=p;j<std::min(p+16,end);++j){
+        if(j!=p)std::cout<<" ";
+        std::cout<<std::hex<<std::setw(2)<<std::setfill('0')
+                 <<unsigned(d[size_t(j)]);
+       }
+       std::cout<<std::dec<<std::setfill(' ')<<"\n";
+      }
+      // Byte-level candidate scan, not an instruction decoder: E8 may occur
+      // inside immediates, data or unreachable instruction sequences.
+      uint64_t candidates=0,knownResource=0,knownLookup=0;
+      for(uint64_t p=target.file;p+5<=end;++p){
+       if(d[size_t(p)]!=0xE8)continue;
+       const uint64_t raw=u32(p+1);
+       const int64_t disp=raw>=0x80000000ULL?
+         int64_t(raw)-0x100000000LL:int64_t(raw);
+       const int64_t destination=mapObject1(int64_t(p+5-base)+disp);
+       if(destination<0)continue;
+       ++candidates;
+       if(destination==513376)++knownResource;
+       if(destination==516148)++knownLookup;
+       if(candidates<=24)
+        std::cout<<"RM_PALETTE_FVF_LE_LOADER_TRACE_CALL_CANDIDATE name="
+                 <<target.name<<" sourceFile="<<p
+                 <<" targetFile="<<destination
+                 <<" rawRel32="<<raw<<" decodedInstruction=0\n";
+      }
+      std::cout<<"RM_PALETTE_FVF_LE_LOADER_TRACE_ENTRY_SUMMARY name="<<target.name
+               <<" candidateCalls="<<candidates
+               <<" directToKnownResource="<<knownResource
+               <<" directToKnownLookup="<<knownLookup
+               <<" scannedBytes="<<end-target.file<<"\n";
+     }
+     const uint64_t palette=510403;
+     const uint64_t from=palette>=48?palette-48:0;
+     const uint64_t to=std::min(uint64_t(d.size()),palette+80);
+     std::cout<<"RM_PALETTE_FVF_LE_LOADER_TRACE_PALETTE_SITE"
+              <<" operandFile="<<palette
+              <<" object1Mapped="<<(mapObject1(int64_t(palette-base))==int64_t(palette)?1:0)
+              <<" rawOperand="<<u32(palette)
+              <<" expectedOffset=3080"
+              <<" callPattern=nonPushEaxE8\n";
+     for(uint64_t p=from;p<to;p+=16){
+      std::cout<<"RM_PALETTE_FVF_LE_LOADER_TRACE_PALETTE_HEX file="<<p<<" hex=";
+      for(uint64_t j=p;j<std::min(p+16,to);++j){
+       if(j!=p)std::cout<<" ";
+       std::cout<<std::hex<<std::setw(2)<<std::setfill('0')
+                <<unsigned(d[size_t(j)]);
+      }
+      std::cout<<std::dec<<std::setfill(' ')<<"\n";
+     }
+     uint64_t paletteCalls=0;
+     for(uint64_t p=palette+4;p+5<=to;++p){
+      if(d[size_t(p)]!=0xE8)continue;
+      const uint64_t raw=u32(p+1);
+      const int64_t disp=raw>=0x80000000ULL?
+        int64_t(raw)-0x100000000LL:int64_t(raw);
+      const int64_t dest=mapObject1(int64_t(p+5-base)+disp);
+      if(dest<0)continue;
+      ++paletteCalls;
+      if(paletteCalls<=12)
+       std::cout<<"RM_PALETTE_FVF_LE_LOADER_TRACE_PALETTE_CALL_CANDIDATE"
+                <<" sourceFile="<<p<<" targetFile="<<dest
+                <<" rawRel32="<<raw<<" decodedInstruction=0\n";
+     }
+     std::cout<<"RM_PALETTE_FVF_LE_LOADER_TRACE_SUMMARY"
+              <<" loaderCandidates=2"
+              <<" paletteCandidateCalls="<<paletteCalls
+              <<" sharedLowerLevelLoader=unverified"
+              <<" argument0x23Meaning=unverified"
+              <<" upperPaletteProvenance=unverified\n";
+    }
+   }
+   std::cout<<"RM_PALETTE_FVF_LE_LOADER_TRACE_LIMITATION"
+            <<" boundedRawCallScan=1"
+            <<" fullInstructionDecode=0"
+            <<" branchControlFlow=notProven"
+            <<" runtimeRelocations=notApplied"
+            <<" resourceLoadingSemantics=unverified\n";
+  }
+ }
+
  std::cout<<"NOTE: Trailer plausibility does not establish palette ownership.\n";
  std::cout<<"NOTE: Palette overlap is numerical only; it does not establish RM palette provenance.\n";
  return 0;
