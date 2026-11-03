@@ -7816,6 +7816,193 @@ int main(int argc,char** argv){
   }
  }
 
+
+ // Milestone 178: bounded, read-only investigation of STANDARD.PAL's 384-byte copy.
+ {
+  std::ifstream in178(std::filesystem::path(argv[1])/"STTNG.OVL",std::ios::binary);
+  if(!in178)std::cout<<"RM_PALETTE_FVF_LE_PAL_COPY_STATUS read=0\n";
+  else{
+   const std::vector<uint8_t> d((std::istreambuf_iterator<char>(in178)),
+                                 std::istreambuf_iterator<char>());
+   const auto u16=[&](uint64_t p)->uint32_t{
+    return p+2<=d.size()?uint32_t(d[size_t(p)])|
+      (uint32_t(d[size_t(p)+1])<<8):0;
+   };
+   const auto u32=[&](uint64_t p)->uint32_t{
+    return p+4<=d.size()?uint32_t(d[size_t(p)])|
+      (uint32_t(d[size_t(p)+1])<<8)|
+      (uint32_t(d[size_t(p)+2])<<16)|
+      (uint32_t(d[size_t(p)+3])<<24):0;
+   };
+   const uint64_t first=u16(4)?uint64_t(u16(4)-1)*512+(u16(2)?u16(2):512):0;
+   const bool firstOk=first+36<=d.size()&&d[size_t(first)]=='B'&&d[size_t(first)+1]=='W';
+   const uint64_t second=firstOk?first+u32(first+32):0;
+   const bool secondOk=firstOk&&second+36<=d.size()&&
+     d[size_t(second)]=='B'&&d[size_t(second)+1]=='W';
+   const uint64_t mz=secondOk?second+u32(second+32):0;
+   const bool mzOk=secondOk&&mz+64<=d.size()&&d[size_t(mz)]=='M'&&d[size_t(mz)+1]=='Z';
+   const uint64_t mzBytes=mzOk&&u16(mz+4)?
+     uint64_t(u16(mz+4)-1)*512+(u16(mz+2)?u16(mz+2):512):0;
+   const uint64_t le=mz+mzBytes+2;
+   const bool leOk=mzOk&&le+0xAC<=d.size()&&d[size_t(le)]=='L'&&d[size_t(le)+1]=='E';
+   std::cout<<"RM_PALETTE_FVF_LE_PAL_COPY_STATUS read=1 le="<<le
+            <<" leSignature="<<(leOk?1:0)<<" readOnly=1\n";
+   if(leOk){
+    const uint64_t base=mz+uint64_t(u32(le+0x80));
+    const uint64_t obj=le+u32(le+0x40),map=le+u32(le+0x48);
+    const uint64_t pt=le+u32(le+0x68),rt=le+u32(le+0x6C);
+    const uint32_t pages=u32(le+0x14),size=u32(le+0x28),objects=u32(le+0x44);
+    const bool valid=pages>0&&pages<=1000000&&size==4096&&
+      objects>=2&&objects<=65536&&obj<=d.size()&&
+      uint64_t(objects)*24<=d.size()-obj&&map<=d.size()&&
+      uint64_t(pages)*4<=d.size()-map&&pt<=d.size()&&
+      uint64_t(pages+1)*4<=d.size()-pt&&rt<=d.size();
+    const uint64_t recordBytes=valid?u32(pt+uint64_t(pages)*4):0;
+    const bool recordsValid=valid&&recordBytes<=d.size()-rt;
+    std::cout<<"RM_PALETTE_FVF_LE_PAL_COPY_TABLES valid="<<(recordsValid?1:0)
+             <<" dataBase="<<base<<"\n";
+    if(recordsValid){
+     const uint64_t firstPage=u32(obj+12),objectPages=u32(obj+16);
+     const uint64_t virtualSize=u32(obj);
+     const auto mapObject1=[&](int64_t offset)->int64_t{
+      if(offset<0||uint64_t(offset)>=virtualSize)return -1;
+      const uint64_t logical=uint64_t(offset)/size;
+      if(logical>=objectPages)return -1;
+      const uint64_t index=firstPage+logical;
+      if(index<1||index>pages)return -1;
+      const uint64_t p=map+(index-1)*4;
+      const uint32_t physical=(uint32_t(d[size_t(p)])<<16)|
+        (uint32_t(d[size_t(p)+1])<<8)|uint32_t(d[size_t(p)+2]);
+      if(physical<1||physical>pages)return -1;
+      const uint64_t file=base+uint64_t(physical-1)*size+
+        uint64_t(offset)%size;
+      return file<d.size()?int64_t(file):-1;
+     };
+     const auto printHex=[&](const char* region,uint64_t from,uint64_t to){
+      if(from>=d.size())return;
+      to=std::min(to,uint64_t(d.size()));
+      for(uint64_t p=from;p<to;p+=16){
+       std::cout<<"RM_PALETTE_FVF_LE_PAL_COPY_HEX region="<<region
+                <<" file="<<p<<" hex=";
+       for(uint64_t j=p;j<std::min(p+16,to);++j){
+        if(j!=p)std::cout<<" ";
+        std::cout<<std::hex<<std::setw(2)<<std::setfill('0')
+                 <<unsigned(d[size_t(j)]);
+       }
+       std::cout<<std::dec<<std::setfill(' ')<<"\n";
+      }
+     };
+     printHex("paletteInitializer",510388,510472);
+     printHex("postCopyHelper",562937,563040);
+     printHex("generalLoader",562864,562937);
+     const bool patternsInBounds=510459<d.size();
+     const bool namePointer=patternsInBounds&&u32(510403)==3080;
+     const bool destination=patternsInBounds&&d[510407]==0xBF&&
+       u32(510408)==0x11F868;
+     const bool length=patternsInBounds&&d[510417]==0xB9&&
+       u32(510418)==0x180;
+     // The source register is loaded from the general loader's return
+     // value; EDI is initialized before the call and saved/restored around
+     // the copy. This is a static register-flow observation, not execution.
+     std::cout<<"RM_PALETTE_FVF_LE_PAL_COPY_SEQUENCE"
+              <<" filenameOperand=510403 filenameObject2Offset="<<u32(510403)
+              <<" filenameMatches="<<(namePointer?1:0)
+              <<" destinationImmediateFile=510408"
+              <<" destinationImmediate="<<u32(510408)
+              <<" destinationMatches="<<(destination?1:0)
+              <<" copyLengthImmediateFile=510418"
+              <<" copyLength="<<u32(510418)
+              <<" lengthMatches384="<<(length?1:0)
+              <<" sourceRegister=ESI_from_EAX_return"
+              <<" destinationRegister=EDI_from_0x11F868"
+              <<" copyInstructions=rep_movsd_then_rep_movsb"
+              <<" runtimeSource=unverified runtimeDestination=unverified\n";
+     const struct {const char* name;uint64_t p;} calls[]={
+       {"paletteOpen",510412},{"postCopy",510451},
+       {"generalToResource",562901}};
+     for(const auto& call:calls){
+      const bool opcode=call.p+5<=d.size()&&d[size_t(call.p)]==0xE8;
+      const uint64_t raw=opcode?u32(call.p+1):0;
+      const int64_t disp=raw>=0x80000000ULL?
+        int64_t(raw)-0x100000000LL:int64_t(raw);
+      const int64_t mapped=opcode?
+        mapObject1(int64_t(call.p+5-base)+disp):-1;
+      std::cout<<"RM_PALETTE_FVF_LE_PAL_COPY_CALL name="<<call.name
+               <<" sourceFile="<<call.p<<" opcodeE8="<<(opcode?1:0)
+               <<" targetFile="<<mapped
+               <<" rawRel32="<<raw
+               <<" mapped="<<(mapped>=0?1:0)<<"\n";
+     }
+     // Search the executable's file-backed Object 1 pages for exact
+     // 0x11F868 operands; report bounded sites, not assumed live uses.
+     uint64_t globalMatches=0;
+     for(uint64_t logical=0;logical<objectPages&&logical*size<virtualSize;++logical){
+      const uint64_t index=firstPage+logical;
+      if(index<1||index>pages)continue;
+      const uint64_t mp=map+(index-1)*4;
+      const uint32_t physical=(uint32_t(d[size_t(mp)])<<16)|
+        (uint32_t(d[size_t(mp)+1])<<8)|uint32_t(d[size_t(mp)+2]);
+      if(physical<1||physical>pages)continue;
+      const uint64_t file=base+uint64_t(physical-1)*size;
+      const uint64_t bytes=std::min(uint64_t(size),virtualSize-logical*size);
+      if(file>d.size()||bytes>d.size()-file)continue;
+      for(uint64_t i=0;i+4<=bytes;++i){
+       if(u32(file+i)!=0x11F868)continue;
+       ++globalMatches;
+       if(globalMatches<=32){
+        std::cout<<"RM_PALETTE_FVF_LE_PAL_COPY_GLOBAL_REFERENCE"
+                 <<" file="<<file+i<<" object1Offset="<<logical*size+i
+                 <<" context=rawImmediateCandidate\n";
+       }
+      }
+     }
+     std::cout<<"RM_PALETTE_FVF_LE_PAL_COPY_GLOBAL_SUMMARY"
+              <<" immediate=0x11F868"
+              <<" rawObject1Matches="<<globalMatches
+              <<" printedLimit=32"
+              <<" relocationClassification=unverified\n";
+     uint64_t matchingFixups=0;
+     for(uint32_t page=1;page<=pages;++page){
+      const uint64_t start=u32(pt+uint64_t(page-1)*4);
+      const uint64_t end=u32(pt+uint64_t(page)*4);
+      if(end<start||end>recordBytes)continue;
+      uint64_t at=rt+start;
+      while(at<rt+end){
+       if(rt+end-at<7)break;
+       const uint8_t type=d[size_t(at)],flags=d[size_t(at+1)];
+       if(type!=7||(flags!=0&&flags!=16))break;
+       const uint64_t bytes=flags==16?9:7;
+       if(rt+end-at<bytes)break;
+       const uint32_t targetObj=unsigned(d[size_t(at+4)]);
+       const uint32_t targetOffset=flags==16?u32(at+5):u16(at+5);
+       if(targetObj==2&&targetOffset==3080){
+        ++matchingFixups;
+        std::cout<<"RM_PALETTE_FVF_LE_PAL_COPY_FILENAME_FIXUP"
+                 <<" page="<<page<<" sourceSigned="
+                 <<(u16(at+2)>=32768?int32_t(u16(at+2))-65536:
+                    int32_t(u16(at+2)))
+                 <<" targetObject=2 targetOffset=3080\n";
+       }
+       at+=bytes;
+      }
+     }
+     std::cout<<"RM_PALETTE_FVF_LE_PAL_COPY_SUMMARY"
+              <<" standardPalFixups="<<matchingFixups
+              <<" copyBytesCandidate=384"
+              <<" copiedPaletteEntriesCandidate=128"
+              <<" paletteDataDestinationRuntime=unverified"
+              <<" upperRMIndexPalette=unverified\n";
+    }
+   }
+   std::cout<<"RM_PALETTE_FVF_LE_PAL_COPY_LIMITATION"
+            <<" boundedRegisterFlow=1"
+            <<" dynamicControlFlow=notExecuted"
+            <<" globalReferenceScan=rawBytesOnly"
+            <<" helperBehavior=notDecoded"
+            <<" VGAProgrammingLink=unverified\n";
+  }
+ }
+
  std::cout<<"NOTE: Trailer plausibility does not establish palette ownership.\n";
  std::cout<<"NOTE: Palette overlap is numerical only; it does not establish RM palette provenance.\n";
  return 0;
