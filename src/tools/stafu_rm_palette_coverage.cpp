@@ -4529,6 +4529,114 @@ int main(int argc,char** argv){
   }
  }
 
+
+ // Milestone 150: backward trace of the FVF owner caller's resource key.
+ {
+  std::ifstream in150(std::filesystem::path(argv[1])/"STTNG.OVL",std::ios::binary);
+  if(!in150){
+   std::cout<<"RM_PALETTE_FVF_CALLER_TRACE_STATUS read=0\n";
+  }else{
+   const std::vector<uint8_t> d150(
+    (std::istreambuf_iterator<char>(in150)),std::istreambuf_iterator<char>());
+   std::cout<<"RM_PALETTE_FVF_CALLER_TRACE_STATUS read=1 bytes="
+            <<d150.size()<<" scope=callerEntryArgumentAndIncomingReferences\n";
+   struct Region150{const char* name;size_t start;size_t end;};
+   const std::vector<Region150> regions150={
+    {"caller_entry_and_argument",522752,522976},
+    {"caller_initializer_call",522960,523048},
+    {"caller_followthrough",523040,523280},
+    {"caller_tail",523264,523488},
+    {"caller_predecessor",522544,522768},
+    {"owner_initializer_forward",518984,519056},
+    {"resource_setup_forward",517192,517232}
+   };
+   for(const auto& region:regions150){
+    for(size_t p=region.start;p<std::min(region.end,d150.size());p+=16){
+     std::cout<<"RM_PALETTE_FVF_CALLER_TRACE_HEX region="<<region.name
+              <<" offset="<<p<<" hex=";
+     for(size_t j=p;j<std::min(p+16,std::min(region.end,d150.size()));++j){
+      if(j!=p)std::cout<<" ";
+      std::cout<<std::hex<<std::setw(2)<<std::setfill('0')<<unsigned(d150[j]);
+     }
+     std::cout<<std::dec<<std::setfill(' ')<<"\n";
+    }
+   }
+   struct Call150{const char* name;size_t offset;int64_t expected;};
+   const std::vector<Call150> calls150={
+    {"caller_to_owner_initializer",523016,518988},
+    {"owner_to_setup_wrapper",519007,563005},
+    {"setup_wrapper_to_setup",563031,517136},
+    {"setup_to_descriptor_lookup",517209,516148}
+   };
+   size_t matched150=0;
+   for(const auto& call:calls150){
+    int64_t target=-1;
+    if(call.offset+5<=d150.size()&&d150[call.offset]==0xE8){
+     const uint32_t u=uint32_t(d150[call.offset+1])|
+       (uint32_t(d150[call.offset+2])<<8)|
+       (uint32_t(d150[call.offset+3])<<16)|
+       (uint32_t(d150[call.offset+4])<<24);
+     target=int64_t(call.offset)+5+int64_t(int32_t(u));
+    }
+    const bool match=target==call.expected;
+    matched150+=match?1:0;
+    std::cout<<"RM_PALETTE_FVF_CALLER_TRACE_CALL name="<<call.name
+             <<" offset="<<call.offset<<" target="<<target
+             <<" expected="<<call.expected<<" match="<<(match?1:0)<<"\n";
+   }
+   std::cout<<"RM_PALETTE_FVF_CALLER_TRACE_CALL_SUMMARY matched="
+            <<matched150<<" total="<<calls150.size()<<"\n";
+   struct Pattern150{const char* name;size_t begin;size_t end;
+                     std::vector<uint8_t> bytes;};
+   const std::vector<Pattern150> patterns150={
+    {"caller_prologue",522800,522848,{0x53,0x56,0x57,0x55}},
+    {"caller_resource_key_stack_read",522992,523024,{0x8b,0x4c,0x24,0x14,0x51}},
+    {"caller_owner_global_read",523000,523024,{0x8b,0x2d,0xa4,0x97,0x09,0x00,0x55}},
+    {"owner_forward_stack_argument",518992,519016,{0x8b,0x54,0x24,0x20,0x52}},
+    {"lookup_two_arguments",517192,517216,{0x51,0x55,0xe8}},
+    {"fvf_header_signature",523136,523168,{0x46,0x56,0x46,0x20}}
+   };
+   for(const auto& pat:patterns150){
+    bool found=false;size_t where=0;
+    const size_t limit=std::min(pat.end,d150.size());
+    for(size_t p=pat.begin;p+pat.bytes.size()<=limit;++p){
+     if(std::equal(pat.bytes.begin(),pat.bytes.end(),d150.begin()+p)){
+      found=true;where=p;break;
+     }
+    }
+    std::cout<<"RM_PALETTE_FVF_CALLER_TRACE_PATTERN name="<<pat.name
+             <<" found="<<(found?1:0)
+             <<" offset="<<(found?int64_t(where):-1)<<"\n";
+   }
+   // Find raw direct relative CALL references in a bounded neighborhood only.
+   const size_t begin150=500000,end150=std::min<size_t>(550000,d150.size());
+   size_t found150=0;
+   for(size_t p=begin150;p+5<=end150;++p){
+    if(d150[p]!=0xe8)continue;
+    const uint32_t u=uint32_t(d150[p+1])|
+      (uint32_t(d150[p+2])<<8)|
+      (uint32_t(d150[p+3])<<16)|
+      (uint32_t(d150[p+4])<<24);
+    const int64_t target=int64_t(p)+5+int64_t(int32_t(u));
+    if(target==522816){
+     ++found150;
+     std::cout<<"RM_PALETTE_FVF_CALLER_TRACE_INCOMING offset="<<p
+              <<" target="<<target<<" scope=rawOpcodeCandidate\n";
+    }
+   }
+   std::cout<<"RM_PALETTE_FVF_CALLER_TRACE_INCOMING_SUMMARY candidates="
+            <<found150<<" scanBegin="<<begin150<<" scanEnd="<<end150
+            <<" limitation=rawOpcodeNotInstructionBoundaryVerified\n";
+   std::cout<<"RM_PALETTE_FVF_CALLER_TRACE_LIMITATION"
+            <<" callerEntry=provisional"
+            <<" callerResourceKeyValue=unverified"
+            <<" callerResourceKeyOrigin=unverified"
+            <<" incomingCallCoverage=bounded"
+            <<" fvfResourceIdentity=unverified"
+            <<" rmUpperPaletteProvenance=unverified\n";
+  }
+ }
+
  std::cout<<"NOTE: Trailer plausibility does not establish palette ownership.\n";
  std::cout<<"NOTE: Palette overlap is numerical only; it does not establish RM palette provenance.\n";
  return 0;
