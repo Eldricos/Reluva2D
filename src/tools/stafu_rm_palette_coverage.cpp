@@ -8343,8 +8343,8 @@ int main(int argc,char** argv){
    };
    const auto u32=[&](uint64_t p)->uint32_t{
     return p+4<=d.size()?uint32_t(d[size_t(p)])|
-      (uint32_t(d[size_t(p)+1])<<16)|
-      (uint32_t(d[size_t(p)+2])<<8)|
+      (uint32_t(d[size_t(p)+1])<<8)|
+      (uint32_t(d[size_t(p)+2])<<16)|
       (uint32_t(d[size_t(p)+3])<<24):0;
    };
    const uint64_t first=u16(4)?uint64_t(u16(4)-1)*512+(u16(2)?u16(2):512):0;
