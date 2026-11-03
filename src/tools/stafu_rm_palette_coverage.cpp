@@ -6401,8 +6401,8 @@ int main(int argc,char** argv){
    };
    const auto u32=[&](uint64_t p)->uint32_t{
     return p+4<=d.size()?uint32_t(d[size_t(p)])|
-      (uint32_t(d[size_t(p)+1])<<16)|
-      (uint32_t(d[size_t(p)+2])<<8)|
+      (uint32_t(d[size_t(p)+1])<<8)|
+      (uint32_t(d[size_t(p)+2])<<16)|
       (uint32_t(d[size_t(p)+3])<<24):0;
    };
    const auto le32=[&](uint64_t p)->uint32_t{
@@ -8408,16 +8408,16 @@ int main(int argc,char** argv){
      };
      // Fixed instruction encodings from the observed code. These
      // checks intentionally do not treat a raw-byte match as execution.
-     const bool firstCopy=byteAt(510705,0x8D)&&byteAt(510706,0x34)&&
-       byteAt(510707,0x2B)&&byteAt(510708,0x29)&&
-       byteAt(510709,0xD9)&&byteAt(510710,0x57)&&
-       byteAt(510711,0x89)&&byteAt(510712,0xC8)&&
-       byteAt(510713,0xC1)&&byteAt(510714,0xE9)&&
-       byteAt(510715,0x02)&&byteAt(510716,0xF2)&&
-       byteAt(510717,0xA5)&&byteAt(510718,0x8A)&&
-       byteAt(510719,0xC8)&&byteAt(510720,0x80)&&
-       byteAt(510721,0xE1)&&byteAt(510722,0x03)&&
-       byteAt(510723,0xF2)&&byteAt(510724,0xA4);
+     const bool firstCopy=byteAt(510707,0x8D)&&byteAt(510708,0x34)&&
+       byteAt(510709,0x2B)&&byteAt(510710,0x29)&&
+       byteAt(510711,0xD9)&&byteAt(510712,0x57)&&
+       byteAt(510713,0x89)&&byteAt(510714,0xC8)&&
+       byteAt(510715,0xC1)&&byteAt(510716,0xE9)&&
+       byteAt(510717,0x02)&&byteAt(510718,0xF2)&&
+       byteAt(510719,0xA5)&&byteAt(510720,0x8A)&&
+       byteAt(510721,0xC8)&&byteAt(510722,0x80)&&
+       byteAt(510723,0xE1)&&byteAt(510724,0x03)&&
+       byteAt(510725,0xF2)&&byteAt(510726,0xA4);
      std::cout<<"RM_PALETTE_FVF_LE_COPY_OPERANDS_SEQUENCE"
               <<" region=rmLoader"
               <<" instructionBytesMatch="<<(firstCopy?1:0)
