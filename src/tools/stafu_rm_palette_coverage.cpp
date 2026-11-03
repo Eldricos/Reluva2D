@@ -6534,6 +6534,172 @@ int main(int argc,char** argv){
   }
  }
 
+
+ // Milestone 170: test LE file-backed mapping, entry bytes and virtual-only extents.
+ {
+  std::ifstream in170(std::filesystem::path(argv[1])/"STTNG.OVL",std::ios::binary);
+  if(!in170){
+   std::cout<<"RM_PALETTE_FVF_LE_VERIFY_STATUS read=0\n";
+  }else{
+   const std::vector<uint8_t> d((std::istreambuf_iterator<char>(in170)),
+                                 std::istreambuf_iterator<char>());
+   const auto u16=[&](uint64_t p)->uint32_t{
+    return p+2<=d.size()?uint32_t(d[size_t(p)])|
+      (uint32_t(d[size_t(p)+1])<<8):0;
+   };
+   const auto u32=[&](uint64_t p)->uint32_t{
+    return p+4<=d.size()?uint32_t(d[size_t(p)])|
+      (uint32_t(d[size_t(p)+1])<<8)|
+      (uint32_t(d[size_t(p)+2])<<16)|
+      (uint32_t(d[size_t(p)+3])<<24):0;
+   };
+   const uint64_t first=u16(4)?uint64_t(u16(4)-1)*512+(u16(2)?u16(2):512):0;
+   const bool firstOk=first+36<=d.size()&&d[size_t(first)]=='B'&&d[size_t(first)+1]=='W';
+   const uint64_t second=firstOk?first+u32(first+32):0;
+   const bool secondOk=firstOk&&second+36<=d.size()&&
+     d[size_t(second)]=='B'&&d[size_t(second)+1]=='W';
+   const uint64_t mz=secondOk?second+u32(second+32):0;
+   const bool mzOk=secondOk&&mz+64<=d.size()&&d[size_t(mz)]=='M'&&d[size_t(mz)+1]=='Z';
+   const uint64_t mzBytes=mzOk&&u16(mz+4)?
+     uint64_t(u16(mz+4)-1)*512+(u16(mz+2)?u16(mz+2):512):0;
+   const uint64_t le=mz+mzBytes+2;
+   const bool leOk=mzOk&&le+0xAC<=d.size()&&d[size_t(le)]=='L'&&d[size_t(le)+1]=='E';
+   std::cout<<"RM_PALETTE_FVF_LE_VERIFY_STATUS read=1 bytes="<<d.size()
+            <<" le="<<le<<" leSignature="<<(leOk?1:0)
+            <<" analysis=readOnly\n";
+   if(leOk){
+    const uint32_t pages=u32(le+0x14),pageSize=u32(le+0x28);
+    const uint32_t lastPage=u32(le+0x2C),objects=u32(le+0x44);
+    const uint32_t objectRel=u32(le+0x40),mapRel=u32(le+0x48);
+    const uint32_t dataBase=u32(le+0x80);
+    const uint32_t entryObj=u32(le+0x18),entryOff=u32(le+0x1C);
+    const uint64_t objectTable=le+objectRel,mapTable=le+mapRel;
+    const bool valid=pages>0&&pages<=1000000&&objects>0&&objects<=65536&&
+      pageSize>=512&&pageSize<=65536&&(pageSize&(pageSize-1))==0&&
+      lastPage>0&&lastPage<=pageSize&&
+      objectTable<=d.size()&&uint64_t(objects)*24<=d.size()-objectTable&&
+      mapTable<=d.size()&&uint64_t(pages)*4<=d.size()-mapTable;
+    std::cout<<"RM_PALETTE_FVF_LE_VERIFY_TABLES valid="<<(valid?1:0)
+             <<" pages="<<pages<<" pageSize="<<pageSize
+             <<" lastPageBytes="<<lastPage<<" objectCount="<<objects
+             <<" dataBase="<<dataBase<<"\n";
+    if(valid){
+     const auto physicalPage=[&](uint64_t index)->uint32_t{
+      if(index<1||index>pages)return 0;
+      const uint64_t p=mapTable+(index-1)*4;
+      return (uint32_t(d[size_t(p)])<<16)|
+        (uint32_t(d[size_t(p)+1])<<8)|uint32_t(d[size_t(p)+2]);
+     };
+     const auto objectMap=[&](uint32_t object,uint64_t offset,
+                               const char* name){
+      if(object<1||object>objects)return;
+      const uint64_t p=objectTable+uint64_t(object-1)*24;
+      const uint64_t virtualSize=u32(p),firstPage=u32(p+12),count=u32(p+16);
+      const uint64_t logical=offset/pageSize,inPage=offset%pageSize;
+      const uint64_t index=firstPage+logical;
+      const bool withinVirtual=offset<virtualSize;
+      const bool withinAllocated=logical<count&&index>=1&&index<=pages;
+      const uint32_t physical=withinAllocated?physicalPage(index):0;
+      const uint64_t file=physical?
+        uint64_t(dataBase)+uint64_t(physical-1)*pageSize+inPage:0;
+      const uint64_t effective=physical==pages?lastPage:pageSize;
+      const bool backed=withinVirtual&&withinAllocated&&physical>0&&
+        physical<=pages&&inPage<effective&&file<d.size();
+      std::cout<<"RM_PALETTE_FVF_LE_VERIFY_TRANSLATE name="<<name
+               <<" object="<<object<<" objectOffset="<<offset
+               <<" virtualSize="<<virtualSize<<" firstPage="<<firstPage
+               <<" logicalPage="<<logical<<" pageMapIndex="<<index
+               <<" physicalPage="<<physical<<" inPage="<<inPage
+               <<" withinVirtual="<<(withinVirtual?1:0)
+               <<" withinAllocated="<<(withinAllocated?1:0)
+               <<" fileBacked="<<(backed?1:0)
+               <<" candidateFile="<<(backed?file:0)
+               <<" fileByte0="<<(backed?unsigned(d[size_t(file)]):0)
+               <<" interpretation=provisional\n";
+      if(backed&&std::string(name)=="entry"){
+       const uint64_t end=std::min(uint64_t(d.size()),std::min(file+64,
+         file+(effective-inPage)));
+       for(uint64_t at=file;at<end;at+=16){
+        std::cout<<"RM_PALETTE_FVF_LE_VERIFY_HEX region=entry offset="<<at<<" hex=";
+        for(uint64_t j=at;j<std::min(at+16,end);++j){
+         if(j!=at)std::cout<<" ";
+         std::cout<<std::hex<<std::setw(2)<<std::setfill('0')
+                  <<unsigned(d[size_t(j)]);
+        }
+        std::cout<<std::dec<<std::setfill(' ')<<"\n";
+       }
+      }
+     };
+     for(uint32_t i=1;i<=std::min(objects,uint32_t(8));++i){
+      const uint64_t p=objectTable+uint64_t(i-1)*24;
+      const uint64_t virtualSize=u32(p),count=u32(p+16);
+      const uint64_t capacity=count*uint64_t(pageSize);
+      std::cout<<"RM_PALETTE_FVF_LE_VERIFY_OBJECT index="<<i
+               <<" virtualSize="<<virtualSize
+               <<" filePageCapacity="<<capacity
+               <<" virtualBeyondPageCapacity="<<(virtualSize>capacity?virtualSize-capacity:0)
+               <<" pageCapacityBeyondVirtual="<<(capacity>virtualSize?capacity-virtualSize:0)
+               <<" zeroFillBehavior=unverified\n";
+      if(virtualSize>0)objectMap(i,0,"object_start");
+      if(capacity>0&&capacity<=virtualSize)objectMap(i,capacity-1,"last_allocated_byte");
+      if(virtualSize>capacity)objectMap(i,capacity,"first_virtual_only_byte");
+     }
+     objectMap(entryObj,entryOff,"entry");
+     const uint64_t known=531027;
+     const uint64_t physicalIndex=known>=dataBase?(known-dataBase)/pageSize+1:0;
+     const uint64_t inPage=known>=dataBase?(known-dataBase)%pageSize:0;
+     std::cout<<"RM_PALETTE_FVF_LE_VERIFY_KNOWN_CODE fileOffset="<<known
+              <<" physicalPageCandidate="<<physicalIndex
+              <<" inPage="<<inPage
+              <<" pageWithinDeclared="<<(physicalIndex>=1&&physicalIndex<=pages?1:0)
+              <<" objectAttribution=unverified\n";
+     if(physicalIndex>=1&&physicalIndex<=pages){
+      for(uint32_t i=1;i<=std::min(objects,uint32_t(8));++i){
+       const uint64_t p=objectTable+uint64_t(i-1)*24;
+       const uint64_t firstPage=u32(p+12),count=u32(p+16);
+       if(physicalIndex>=firstPage&&physicalIndex<firstPage+count){
+        const uint64_t offset=(physicalIndex-firstPage)*pageSize+inPage;
+        objectMap(i,offset,"known_code");
+       }
+      }
+     }
+     const uint64_t lastStart=uint64_t(dataBase)+uint64_t(pages-1)*pageSize;
+     const uint64_t declaredEnd=lastStart+lastPage;
+     std::cout<<"RM_PALETTE_FVF_LE_VERIFY_END lastPageStart="<<lastStart
+              <<" declaredDataEnd="<<declaredEnd
+              <<" remainingFileBytes="<<(declaredEnd<=d.size()?d.size()-declaredEnd:0)
+              <<" lastPageInFile="<<(declaredEnd<=d.size()?1:0)
+              <<" followingRegion=unverified\n";
+     const std::vector<std::pair<const char*,uint64_t>> sites={
+       {"last_page",lastStart},{"data_end_before",declaredEnd>=32?declaredEnd-32:0},
+       {"data_end_after",declaredEnd}
+     };
+     for(const auto& site:sites){
+      if(site.second>=d.size())continue;
+      const uint64_t end=std::min(site.second+64,uint64_t(d.size()));
+      for(uint64_t at=site.second;at<end;at+=16){
+       std::cout<<"RM_PALETTE_FVF_LE_VERIFY_HEX region="<<site.first
+                <<" offset="<<at<<" hex=";
+       for(uint64_t j=at;j<std::min(at+16,end);++j){
+        if(j!=at)std::cout<<" ";
+        std::cout<<std::hex<<std::setw(2)<<std::setfill('0')
+                 <<unsigned(d[size_t(j)]);
+       }
+       std::cout<<std::dec<<std::setfill(' ')<<"\n";
+      }
+     }
+    }
+   }
+   std::cout<<"RM_PALETTE_FVF_LE_VERIFY_LIMITATION"
+            <<" bytePatternsNotDisassembly=1"
+            <<" objectMapping=provisional"
+            <<" virtualOnlyInitialization=unverified"
+            <<" relocations=notApplied"
+            <<" immediate0xF84Meaning=unverified"
+            <<" rmUpperPaletteProvenance=unverified\n";
+  }
+ }
+
  std::cout<<"NOTE: Trailer plausibility does not establish palette ownership.\n";
  std::cout<<"NOTE: Palette overlap is numerical only; it does not establish RM palette provenance.\n";
  return 0;
