@@ -7501,6 +7501,167 @@ int main(int argc,char** argv){
   }
  }
 
+
+ // Milestone 176: bounded relative-call inspection at relocation-backed filename sites.
+ {
+  std::ifstream in176(std::filesystem::path(argv[1])/"STTNG.OVL",std::ios::binary);
+  if(!in176){
+   std::cout<<"RM_PALETTE_FVF_LE_CALL_STATUS read=0\n";
+  }else{
+   const std::vector<uint8_t> d((std::istreambuf_iterator<char>(in176)),
+                                 std::istreambuf_iterator<char>());
+   const auto u16=[&](uint64_t p)->uint32_t{
+    return p+2<=d.size()?uint32_t(d[size_t(p)])|
+      (uint32_t(d[size_t(p)+1])<<8):0;
+   };
+   const auto u32=[&](uint64_t p)->uint32_t{
+    return p+4<=d.size()?uint32_t(d[size_t(p)])|
+      (uint32_t(d[size_t(p)+1])<<8)|
+      (uint32_t(d[size_t(p)+2])<<16)|
+      (uint32_t(d[size_t(p)+3])<<24):0;
+   };
+   const uint64_t first=u16(4)?uint64_t(u16(4)-1)*512+(u16(2)?u16(2):512):0;
+   const bool firstOk=first+36<=d.size()&&d[size_t(first)]=='B'&&d[size_t(first)+1]=='W';
+   const uint64_t second=firstOk?first+u32(first+32):0;
+   const bool secondOk=firstOk&&second+36<=d.size()&&
+     d[size_t(second)]=='B'&&d[size_t(second)+1]=='W';
+   const uint64_t mz=secondOk?second+u32(second+32):0;
+   const bool mzOk=secondOk&&mz+64<=d.size()&&d[size_t(mz)]=='M'&&d[size_t(mz)+1]=='Z';
+   const uint64_t mzBytes=mzOk&&u16(mz+4)?
+     uint64_t(u16(mz+4)-1)*512+(u16(mz+2)?u16(mz+2):512):0;
+   const uint64_t le=mz+mzBytes+2;
+   const bool leOk=mzOk&&le+0xAC<=d.size()&&d[size_t(le)]=='L'&&d[size_t(le)+1]=='E';
+   std::cout<<"RM_PALETTE_FVF_LE_CALL_STATUS read=1 le="<<le
+            <<" leSignature="<<(leOk?1:0)<<" readOnly=1\n";
+   if(leOk){
+    const uint64_t base=mz+uint64_t(u32(le+0x80));
+    const uint32_t pages=u32(le+0x14),pageSize=u32(le+0x28);
+    const uint64_t obj=le+u32(le+0x40),map=le+u32(le+0x48);
+    const uint32_t objects=u32(le+0x44);
+    const bool valid=pages>0&&pages<=1000000&&pageSize==4096&&
+      objects>=2&&objects<=65536&&obj<=d.size()&&
+      uint64_t(objects)*24<=d.size()-obj&&map<=d.size()&&
+      uint64_t(pages)*4<=d.size()-map;
+    std::cout<<"RM_PALETTE_FVF_LE_CALL_TABLES valid="<<(valid?1:0)
+             <<" dataBase="<<base<<" object1Virtual="<<(valid?u32(obj):0)
+             <<" object1Pages="<<(valid?u32(obj+16):0)<<"\n";
+    if(valid){
+     struct Site176{const char* name;uint64_t operand;uint32_t target;};
+     const std::vector<Site176> sites={
+       {"ENDGAME.RM",509894,3058},
+       {"STANDARD.PAL_A",510403,3080},
+       {"movie.map",531028,3972},
+       {"STANDARD.PAL_B",758290,24606},
+       {"BRIDGE.RM_A",817000,26875},
+       {"BRIDGE.RM_B",827168,27710},
+       {"VIEWSCR.RM",832354,28244},
+       {"TRANSP.RM",858700,30239},
+       {"STANDARD.PAL_C",1010603,50406},
+       {"STANDARD.PAL_D",1012235,50562}
+     };
+     const uint64_t object1First=u32(obj+12),object1Pages=u32(obj+16);
+     const uint64_t object1Virtual=u32(obj);
+     const auto mapObject1=[&](int64_t offset)->int64_t{
+      if(offset<0||uint64_t(offset)>=object1Virtual)return -1;
+      const uint64_t logical=uint64_t(offset)/pageSize;
+      if(logical>=object1Pages)return -1;
+      const uint64_t index=object1First+logical;
+      if(index<1||index>pages)return -1;
+      const uint64_t p=map+(index-1)*4;
+      const uint32_t physical=(uint32_t(d[size_t(p)])<<16)|
+        (uint32_t(d[size_t(p)+1])<<8)|uint32_t(d[size_t(p)+2]);
+      if(physical<1||physical>pages)return -1;
+      const uint64_t file=base+uint64_t(physical-1)*pageSize+
+        uint64_t(offset)%pageSize;
+      return file<d.size()?int64_t(file):-1;
+     };
+     uint64_t resolved=0,unresolved=0,common=0;
+     std::vector<int64_t> targets;
+     for(const auto& site:sites){
+      const bool operandValid=site.operand>=base+1&&site.operand+4<=d.size()&&
+        u32(site.operand)==site.target;
+      const int64_t sourceObjectOffset=operandValid?
+        int64_t(site.operand-base):-1;
+      const bool inObject1=sourceObjectOffset>=0&&
+        uint64_t(sourceObjectOffset)<object1Virtual;
+      const uint64_t searchStart=site.operand+4;
+      const uint64_t searchEnd=std::min(uint64_t(d.size()),searchStart+16);
+      int64_t callFile=-1,callTarget=-1;
+      uint64_t displacementRaw=0;
+      for(uint64_t p=searchStart;p+5<=searchEnd;++p){
+       if(d[size_t(p)]!=0xE8)continue;
+       // Only accept an E8 preceded by the expected push-eax opcode;
+       // this avoids interpreting arbitrary immediate bytes as instructions.
+       if(p==0||d[size_t(p-1)]!=0x50)continue;
+       callFile=int64_t(p);
+       displacementRaw=u32(p+1);
+       const int64_t disp=displacementRaw>=0x80000000ULL?
+         int64_t(displacementRaw)-0x100000000LL:int64_t(displacementRaw);
+       const int64_t sourceNext=int64_t(p+5)-int64_t(base);
+       callTarget=mapObject1(sourceNext+disp);
+       break;
+      }
+      if(callFile>=0&&callTarget>=0){++resolved;targets.push_back(callTarget);}
+      else ++unresolved;
+      std::cout<<"RM_PALETTE_FVF_LE_CALL_SITE name="<<site.name
+               <<" operandFile="<<site.operand
+               <<" operandMatchesStringOffset="<<(operandValid?1:0)
+               <<" sourceObject1="<<(inObject1?1:0)
+               <<" callFile="<<callFile
+               <<" rel32Raw="<<displacementRaw
+               <<" targetFile="<<callTarget
+               <<" targetMapped="<<(callTarget>=0?1:0)
+               <<" callCandidate=pushEaxThenE8\n";
+      if(callFile>=0){
+       const uint64_t from=site.operand>=8?site.operand-8:0;
+       const uint64_t to=std::min(uint64_t(d.size()),uint64_t(callFile)+10);
+       std::cout<<"RM_PALETTE_FVF_LE_CALL_HEX name="<<site.name
+                <<" start="<<from<<" hex=";
+       for(uint64_t p=from;p<to;++p){
+        if(p!=from)std::cout<<" ";
+        std::cout<<std::hex<<std::setw(2)<<std::setfill('0')
+                 <<unsigned(d[size_t(p)]);
+       }
+       std::cout<<std::dec<<std::setfill(' ')<<"\n";
+      }
+     }
+     for(size_t i=0;i<sites.size();++i){
+      // Group by printed target via a second bounded scan, avoiding assumptions
+      // about function identity beyond identical mapped call destinations.
+      const uint64_t p0=sites[i].operand+4;
+      int64_t target=-1;
+      for(uint64_t p=p0;p+5<=std::min(uint64_t(d.size()),p0+16);++p){
+       if(d[size_t(p)]==0xE8&&p>0&&d[size_t(p-1)]==0x50){
+        const uint64_t raw=u32(p+1);
+        const int64_t disp=raw>=0x80000000ULL?
+          int64_t(raw)-0x100000000LL:int64_t(raw);
+        target=mapObject1(int64_t(p+5)-int64_t(base)+disp);
+        break;
+       }
+      }
+      if(target<0)continue;
+      uint64_t count=0;
+      for(const auto t:targets)if(t==target)++count;
+      if(count>1)++common;
+      std::cout<<"RM_PALETTE_FVF_LE_CALL_GROUP name="<<sites[i].name
+               <<" targetFile="<<target<<" sitesWithSameTarget="<<count
+               <<" functionIdentity=entryCandidate\n";
+     }
+     std::cout<<"RM_PALETTE_FVF_LE_CALL_SUMMARY sites="<<sites.size()
+              <<" resolved="<<resolved<<" unresolved="<<unresolved
+              <<" sitesWithSharedTarget="<<common
+              <<" constant0x23Meaning=unverified"
+              <<" loaderSemantics=unverified\n";
+    }
+   }
+   std::cout<<"RM_PALETTE_FVF_LE_CALL_LIMITATION"
+            <<" scansOnlyPushEaxE8Within16Bytes=1"
+            <<" noFullInstructionDecoder=1"
+            <<" mappedTargetsNotVerifiedFunctionStarts=1"
+            <<" rmUpperPaletteProvenance=unverified\n";
+  }
+ }
+
  std::cout<<"NOTE: Trailer plausibility does not establish palette ownership.\n";
  std::cout<<"NOTE: Palette overlap is numerical only; it does not establish RM palette provenance.\n";
  return 0;
