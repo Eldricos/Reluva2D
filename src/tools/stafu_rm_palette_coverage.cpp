@@ -4919,6 +4919,93 @@ int main(int argc,char** argv){
   }
  }
 
+
+ // Milestone 154: verify the parent entry and table-based caller evidence.
+ {
+  std::ifstream in154(std::filesystem::path(argv[1])/"STTNG.OVL",std::ios::binary);
+  if(!in154){
+   std::cout<<"RM_PALETTE_FVF_TABLE_CALLER_STATUS read=0\n";
+  }else{
+   const std::vector<uint8_t> d154(
+    (std::istreambuf_iterator<char>(in154)),std::istreambuf_iterator<char>());
+   std::cout<<"RM_PALETTE_FVF_TABLE_CALLER_STATUS read=1 bytes="
+            <<d154.size()<<" target=533098 scope=verifiedEntryAndTableArgument\n";
+   struct Region154{const char* name;size_t begin;size_t end;};
+   const std::vector<Region154> regions154={
+    {"parent_boundary",533056,533152},
+    {"table_caller_entry",531840,532080},
+    {"table_caller_setup",532080,532288},
+    {"table_caller_iteration",532288,532432},
+    {"table_caller_followthrough",532416,532512},
+    {"global_table_context",533136,533224}
+   };
+   for(const auto& region:regions154){
+    for(size_t p=region.begin;p<std::min(region.end,d154.size());p+=16){
+     std::cout<<"RM_PALETTE_FVF_TABLE_CALLER_HEX region="<<region.name
+              <<" offset="<<p<<" hex=";
+     for(size_t j=p;j<std::min(p+16,std::min(region.end,d154.size()));++j){
+      if(j!=p)std::cout<<" ";
+      std::cout<<std::hex<<std::setw(2)<<std::setfill('0')<<unsigned(d154[j]);
+     }
+     std::cout<<std::dec<<std::setfill(' ')<<"\n";
+    }
+   }
+   struct Pattern154{const char* name;size_t begin;size_t end;std::vector<uint8_t> bytes;};
+   const std::vector<Pattern154> patterns154={
+    {"parent_entry_pushes",533088,533112,{0x53,0x56,0x57,0x55,0x89,0xe5}},
+    {"parent_local_allocation",533098,533120,{0x81,0xec,0x50,0x00,0x00,0x00}},
+    {"table_record_stride_shift",532320,532408,{0xc1,0xe0,0x04}},
+    {"table_base_global_read",532320,532408,{0x8b,0x15,0x30,0xa6,0x09,0x00}},
+    {"table_field_push",532368,532404,{0xff,0x70,0x04}},
+    {"table_call_cleanup",532398,532412,{0x83,0xc4,0x04}}
+   };
+   size_t matched154=0;
+   for(const auto& pat:patterns154){
+    bool found=false;size_t where=0;
+    const size_t limit=std::min(pat.end,d154.size());
+    for(size_t p=pat.begin;p+pat.bytes.size()<=limit;++p){
+     if(std::equal(pat.bytes.begin(),pat.bytes.end(),d154.begin()+p)){
+      found=true;where=p;break;
+     }
+    }
+    matched154+=found?1:0;
+    std::cout<<"RM_PALETTE_FVF_TABLE_CALLER_PATTERN name="<<pat.name
+             <<" found="<<(found?1:0)
+             <<" offset="<<(found?int64_t(where):-1)<<"\n";
+   }
+   std::cout<<"RM_PALETTE_FVF_TABLE_CALLER_PATTERN_SUMMARY matched="
+            <<matched154<<" total="<<patterns154.size()<<"\n";
+   const std::vector<size_t> sites154={
+    507108,507122,532398,714909,714954,840089,1010578,1042631
+   };
+   size_t calls154=0;
+   for(size_t p:sites154){
+    int64_t target=-1;
+    if(p+5<=d154.size()&&d154[p]==0xe8){
+     const uint32_t u=uint32_t(d154[p+1])|
+       (uint32_t(d154[p+2])<<8)|
+       (uint32_t(d154[p+3])<<16)|
+       (uint32_t(d154[p+4])<<24);
+     target=int64_t(p)+5+int64_t(int32_t(u));
+    }
+    const bool match=target==533098;
+    calls154+=match?1:0;
+    std::cout<<"RM_PALETTE_FVF_TABLE_CALLER_CALL offset="<<p
+             <<" target="<<target<<" expected=533098 match="<<(match?1:0)
+             <<" instructionBoundaryVerified=0\n";
+   }
+   std::cout<<"RM_PALETTE_FVF_TABLE_CALLER_CALL_SUMMARY matched="
+            <<calls154<<" total="<<sites154.size()<<"\n";
+   std::cout<<"RM_PALETTE_FVF_TABLE_CALLER_LIMITATION"
+            <<" entryBoundary=byteSequenceSupported"
+            <<" callerDisassembly=partial"
+            <<" tableRecordMeaning=unverified"
+            <<" tableFieldType=unverified"
+            <<" resourceKeyIdentity=unverified"
+            <<" rmUpperPaletteProvenance=unverified\n";
+  }
+ }
+
  std::cout<<"NOTE: Trailer plausibility does not establish palette ownership.\n";
  std::cout<<"NOTE: Palette overlap is numerical only; it does not establish RM palette provenance.\n";
  return 0;
