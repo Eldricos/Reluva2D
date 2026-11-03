@@ -7011,6 +7011,164 @@ int main(int argc,char** argv){
   }
  }
 
+
+ // Milestone 173: inspect one LE fixup operand and cross-page source exceptions.
+ {
+  std::ifstream in173(std::filesystem::path(argv[1])/"STTNG.OVL",std::ios::binary);
+  if(!in173){
+   std::cout<<"RM_PALETTE_FVF_LE_OPERAND_STATUS read=0\n";
+  }else{
+   const std::vector<uint8_t> d((std::istreambuf_iterator<char>(in173)),
+                                 std::istreambuf_iterator<char>());
+   const auto u16=[&](uint64_t p)->uint32_t{
+    return p+2<=d.size()?uint32_t(d[size_t(p)])|
+      (uint32_t(d[size_t(p)+1])<<8):0;
+   };
+   const auto u32=[&](uint64_t p)->uint32_t{
+    return p+4<=d.size()?uint32_t(d[size_t(p)])|
+      (uint32_t(d[size_t(p)+1])<<8)|
+      (uint32_t(d[size_t(p)+2])<<16)|
+      (uint32_t(d[size_t(p)+3])<<24):0;
+   };
+   const uint64_t first=u16(4)?uint64_t(u16(4)-1)*512+(u16(2)?u16(2):512):0;
+   const bool firstOk=first+36<=d.size()&&d[size_t(first)]=='B'&&d[size_t(first)+1]=='W';
+   const uint64_t second=firstOk?first+u32(first+32):0;
+   const bool secondOk=firstOk&&second+36<=d.size()&&
+     d[size_t(second)]=='B'&&d[size_t(second)+1]=='W';
+   const uint64_t mz=secondOk?second+u32(second+32):0;
+   const bool mzOk=secondOk&&mz+64<=d.size()&&d[size_t(mz)]=='M'&&d[size_t(mz)+1]=='Z';
+   const uint64_t mzBytes=mzOk&&u16(mz+4)?
+     uint64_t(u16(mz+4)-1)*512+(u16(mz+2)?u16(mz+2):512):0;
+   const uint64_t le=mz+mzBytes+2;
+   const bool leOk=mzOk&&le+0xAC<=d.size()&&d[size_t(le)]=='L'&&d[size_t(le)+1]=='E';
+   std::cout<<"RM_PALETTE_FVF_LE_OPERAND_STATUS read=1 le="<<le
+            <<" mz="<<mz<<" leSignature="<<(leOk?1:0)
+            <<" readOnly=1\n";
+   if(leOk){
+    const uint32_t pages=u32(le+0x14),pageSize=u32(le+0x28);
+    const uint32_t objects=u32(le+0x44),lastPage=u32(le+0x2C);
+    const uint64_t objectTable=le+u32(le+0x40);
+    const uint64_t pt=le+u32(le+0x68),rt=le+u32(le+0x6C);
+    const uint64_t base=mz+uint64_t(u32(le+0x80));
+    const bool valid=pages>0&&pages<=1000000&&pageSize==4096&&
+      objects>0&&objects<=65536&&lastPage>0&&lastPage<=pageSize&&
+      objectTable<=d.size()&&uint64_t(objects)*24<=d.size()-objectTable&&
+      pt<=d.size()&&uint64_t(pages+1)*4<=d.size()-pt&&rt<=d.size();
+    const uint64_t total=valid?u32(pt+uint64_t(pages)*4):0;
+    const bool recordsValid=valid&&total<=d.size()-rt;
+    std::cout<<"RM_PALETTE_FVF_LE_OPERAND_TABLES valid="<<(recordsValid?1:0)
+             <<" pageSize="<<pageSize<<" pages="<<pages
+             <<" dataBase="<<base<<" recordsEnd="<<(recordsValid?rt+total:0)
+             <<" physicalEnd="<<(valid?base+uint64_t(pages-1)*pageSize+lastPage:0)
+             <<"\n";
+    if(recordsValid){
+     const uint64_t lookupFile=531027;
+     const uint32_t lookupPage=lookupFile>=base?
+       uint32_t((lookupFile-base)/pageSize+1):0;
+     const uint32_t lookupWithin=lookupFile>=base?
+       uint32_t((lookupFile-base)%pageSize):0;
+     uint64_t exceptions=0,crossPagePossible=0,farOutside=0;
+     uint64_t exactRecords=0,exactTarget=0;
+     for(uint32_t page=1;page<=pages;++page){
+      const uint64_t start=u32(pt+uint64_t(page-1)*4);
+      const uint64_t end=u32(pt+uint64_t(page)*4);
+      if(end<start||end>total)continue;
+      uint64_t at=rt+start;
+      while(at<rt+end){
+       if(rt+end-at<5)break;
+       const uint8_t source=d[size_t(at)],flags=d[size_t(at+1)];
+       if(source!=0x07||(flags!=0x00&&flags!=0x10))break;
+       const uint64_t length=flags==0x10?9:7;
+       if(rt+end-at<length)break;
+       const uint32_t sourceOffset=u16(at+2);
+       const uint32_t targetObject=unsigned(d[size_t(at+4)]);
+       const uint32_t targetOffset=flags==0x10?u32(at+5):u16(at+5);
+       if(sourceOffset>=pageSize){
+        ++exceptions;
+        // A 32-bit fixup can begin near the end of a page; source
+        // offsets beyond the page itself require separate explanation.
+        if(sourceOffset<pageSize+4)++crossPagePossible;
+        else ++farOutside;
+        if(exceptions<=32){
+         std::cout<<"RM_PALETTE_FVF_LE_OPERAND_EXCEPTION page="<<page
+                  <<" sourceOffset="<<sourceOffset
+                  <<" excess="<<sourceOffset-pageSize
+                  <<" recordOffset="<<at
+                  <<" targetObject="<<targetObject
+                  <<" targetOffset="<<targetOffset
+                  <<" crossPage=unverified\n";
+        }
+       }
+       if(page==lookupPage&&sourceOffset>=lookupWithin&&
+          sourceOffset<=lookupWithin+4){
+        ++exactRecords;
+        if(targetObject==2&&targetOffset==3972)++exactTarget;
+        const uint64_t sourceFile=base+uint64_t(page-1)*pageSize+sourceOffset;
+        const uint32_t preferredBase=targetObject>=1&&targetObject<=objects?
+          u32(objectTable+uint64_t(targetObject-1)*24+4):0;
+        const uint64_t preferred=uint64_t(preferredBase)+targetOffset;
+        std::cout<<"RM_PALETTE_FVF_LE_OPERAND_FIXUP page="<<page
+                 <<" recordOffset="<<at<<" sourceType="<<unsigned(source)
+                 <<" flags="<<unsigned(flags)
+                 <<" sourceOffset="<<sourceOffset
+                 <<" sourceFile="<<sourceFile
+                 <<" targetObject="<<targetObject
+                 <<" targetOffset="<<targetOffset
+                 <<" preferredBase="<<preferredBase
+                 <<" preferredLinearCandidate="<<preferred
+                 <<" sourceFileInRange="<<(sourceFile+4<=d.size()?1:0)
+                 <<" sourceWidthCandidate=4\n";
+        if(sourceFile+4<=d.size()){
+         std::cout<<"RM_PALETTE_FVF_LE_OPERAND_RAW"
+                  <<" sourceFile="<<sourceFile
+                  <<" rawOperandLE="<<u32(sourceFile)
+                  <<" expectedObjectOffset="<<targetOffset
+                  <<" rawEqualsTargetOffset="<<(u32(sourceFile)==targetOffset?1:0)
+                  <<" loaderPatch=notApplied\n";
+        }
+       }
+       at+=length;
+      }
+     }
+     std::cout<<"RM_PALETTE_FVF_LE_OPERAND_SUMMARY"
+              <<" lookupFile="<<lookupFile
+              <<" lookupPage="<<lookupPage
+              <<" lookupWithin="<<lookupWithin
+              <<" nearbyFixups="<<exactRecords
+              <<" targetObject2Offset3972="<<exactTarget
+              <<" outOfPageSources="<<exceptions
+              <<" nearPageBoundaryExcess="<<crossPagePossible
+              <<" fartherOutside="<<farOutside
+              <<" runtimeBase=unverified\n";
+     const uint64_t start=lookupFile>=16?lookupFile-16:0;
+     const uint64_t end=std::min(uint64_t(d.size()),lookupFile+32);
+     for(uint64_t at=start;at<end;at+=16){
+      std::cout<<"RM_PALETTE_FVF_LE_OPERAND_HEX region=lookup offset="<<at<<" hex=";
+      for(uint64_t j=at;j<std::min(at+16,end);++j){
+       if(j!=at)std::cout<<" ";
+       std::cout<<std::hex<<std::setw(2)<<std::setfill('0')
+                <<unsigned(d[size_t(j)]);
+      }
+      std::cout<<std::dec<<std::setfill(' ')<<"\n";
+     }
+     const uint64_t entryOffset=u32(le+0x1C);
+     const uint64_t entryFile=base+entryOffset;
+     std::cout<<"RM_PALETTE_FVF_LE_OPERAND_ENTRY object="<<u32(le+0x18)
+              <<" offset="<<entryOffset
+              <<" object1SequentialCandidate="<<entryFile
+              <<" inFile="<<(entryFile<d.size()?1:0)
+              <<" mappingAssumption=object1Sequential\n";
+   }
+   }
+   std::cout<<"RM_PALETTE_FVF_LE_OPERAND_LIMITATION"
+            <<" source07Only=1"
+            <<" instructionDecode=byteInspectionOnly"
+            <<" crossPageSemantics=unverified"
+            <<" preferredLinearNotRuntime=1"
+            <<" upperPaletteProvenance=unverified\n";
+  }
+ }
+
  std::cout<<"NOTE: Trailer plausibility does not establish palette ownership.\n";
  std::cout<<"NOTE: Palette overlap is numerical only; it does not establish RM palette provenance.\n";
  return 0;
