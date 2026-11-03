@@ -4072,6 +4072,113 @@ int main(int argc,char** argv){
   }
  }
 
+
+ // Milestone 145: source setup and backing-field initialization evidence.
+ // Report byte-level observations without asserting a file/archive identity.
+ {
+  std::ifstream in145(std::filesystem::path(argv[1])/"STTNG.OVL",std::ios::binary);
+  if(!in145){
+   std::cout<<"RM_PALETTE_SOURCE_INIT_STATUS read=0\n";
+  }else{
+   const std::vector<uint8_t> d145(
+    (std::istreambuf_iterator<char>(in145)),std::istreambuf_iterator<char>());
+   std::cout<<"RM_PALETTE_SOURCE_INIT_STATUS read=1 bytes="
+            <<d145.size()<<" scope=setupCallerAndBackingFields\n";
+   struct Region145{const char* name;size_t start;size_t end;};
+   const std::vector<Region145> regions145={
+    {"source_setup_entry",517088,517280},
+    {"source_setup_continuation",517264,517456},
+    {"source_setup_tail",517440,517552},
+    {"backing_setup_adjacent",516832,517104},
+    {"owner_initial_call",518984,519056},
+    {"source_setup_wrapper",563000,563064},
+    {"cursor_operation",517688,517764},
+    {"transfer_memory",517780,517856},
+    {"transfer_external",517848,518112}
+   };
+   for(const auto& region:regions145){
+    for(size_t p=region.start;p<std::min(region.end,d145.size());p+=16){
+     std::cout<<"RM_PALETTE_SOURCE_INIT_HEX region="<<region.name
+              <<" offset="<<p<<" hex=";
+     for(size_t j=p;j<std::min(p+16,std::min(region.end,d145.size()));++j){
+      if(j!=p)std::cout<<" ";
+      std::cout<<std::hex<<std::setw(2)<<std::setfill('0')<<unsigned(d145[j]);
+     }
+     std::cout<<std::dec<<std::setfill(' ')<<"\n";
+    }
+   }
+   struct Call145{const char* name;size_t offset;int64_t expected;};
+   const std::vector<Call145> calls145={
+    {"owner_to_setup_wrapper",519007,563005},
+    {"setup_wrapper_to_setup",563031,517136},
+    {"owner_to_transfer_wrapper",519037,563062},
+    {"transfer_wrapper_to_reader",563092,517764},
+    {"owner_to_cursor_wrapper",519076,563123},
+    {"cursor_wrapper_to_cursor",563153,517688}
+   };
+   size_t matched145=0;
+   for(const auto& call:calls145){
+    int64_t target=-1;
+    if(call.offset+5<=d145.size()&&d145[call.offset]==0xE8){
+     const uint32_t u=uint32_t(d145[call.offset+1])|
+       (uint32_t(d145[call.offset+2])<<8)|
+       (uint32_t(d145[call.offset+3])<<16)|
+       (uint32_t(d145[call.offset+4])<<24);
+     target=int64_t(call.offset)+5+int64_t(int32_t(u));
+    }
+    const bool match=target==call.expected;
+    matched145+=match?1:0;
+    std::cout<<"RM_PALETTE_SOURCE_INIT_CALL name="<<call.name
+             <<" offset="<<call.offset<<" target="<<target
+             <<" expected="<<call.expected<<" match="<<(match?1:0)<<"\n";
+   }
+   std::cout<<"RM_PALETTE_SOURCE_INIT_CALL_SUMMARY matched="
+            <<matched145<<" total="<<calls145.size()<<"\n";
+   // Identify writes to the context's four candidate backing fields
+   // using literal x86 displacement bytes; a match is not a decoded write.
+   struct Field145{const char* name;uint32_t displacement;};
+   const std::vector<Field145> fields145={
+    {"backing_selector",0x409C},
+    {"external_base",0x40A0},
+    {"logical_cursor",0x40A4},
+    {"length_boundary",0x40A8},
+    {"memory_source",0x40AC}
+   };
+   for(const auto& field:fields145){
+    size_t count=0;
+    const size_t begin=516832,end=std::min<size_t>(518112,d145.size());
+    for(size_t p=begin;p+4<=end;++p){
+     const uint32_t v=uint32_t(d145[p])|
+       (uint32_t(d145[p+1])<<8)|
+       (uint32_t(d145[p+2])<<16)|
+       (uint32_t(d145[p+3])<<24);
+     if(v!=field.displacement)continue;
+     if(count<24){
+      std::cout<<"RM_PALETTE_SOURCE_INIT_FIELD_REFERENCE name="<<field.name
+               <<" displacement=0x"<<std::hex<<field.displacement<<std::dec
+               <<" offset="<<p<<" context=";
+      const size_t from=p>=4?p-4:0;
+      for(size_t j=from;j<std::min(p+8,d145.size());++j){
+       if(j!=from)std::cout<<" ";
+       std::cout<<std::hex<<std::setw(2)<<std::setfill('0')<<unsigned(d145[j]);
+      }
+      std::cout<<std::dec<<std::setfill(' ')<<"\n";
+     }
+     ++count;
+    }
+    std::cout<<"RM_PALETTE_SOURCE_INIT_FIELD_SUMMARY name="<<field.name
+             <<" references="<<count<<" range=516832..518112"
+             <<" semantics=notYetDecoded\n";
+   }
+   std::cout<<"RM_PALETTE_SOURCE_INIT_LIMITATION"
+            <<" fieldWrites=notYetClassified"
+            <<" sourceOpenPath=unverified"
+            <<" backingSelectorMeaning=unverified"
+            <<" fvfSourceIdentity=unverified"
+            <<" rmUpperPaletteProvenance=unverified\n";
+  }
+ }
+
  std::cout<<"NOTE: Trailer plausibility does not establish palette ownership.\n";
  std::cout<<"NOTE: Palette overlap is numerical only; it does not establish RM palette provenance.\n";
  return 0;
