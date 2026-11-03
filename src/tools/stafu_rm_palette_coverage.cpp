@@ -3813,7 +3813,7 @@ int main(int argc,char** argv){
    const std::vector<uint8_t> signature142={
     0x81,0xB8,0xCC,0x01,0x00,0x00,0x46,0x56,0x46,0x20
    };
-   size_t signatureOffset142=523149;
+   size_t signatureOffset142=523147;
    bool signatureMatch142=signatureOffset142+signature142.size()<=d142.size()&&
      std::equal(signature142.begin(),signature142.end(),d142.begin()+signatureOffset142);
    std::cout<<"RM_PALETTE_FVF_READER_SIGNATURE offset="
@@ -3904,6 +3904,80 @@ int main(int argc,char** argv){
            <<" archiveCompressedContent=notScanned"
            <<" fvfResourceIdentity=unverified"
            <<" rmUpperPaletteProvenance=unverified\n";
+ }
+
+
+ // Milestone 143: follow the actual stream transfer target and wrappers.
+ // Raw hex and CALL targets are evidence; no source-kind inference is encoded.
+ {
+  std::ifstream in143(std::filesystem::path(argv[1])/"STTNG.OVL",std::ios::binary);
+  if(!in143){
+   std::cout<<"RM_PALETTE_STREAM_TRACE_STATUS read=0\n";
+  }else{
+   const std::vector<uint8_t> d143(
+    (std::istreambuf_iterator<char>(in143)),std::istreambuf_iterator<char>());
+   std::cout<<"RM_PALETTE_STREAM_TRACE_STATUS read=1 bytes="
+            <<d143.size()<<" scope=boundedReaderAndSourceContext\n";
+   struct Region143{const char* name;size_t start;size_t end;};
+   const std::vector<Region143> regions143={
+    {"transfer_entry",517728,517968},
+    {"transfer_continuation",517952,518208},
+    {"setup_wrapper",562992,563064},
+    {"transfer_wrapper",563056,563128},
+    {"intermediate_wrapper",563120,563208},
+    {"owner_source_assignment",518984,519056},
+    {"owner_source_use",519048,519192},
+    {"owner_source_followup",519192,519384},
+    {"caller_source_context",522944,523040},
+    {"fvf_validation",523136,523208}
+   };
+   for(const auto& region:regions143){
+    for(size_t p=region.start;p<std::min(region.end,d143.size());p+=16){
+     std::cout<<"RM_PALETTE_STREAM_TRACE_HEX region="<<region.name
+              <<" offset="<<p<<" hex=";
+     for(size_t j=p;j<std::min(p+16,std::min(region.end,d143.size()));++j){
+      if(j!=p)std::cout<<" ";
+      std::cout<<std::hex<<std::setw(2)<<std::setfill('0')<<unsigned(d143[j]);
+     }
+     std::cout<<std::dec<<std::setfill(' ')<<"\n";
+    }
+   }
+   struct Call143{const char* name;size_t offset;int64_t expected;};
+   const std::vector<Call143> calls143={
+    {"setup_wrapper_forward",563027,-1},
+    {"transfer_wrapper_forward",563092,517764},
+    {"intermediate_wrapper_forward",563153,-1},
+    {"owner_initial_setup",519007,563005},
+    {"owner_header_96",519037,563062},
+    {"owner_intermediate",519076,563123}
+   };
+   size_t verified143=0;
+   for(const auto& call:calls143){
+    int64_t target=-1;
+    if(call.offset+5<=d143.size()&&d143[call.offset]==0xE8){
+     const uint32_t u=uint32_t(d143[call.offset+1])|
+       (uint32_t(d143[call.offset+2])<<8)|
+       (uint32_t(d143[call.offset+3])<<16)|
+       (uint32_t(d143[call.offset+4])<<24);
+     target=int64_t(call.offset)+5+int64_t(int32_t(u));
+    }
+    const bool match=call.expected<0?target>=0:target==call.expected;
+    if(match)++verified143;
+    std::cout<<"RM_PALETTE_STREAM_TRACE_CALL name="<<call.name
+             <<" offset="<<call.offset<<" target="<<target
+             <<" expected="<<call.expected
+             <<" match="<<(match?1:0)
+             <<" expectedMinusOne=opcodeOnly\n";
+   }
+   std::cout<<"RM_PALETTE_STREAM_TRACE_CALL_SUMMARY matched="
+            <<verified143<<" total="<<calls143.size()<<"\n";
+   std::cout<<"RM_PALETTE_STREAM_TRACE_LIMITATION"
+            <<" transferSourceKind=unverified"
+            <<" streamImplementation=unverified"
+            <<" ownerSourceProvenance=unverified"
+            <<" fvfResourceIdentity=unverified"
+            <<" rmUpperPaletteProvenance=unverified\n";
+  }
  }
 
  std::cout<<"NOTE: Trailer plausibility does not establish palette ownership.\n";
