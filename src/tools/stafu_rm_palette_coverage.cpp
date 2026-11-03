@@ -6245,6 +6245,147 @@ int main(int argc,char** argv){
   }
  }
 
+
+ // Milestone 168: bounded LE header/object/page-map inspection (read-only).
+ {
+  std::ifstream in168(std::filesystem::path(argv[1])/"STTNG.OVL",std::ios::binary);
+  if(!in168){
+   std::cout<<"RM_PALETTE_FVF_LE_STATUS read=0\n";
+  }else{
+   const std::vector<uint8_t> d168((std::istreambuf_iterator<char>(in168)),
+                                   std::istreambuf_iterator<char>());
+   const auto u16=[&](uint64_t p)->uint32_t{
+    return p+2<=d168.size()?uint32_t(d168[size_t(p)])|
+      (uint32_t(d168[size_t(p)+1])<<8):0;
+   };
+   const auto u32=[&](uint64_t p)->uint32_t{
+    return p+4<=d168.size()?uint32_t(d168[size_t(p)])|
+      (uint32_t(d168[size_t(p)+1])<<8)|
+      (uint32_t(d168[size_t(p)+2])<<16)|
+      (uint32_t(d168[size_t(p)+3])<<24):0;
+   };
+   const uint64_t first=(u16(4)?uint64_t(u16(4)-1)*512+
+     (u16(2)?u16(2):512):0);
+   const bool firstOk=first+36<=d168.size()&&
+     d168[size_t(first)]=='B'&&d168[size_t(first)+1]=='W';
+   const uint64_t second=firstOk?first+u32(first+32):0;
+   const bool secondOk=firstOk&&second+36<=d168.size()&&
+     d168[size_t(second)]=='B'&&d168[size_t(second)+1]=='W';
+   const uint64_t mz=secondOk?second+u32(second+32):0;
+   const bool mzOk=secondOk&&mz+64<=d168.size()&&
+     d168[size_t(mz)]=='M'&&d168[size_t(mz)+1]=='Z';
+   const uint64_t mzSize=mzOk&&u16(mz+4)?
+     uint64_t(u16(mz+4)-1)*512+(u16(mz+2)?u16(mz+2):512):0;
+   const uint64_t le=mz+mzSize+2;
+   const bool leOk=mzOk&&le+0xAC<=d168.size()&&
+     d168[size_t(le)]=='L'&&d168[size_t(le)+1]=='E';
+   std::cout<<"RM_PALETTE_FVF_LE_STATUS read=1 bytes="<<d168.size()
+            <<" embeddedMZ="<<mz<<" embeddedMZValid="<<(mzOk?1:0)
+            <<" mzDeclaredEnd="<<mz+mzSize<<" candidateLE="<<le
+            <<" leSignature="<<(leOk?1:0)
+            <<" formatValidated=0\n";
+   if(leOk){
+    // LE/LX common header offsets; LE-specific page map uses 4-byte entries.
+    const uint32_t cpu=u16(le+0x08),os=u16(le+0x0A);
+    const uint32_t moduleFlags=u32(le+0x10),pages=u32(le+0x14);
+    const uint32_t entryObject=u32(le+0x18),entryOffset=u32(le+0x1C);
+    const uint32_t pageSize=u32(le+0x28),lastPage=u32(le+0x2C);
+    const uint32_t objectRel=u32(le+0x40),objectCount=u32(le+0x44);
+    const uint32_t pageMapRel=u32(le+0x48);
+    const uint32_t fixupPageRel=u32(le+0x68),fixupRecordRel=u32(le+0x6C);
+    const uint32_t dataPagesAbs=u32(le+0x80);
+    std::cout<<"RM_PALETTE_FVF_LE_HEADER byteOrder="<<unsigned(d168[size_t(le)+2])
+             <<" wordOrder="<<unsigned(d168[size_t(le)+3])
+             <<" formatLevel="<<u32(le+4)<<" cpu="<<cpu<<" os="<<os
+             <<" moduleFlags="<<moduleFlags<<" modulePages="<<pages
+             <<" entryObject="<<entryObject<<" entryOffset="<<entryOffset
+             <<" pageSize="<<pageSize<<" lastPageField="<<lastPage
+             <<" objectTableRelative="<<objectRel<<" objectCount="<<objectCount
+             <<" pageMapRelative="<<pageMapRel
+             <<" fixupPageRelative="<<fixupPageRel
+             <<" fixupRecordRelative="<<fixupRecordRel
+             <<" dataPagesAbsoluteField="<<dataPagesAbs
+             <<" fieldInterpretation=LECandidate\n";
+    const uint64_t objectStart=le+objectRel,pageMapStart=le+pageMapRel;
+    const bool objectBounds=objectCount<=65536&&
+      objectStart<=d168.size()&&uint64_t(objectCount)*24<=d168.size()-objectStart;
+    const bool pageBounds=pages<=1000000&&pageMapStart<=d168.size()&&
+      uint64_t(pages)*4<=d168.size()-pageMapStart;
+    std::cout<<"RM_PALETTE_FVF_LE_TABLE_STATUS objectStart="<<objectStart
+             <<" objectBounds="<<(objectBounds?1:0)
+             <<" pageMapStart="<<pageMapStart
+             <<" pageMapBounds="<<(pageBounds?1:0)
+             <<" entryObjectWithinCount="<<(entryObject>=1&&entryObject<=objectCount?1:0)
+             <<" pageSizePlausible="<<(pageSize>=512&&pageSize<=65536&&
+                 (pageSize&(pageSize-1))==0?1:0)
+             <<" objectSchema=unverified\n";
+    if(objectBounds){
+     const uint32_t show=std::min(objectCount,uint32_t(24));
+     for(uint32_t i=0;i<show;++i){
+      const uint64_t p=objectStart+uint64_t(i)*24;
+      std::cout<<"RM_PALETTE_FVF_LE_OBJECT index="<<i+1
+               <<" virtualSize="<<u32(p)
+               <<" relocationBase="<<u32(p+4)
+               <<" flags="<<u32(p+8)
+               <<" pageMapIndex="<<u32(p+12)
+               <<" pageMapCount="<<u32(p+16)
+               <<" reserved="<<u32(p+20)
+               <<" pageRangeWithinMap="<<(u32(p+12)>=1&&
+                  uint64_t(u32(p+12)-1)+u32(p+16)<=pages?1:0)
+               <<" interpretation=LECandidate\n";
+     }
+     if(entryObject>=1&&entryObject<=objectCount){
+      const uint64_t p=objectStart+uint64_t(entryObject-1)*24;
+      std::cout<<"RM_PALETTE_FVF_LE_ENTRY object="<<entryObject
+               <<" offset="<<entryOffset<<" objectVirtualSize="<<u32(p)
+               <<" entryWithinVirtualSize="<<(entryOffset<u32(p)?1:0)
+               <<" fileMapping=unverified\n";
+     }
+    }
+    if(pageBounds){
+     const uint32_t show=std::min(pages,uint32_t(24));
+     for(uint32_t i=0;i<show;++i){
+      const uint64_t p=pageMapStart+uint64_t(i)*4;
+      std::cout<<"RM_PALETTE_FVF_LE_PAGE index="<<i+1
+               <<" raw="<<u32(p)<<" high24="<<(u32(p)>>8)
+               <<" low8="<<(u32(p)&255)
+               <<" mapping=unverified\n";
+     }
+    }
+    const uint64_t target=531027;
+    std::cout<<"RM_PALETTE_FVF_LE_CODE_CANDIDATE fileOffset="<<target
+             <<" afterLEHeader="<<(target>=le?1:0)
+             <<" relativeToLE="<<(target>=le?target-le:0)
+             <<" insideFile="<<(target<d168.size()?1:0)
+             <<" objectMapping=unverified\n";
+    const std::vector<std::pair<const char*,uint64_t>> regions={
+      {"le_header",le},{"object_table",objectStart},{"page_map",pageMapStart}
+    };
+    for(const auto& region:regions){
+     if(region.second>=d168.size())continue;
+     const uint64_t end=std::min(region.second+96,uint64_t(d168.size()));
+     for(uint64_t p=region.second;p<end;p+=16){
+      std::cout<<"RM_PALETTE_FVF_LE_HEX region="<<region.first
+               <<" offset="<<p<<" hex=";
+      for(uint64_t j=p;j<std::min(p+16,end);++j){
+       if(j!=p)std::cout<<" ";
+       std::cout<<std::hex<<std::setw(2)<<std::setfill('0')
+                <<unsigned(d168[size_t(j)]);
+      }
+      std::cout<<std::dec<<std::setfill(' ')<<"\n";
+     }
+    }
+   }
+   std::cout<<"RM_PALETTE_FVF_LE_LIMITATION"
+            <<" leHeaderSchema=provisional"
+            <<" dataPageBaseSemantics=unverified"
+            <<" objectFileMapping=unverified"
+            <<" runtimeRelocations=notApplied"
+            <<" immediate0xF84Meaning=unverified"
+            <<" rmUpperPaletteProvenance=unverified\n";
+  }
+ }
+
  std::cout<<"NOTE: Trailer plausibility does not establish palette ownership.\n";
  std::cout<<"NOTE: Palette overlap is numerical only; it does not establish RM palette provenance.\n";
  return 0;
