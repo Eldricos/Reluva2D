@@ -5109,6 +5109,98 @@ int main(int argc,char** argv){
   }
  }
 
+
+ // Milestone 156: inspect text-resource acquisition and parser field boundaries.
+ {
+  std::ifstream in156(std::filesystem::path(argv[1])/"STTNG.OVL",std::ios::binary);
+  if(!in156){
+   std::cout<<"RM_PALETTE_FVF_TABLE_SOURCE_STATUS read=0\n";
+  }else{
+   const std::vector<uint8_t> d156(
+    (std::istreambuf_iterator<char>(in156)),std::istreambuf_iterator<char>());
+   std::cout<<"RM_PALETTE_FVF_TABLE_SOURCE_STATUS read=1 bytes="
+            <<d156.size()<<" scope=resourceCallAndParserDelimiters\n";
+   struct Region156{const char* name;size_t begin;size_t end;};
+   const std::vector<Region156> regions156={
+    {"resource_acquisition",530992,531088},
+    {"record_counting",531072,531344},
+    {"table_allocation",531328,531440},
+    {"record_first_field",531432,531576},
+    {"record_second_field",531568,531712},
+    {"record_third_field",531704,531824},
+    {"resource_helper_entry",561936,562128}
+   };
+   for(const auto& region:regions156){
+    for(size_t p=region.begin;p<std::min(region.end,d156.size());p+=16){
+     std::cout<<"RM_PALETTE_FVF_TABLE_SOURCE_HEX region="<<region.name
+              <<" offset="<<p<<" hex=";
+     for(size_t j=p;j<std::min(p+16,std::min(region.end,d156.size()));++j){
+      if(j!=p)std::cout<<" ";
+      std::cout<<std::hex<<std::setw(2)<<std::setfill('0')<<unsigned(d156[j]);
+     }
+     std::cout<<std::dec<<std::setfill(' ')<<"\n";
+    }
+   }
+   struct Call156{const char* name;size_t offset;};
+   const std::vector<Call156> calls156={
+    {"source_acquisition",531031},
+    {"record_count_line_advance",531285},
+    {"table_allocation",531354},
+    {"first_field_conversion",531540},
+    {"next_record_line_advance",531784},
+    {"source_release",531813}
+   };
+   for(const auto& call:calls156){
+    int64_t target=-1;
+    if(call.offset+5<=d156.size()&&d156[call.offset]==0xe8){
+     const uint32_t u=uint32_t(d156[call.offset+1])|
+       (uint32_t(d156[call.offset+2])<<8)|
+       (uint32_t(d156[call.offset+3])<<16)|
+       (uint32_t(d156[call.offset+4])<<24);
+     target=int64_t(call.offset)+5+int64_t(int32_t(u));
+    }
+    std::cout<<"RM_PALETTE_FVF_TABLE_SOURCE_CALL name="<<call.name
+             <<" offset="<<call.offset<<" target="<<target
+             <<" opcodeE8="<<(call.offset<d156.size()&&d156[call.offset]==0xe8?1:0)
+             <<" instructionBoundaryVerified=0\n";
+   }
+   struct Pattern156{const char* name;size_t begin;size_t end;
+                     std::vector<uint8_t> bytes;};
+   const std::vector<Pattern156> patterns156={
+    {"resource_key_constant",531016,531040,{0xb8,0x84,0x0f,0x00,0x00}},
+    {"source_buffer_end_add",531032,531064,{0x03,0x45,0xe4}},
+    {"record_marker_hash",531060,531092,{0x80,0x38,0x23}},
+    {"line_carriage_return",531232,531272,{0x80,0x38,0x0d}},
+    {"line_feed",531232,531272,{0x80,0x38,0x0a}},
+    {"record_text_pointer_store",531608,531648,{0x89,0x42,0x04}},
+    {"record_next_text_pointer_store",531704,531744,{0x89,0x42,0x08}}
+   };
+   size_t matched156=0;
+   for(const auto& pat:patterns156){
+    bool found=false;size_t where=0;
+    const size_t limit=std::min(pat.end,d156.size());
+    for(size_t p=pat.begin;p+pat.bytes.size()<=limit;++p){
+     if(std::equal(pat.bytes.begin(),pat.bytes.end(),d156.begin()+p)){
+      found=true;where=p;break;
+     }
+    }
+    matched156+=found?1:0;
+    std::cout<<"RM_PALETTE_FVF_TABLE_SOURCE_PATTERN name="<<pat.name
+             <<" found="<<(found?1:0)
+             <<" offset="<<(found?int64_t(where):-1)<<"\n";
+   }
+   std::cout<<"RM_PALETTE_FVF_TABLE_SOURCE_PATTERN_SUMMARY matched="
+            <<matched156<<" total="<<patterns156.size()<<"\n";
+   std::cout<<"RM_PALETTE_FVF_TABLE_SOURCE_LIMITATION"
+            <<" constant0xF84Meaning=unverified"
+            <<" resourceHelperSemantics=unverified"
+            <<" parserCharacterClassification=unverified"
+            <<" sourceTextIdentity=unverified"
+            <<" fvfResourceIdentity=unverified"
+            <<" rmUpperPaletteProvenance=unverified\n";
+  }
+ }
+
  std::cout<<"NOTE: Trailer plausibility does not establish palette ownership.\n";
  std::cout<<"NOTE: Palette overlap is numerical only; it does not establish RM palette provenance.\n";
  return 0;
