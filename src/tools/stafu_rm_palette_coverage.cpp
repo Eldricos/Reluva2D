@@ -8329,6 +8329,159 @@ int main(int argc,char** argv){
   }
  }
 
+
+ // Milestone 181: read-only copy-operand inspection, not runtime emulation.
+ {
+  std::ifstream in181(std::filesystem::path(argv[1])/"STTNG.OVL",std::ios::binary);
+  if(!in181)std::cout<<"RM_PALETTE_FVF_LE_COPY_OPERANDS_STATUS read=0\n";
+  else{
+   const std::vector<uint8_t> d((std::istreambuf_iterator<char>(in181)),
+                                 std::istreambuf_iterator<char>());
+   const auto u16=[&](uint64_t p)->uint32_t{
+    return p+2<=d.size()?uint32_t(d[size_t(p)])|
+      (uint32_t(d[size_t(p)+1])<<8):0;
+   };
+   const auto u32=[&](uint64_t p)->uint32_t{
+    return p+4<=d.size()?uint32_t(d[size_t(p)])|
+      (uint32_t(d[size_t(p)+1])<<16)|
+      (uint32_t(d[size_t(p)+2])<<8)|
+      (uint32_t(d[size_t(p)+3])<<24):0;
+   };
+   const uint64_t first=u16(4)?uint64_t(u16(4)-1)*512+(u16(2)?u16(2):512):0;
+   const bool firstOk=first+36<=d.size()&&d[size_t(first)]=='B'&&d[size_t(first)+1]=='W';
+   const uint64_t second=firstOk?first+u32(first+32):0;
+   const bool secondOk=firstOk&&second+36<=d.size()&&
+     d[size_t(second)]=='B'&&d[size_t(second)+1]=='W';
+   const uint64_t mz=secondOk?second+u32(second+32):0;
+   const bool mzOk=secondOk&&mz+64<=d.size()&&d[size_t(mz)]=='M'&&d[size_t(mz)+1]=='Z';
+   const uint64_t mzBytes=mzOk&&u16(mz+4)?
+     uint64_t(u16(mz+4)-1)*512+(u16(mz+2)?u16(mz+2):512):0;
+   const uint64_t le=mz+mzBytes+2;
+   const bool leOk=mzOk&&le+0xAC<=d.size()&&d[size_t(le)]=='L'&&d[size_t(le)+1]=='E';
+   std::cout<<"RM_PALETTE_FVF_LE_COPY_OPERANDS_STATUS read=1 le="<<le
+            <<" leSignature="<<(leOk?1:0)<<" readOnly=1\n";
+   if(leOk){
+    const uint64_t base=mz+uint64_t(u32(le+0x80));
+    const uint64_t obj=le+u32(le+0x40),map=le+u32(le+0x48);
+    const uint32_t pages=u32(le+0x14),size=u32(le+0x28),objects=u32(le+0x44);
+    const bool valid=pages>0&&pages<=1000000&&size==4096&&
+      objects>=2&&objects<=65536&&obj<=d.size()&&
+      uint64_t(objects)*24<=d.size()-obj&&map<=d.size()&&
+      uint64_t(pages)*4<=d.size()-map;
+    std::cout<<"RM_PALETTE_FVF_LE_COPY_OPERANDS_TABLES valid="<<(valid?1:0)
+             <<" dataBase="<<base<<"\n";
+    if(valid){
+     const uint64_t firstPage=u32(obj+12),objectPages=u32(obj+16),virtualSize=u32(obj);
+     const auto mapCode=[&](int64_t offset)->int64_t{
+      if(offset<0||uint64_t(offset)>=virtualSize)return -1;
+      const uint64_t logical=uint64_t(offset)/size;
+      if(logical>=objectPages)return -1;
+      const uint64_t index=firstPage+logical;
+      if(index<1||index>pages)return -1;
+      const uint64_t p=map+(index-1)*4;
+      const uint32_t physical=(uint32_t(d[size_t(p)])<<16)|
+        (uint32_t(d[size_t(p)+1])<<8)|uint32_t(d[size_t(p)+2]);
+      if(physical<1||physical>pages)return -1;
+      const uint64_t file=base+uint64_t(physical-1)*size+uint64_t(offset)%size;
+      return file<d.size()?int64_t(file):-1;
+     };
+     const auto hex=[&](const char* region,uint64_t from,uint64_t to){
+      to=std::min(to,uint64_t(d.size()));
+      for(uint64_t p=from;p<to;p+=16){
+       std::cout<<"RM_PALETTE_FVF_LE_COPY_OPERANDS_HEX region="<<region
+                <<" file="<<p<<" hex=";
+       for(uint64_t j=p;j<std::min(p+16,to);++j){
+        if(j!=p)std::cout<<" ";
+        std::cout<<std::hex<<std::setw(2)<<std::setfill('0')
+                 <<unsigned(d[size_t(j)]);
+       }
+       std::cout<<std::dec<<std::setfill(' ')<<"\n";
+      }
+     };
+     hex("rmLoaderEntryAndFlags",510528,510704);
+     hex("rmCopyAndExit",510696,510744);
+     hex("paletteInitializerCopy",510388,510472);
+     hex("flag21Caller",1010640,1010680);
+     hex("flag23Caller",827156,827185);
+     const auto byteAt=[&](uint64_t p,uint8_t value)->bool{
+      return p<d.size()&&d[size_t(p)]==value;
+     };
+     // Fixed instruction encodings from the observed code. These
+     // checks intentionally do not treat a raw-byte match as execution.
+     const bool firstCopy=byteAt(510705,0x8D)&&byteAt(510706,0x34)&&
+       byteAt(510707,0x2B)&&byteAt(510708,0x29)&&
+       byteAt(510709,0xD9)&&byteAt(510710,0x57)&&
+       byteAt(510711,0x89)&&byteAt(510712,0xC8)&&
+       byteAt(510713,0xC1)&&byteAt(510714,0xE9)&&
+       byteAt(510715,0x02)&&byteAt(510716,0xF2)&&
+       byteAt(510717,0xA5)&&byteAt(510718,0x8A)&&
+       byteAt(510719,0xC8)&&byteAt(510720,0x80)&&
+       byteAt(510721,0xE1)&&byteAt(510722,0x03)&&
+       byteAt(510723,0xF2)&&byteAt(510724,0xA4);
+     std::cout<<"RM_PALETTE_FVF_LE_COPY_OPERANDS_SEQUENCE"
+              <<" region=rmLoader"
+              <<" instructionBytesMatch="<<(firstCopy?1:0)
+              <<" sourceSetup=lea_ESI_EBP_plus_EBX"
+              <<" destinationSetup=mov_EDI_global_0x1534C"
+              <<" lengthSetup=mov_ECX_stackTop_then_sub_ECX_EBX"
+              <<" copy=rep_movsd_then_rep_movsb"
+              <<" sourceRuntime=unverified destinationRuntime=unverified\n";
+     const bool flagMasks=byteAt(510614,0xF6)&&
+       byteAt(510615,0xC6)&&byteAt(510616,0x02)&&
+       byteAt(510684,0xF6)&&byteAt(510685,0xC4)&&
+       byteAt(510686,0x02);
+     std::cout<<"RM_PALETTE_FVF_LE_COPY_OPERANDS_FLAGS"
+              <<" bit02TestsMatch="<<(flagMasks?1:0)
+              <<" earlyValueWithoutBit02=256"
+              <<" earlyValueWithBit02=128"
+              <<" laterValueWithoutBit02=768"
+              <<" laterValueWithBit02=384"
+              <<" selectedPath=conditional"
+              <<" dataLayout=unverified\n";
+     // Static arithmetic illustration only: the loader's other input
+     // registers and branches are not modeled.
+     for(unsigned flag: {0x21u,0x23u}){
+      const bool bit2=(flag&2)!=0;
+      std::cout<<"RM_PALETTE_FVF_LE_COPY_OPERANDS_MODEL"
+               <<" flag="<<flag
+               <<" bit02="<<(bit2?1:0)
+               <<" firstSelectedValue="<<(bit2?128:256)
+               <<" firstScaledBy4="<<(bit2?512:1024)
+               <<" secondSelectedValue="<<(bit2?384:768)
+               <<" actualCopiedBytes=unknown"
+               <<" sourceOffset=unknown destinationOffset=unknown\n";
+     }
+     for(const auto& item:std::vector<std::pair<const char*,uint64_t>>{
+          {"postCopyCleanup",510729},{"paletteSetup",510550},
+          {"resourceLoad",510563},{"preCopyHelper",510648}}){
+      const uint64_t p=item.second;
+      const bool opcode=p+5<=d.size()&&d[size_t(p)]==0xE8;
+      const uint64_t raw=opcode?u32(p+1):0;
+      const int64_t disp=raw>=0x80000000ULL?
+        int64_t(raw)-0x100000000LL:int64_t(raw);
+      const int64_t target=opcode?mapCode(int64_t(p+5-base)+disp):-1;
+      std::cout<<"RM_PALETTE_FVF_LE_COPY_OPERANDS_CALL name="<<item.first
+               <<" sourceFile="<<p<<" targetFile="<<target
+               <<" opcodeE8="<<(opcode?1:0)<<"\n";
+     }
+     std::cout<<"RM_PALETTE_FVF_LE_COPY_OPERANDS_SUMMARY"
+              <<" sharedStandardPalBuffer=0x11F868"
+              <<" rmDestinationGlobal=0x1534C"
+              <<" rmPrefixBytes=384"
+              <<" pixelRasterBytes=307200"
+              <<" sourceBufferIdentity=unverified"
+              <<" actualCopyExtent=unverified"
+              <<" upperPaletteProvenance=unverified\n";
+    }
+   }
+   std::cout<<"RM_PALETTE_FVF_LE_COPY_OPERANDS_LIMITATION"
+            <<" staticBytesOnly=1"
+            <<" noRuntimeRegisters=1"
+            <<" noBranchExecution=1"
+            <<" noVgaLinkProven=1\n";
+  }
+ }
+
  std::cout<<"NOTE: Trailer plausibility does not establish palette ownership.\n";
  std::cout<<"NOTE: Palette overlap is numerical only; it does not establish RM palette provenance.\n";
  return 0;
