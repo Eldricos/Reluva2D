@@ -4205,7 +4205,7 @@ int main(int argc,char** argv){
     for(size_t p=region.start;p<std::min(region.end,d146.size());p+=16){
      std::cout<<"RM_PALETTE_DESCRIPTOR_TRACE_HEX region="<<region.name
               <<" offset="<<p<<" hex=";
-     for(size_t j=p;j<std::min(p+16,std::min(region.end,d146.size());++j){
+     for(size_t j=p;j<std::min(p+16,std::min(region.end,d146.size()));++j){
       if(j!=p)std::cout<<" ";
       std::cout<<std::hex<<std::setw(2)<<std::setfill('0')<<unsigned(d146[j]);
      }
