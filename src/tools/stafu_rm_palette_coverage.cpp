@@ -6118,6 +6118,133 @@ int main(int argc,char** argv){
   }
  }
 
+
+ // Milestone 167: validate the embedded DOS MZ image at the BW-linked boundary.
+ {
+  std::ifstream in167(std::filesystem::path(argv[1])/"STTNG.OVL",std::ios::binary);
+  if(!in167){
+   std::cout<<"RM_PALETTE_FVF_EMBEDDED_MZ_STATUS read=0\n";
+  }else{
+   const std::vector<uint8_t> d167((std::istreambuf_iterator<char>(in167)),
+                                   std::istreambuf_iterator<char>());
+   const auto u16_167=[&](size_t p)->uint32_t{
+    return p+2<=d167.size()?uint32_t(d167[p])|(uint32_t(d167[p+1])<<8):0;
+   };
+   const auto u32_167=[&](size_t p)->uint32_t{
+    return p+4<=d167.size()?uint32_t(d167[p])|(uint32_t(d167[p+1])<<8)|
+      (uint32_t(d167[p+2])<<16)|(uint32_t(d167[p+3])<<24):0;
+   };
+   const uint32_t outerPages167=u16_167(4),outerLast167=u16_167(2);
+   const uint64_t first167=outerPages167?
+     uint64_t(outerPages167-1)*512+(outerLast167?outerLast167:512):0;
+   const bool firstValid167=first167+36<=d167.size()&&
+     d167[size_t(first167)]=='B'&&d167[size_t(first167)+1]=='W';
+   const uint64_t second167=firstValid167?
+     first167+u32_167(size_t(first167)+32):0;
+   const bool secondValid167=firstValid167&&second167+36<=d167.size()&&
+     d167[size_t(second167)]=='B'&&d167[size_t(second167)+1]=='W';
+   const uint64_t mz167=secondValid167?
+     second167+u32_167(size_t(second167)+32):0;
+   const bool mzSignature167=secondValid167&&mz167+64<=d167.size()&&
+     d167[size_t(mz167)]=='M'&&d167[size_t(mz167)+1]=='Z';
+   std::cout<<"RM_PALETTE_FVF_EMBEDDED_MZ_STATUS read=1 bytes="<<d167.size()
+            <<" firstBW="<<(firstValid167?1:0)
+            <<" secondBW="<<(secondValid167?1:0)
+            <<" embeddedOffset="<<mz167
+            <<" mzSignature="<<(mzSignature167?1:0)
+            <<" imageValidated=0\n";
+   if(mzSignature167){
+    const size_t p=size_t(mz167);
+    const uint32_t last=u16_167(p+2),pages=u16_167(p+4);
+    const uint32_t relocCount=u16_167(p+6),headerParas=u16_167(p+8);
+    const uint32_t headerBytes=headerParas*16;
+    const uint32_t relocOffset=u16_167(p+24);
+    const uint32_t initialSS=u16_167(p+14),initialSP=u16_167(p+16);
+    const uint32_t initialIP=u16_167(p+20),initialCS=u16_167(p+22);
+    const uint64_t imageBytes=pages?
+      uint64_t(pages-1)*512+(last?last:512):0;
+    const uint64_t imageEnd=mz167+imageBytes;
+    const uint64_t headerEnd=mz167+headerBytes;
+    const uint64_t relocEnd=uint64_t(relocOffset)+uint64_t(relocCount)*4;
+    const bool imageInFile=imageBytes>=headerBytes&&imageEnd<=d167.size();
+    const bool relocTableInHeader=relocOffset>=28&&relocEnd<=headerBytes;
+    const uint64_t loadBytes=imageBytes>=headerBytes?imageBytes-headerBytes:0;
+    const uint64_t entryLinear=uint64_t(initialCS)*16+initialIP;
+    std::cout<<"RM_PALETTE_FVF_EMBEDDED_MZ_HEADER"
+             <<" offset="<<mz167<<" lastPageBytes="<<last
+             <<" pages="<<pages<<" headerParagraphs="<<headerParas
+             <<" headerBytes="<<headerBytes
+             <<" relocationCount="<<relocCount
+             <<" relocationTableOffset="<<relocOffset
+             <<" relocationTableEnd="<<relocEnd
+             <<" initialCS="<<initialCS<<" initialIP="<<initialIP
+             <<" initialSS="<<initialSS<<" initialSP="<<initialSP
+             <<" declaredImageBytes="<<imageBytes
+             <<" declaredImageEnd="<<imageEnd
+             <<" headerEnd="<<headerEnd
+             <<" imageInFile="<<(imageInFile?1:0)
+             <<" relocationTableInHeader="<<(relocTableInHeader?1:0)
+             <<" remainingFileBytes="<<(imageEnd<=d167.size()?d167.size()-imageEnd:0)
+             <<" semantics=standardMZFields\n";
+    const bool entryInLoad=entryLinear<loadBytes;
+    const uint64_t entryFile=headerEnd+entryLinear;
+    std::cout<<"RM_PALETTE_FVF_EMBEDDED_MZ_ENTRY"
+             <<" csIpLinear="<<entryLinear
+             <<" loadImageBytes="<<loadBytes
+             <<" entryInLoad="<<(entryInLoad?1:0)
+             <<" entryFileOffset="<<entryFile
+             <<" entryInDeclaredImage="<<(entryInLoad&&entryFile<imageEnd?1:0)
+             <<" runtimeExecution=unverified\n";
+    for(uint32_t i=0;i<relocCount&&i<256;++i){
+     const uint64_t r=mz167+relocOffset+uint64_t(i)*4;
+     if(!relocTableInHeader||r+4>d167.size())break;
+     const uint32_t off=u16_167(size_t(r)),seg=u16_167(size_t(r)+2);
+     const uint64_t linear=uint64_t(seg)*16+off;
+     std::cout<<"RM_PALETTE_FVF_EMBEDDED_MZ_RELOC index="<<i
+              <<" offset="<<off<<" segment="<<seg
+              <<" loadLinear="<<linear
+              <<" wordInLoad="<<(linear+2<=loadBytes?1:0)
+              <<" targetFileOffset="<<headerEnd+linear
+              <<" interpretation=standardMZRelocation\n";
+    }
+    const std::vector<std::pair<const char*,uint64_t>> sites={
+      {"header_start",mz167},
+      {"entry",entryFile},
+      {"image_end_before",imageEnd>=64?imageEnd-64:0},
+      {"image_end_after",imageEnd}
+    };
+    for(const auto& site:sites){
+     if(site.second>=d167.size())continue;
+     const size_t start=size_t(site.second);
+     const size_t end=std::min(start+64,d167.size());
+     for(size_t at=start;at<end;at+=16){
+      std::cout<<"RM_PALETTE_FVF_EMBEDDED_MZ_HEX region="<<site.first
+               <<" offset="<<at<<" hex=";
+      for(size_t j=at;j<std::min(at+16,end);++j){
+       if(j!=at)std::cout<<" ";
+       std::cout<<std::hex<<std::setw(2)<<std::setfill('0')
+                <<unsigned(d167[j]);
+      }
+      std::cout<<std::dec<<std::setfill(' ')<<"\n";
+     }
+    }
+    std::cout<<"RM_PALETTE_FVF_EMBEDDED_MZ_SUMMARY"
+             <<" headerWithinImage="<<(headerBytes<=imageBytes?1:0)
+             <<" relocationsWithinHeader="<<(relocTableInHeader?1:0)
+             <<" entryWithinLoad="<<(entryInLoad?1:0)
+             <<" imageWithinFile="<<(imageInFile?1:0)
+             <<" allRelocationsChecked="<<(relocCount<=256?1:0)
+             <<" nextRegionFormat=unverified\n";
+   }
+   std::cout<<"RM_PALETTE_FVF_EMBEDDED_MZ_LIMITATION"
+            <<" executionNotAttempted=1"
+            <<" runtimeSegmentBases=unknown"
+            <<" nextRegionFormat=unverified"
+            <<" immediate0xF84Meaning=unverified"
+            <<" rmUpperPaletteProvenance=unverified\n";
+  }
+ }
+
  std::cout<<"NOTE: Trailer plausibility does not establish palette ownership.\n";
  std::cout<<"NOTE: Palette overlap is numerical only; it does not establish RM palette provenance.\n";
  return 0;
