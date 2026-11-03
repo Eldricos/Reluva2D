@@ -8003,6 +8003,170 @@ int main(int argc,char** argv){
   }
  }
 
+
+ // Milestone 179: bounded inspection of palette-buffer references and cleanup.
+ {
+  std::ifstream in179(std::filesystem::path(argv[1])/"STTNG.OVL",std::ios::binary);
+  if(!in179)std::cout<<"RM_PALETTE_FVF_LE_PAL_CONSUMER_STATUS read=0\n";
+  else{
+   const std::vector<uint8_t> d((std::istreambuf_iterator<char>(in179)),
+                                 std::istreambuf_iterator<char>());
+   const auto u16=[&](uint64_t p)->uint32_t{
+    return p+2<=d.size()?uint32_t(d[size_t(p)])|
+      (uint32_t(d[size_t(p)+1])<<8):0;
+   };
+   const auto u32=[&](uint64_t p)->uint32_t{
+    return p+4<=d.size()?uint32_t(d[size_t(p)])|
+      (uint32_t(d[size_t(p)+1])<<8)|
+      (uint32_t(d[size_t(p)+2])<<16)|
+      (uint32_t(d[size_t(p)+3])<<24):0;
+   };
+   const uint64_t first=u16(4)?uint64_t(u16(4)-1)*512+(u16(2)?u16(2):512):0;
+   const bool firstOk=first+36<=d.size()&&d[size_t(first)]=='B'&&d[size_t(first)+1]=='W';
+   const uint64_t second=firstOk?first+u32(first+32):0;
+   const bool secondOk=firstOk&&second+36<=d.size()&&
+     d[size_t(second)]=='B'&&d[size_t(second)+1]=='W';
+   const uint64_t mz=secondOk?second+u32(second+32):0;
+   const bool mzOk=secondOk&&mz+64<=d.size()&&d[size_t(mz)]=='M'&&d[size_t(mz)+1]=='Z';
+   const uint64_t mzBytes=mzOk&&u16(mz+4)?
+     uint64_t(u16(mz+4)-1)*512+(u16(mz+2)?u16(mz+2):512):0;
+   const uint64_t le=mz+mzBytes+2;
+   const bool leOk=mzOk&&le+0xAC<=d.size()&&d[size_t(le)]=='L'&&d[size_t(le)+1]=='E';
+   std::cout<<"RM_PALETTE_FVF_LE_PAL_CONSUMER_STATUS read=1 le="<<le
+            <<" leSignature="<<(leOk?1:0)<<" readOnly=1\n";
+   if(leOk){
+    const uint64_t base=mz+uint64_t(u32(le+0x80));
+    const uint64_t obj=le+u32(le+0x40),map=le+u32(le+0x48);
+    const uint64_t pt=le+u32(le+0x68),rt=le+u32(le+0x6C);
+    const uint32_t pages=u32(le+0x14),size=u32(le+0x28),objects=u32(le+0x44);
+    const bool valid=pages>0&&pages<=1000000&&size==4096&&
+      objects>=2&&objects<=65536&&obj<=d.size()&&
+      uint64_t(objects)*24<=d.size()-obj&&map<=d.size()&&
+      uint64_t(pages)*4<=d.size()-map&&pt<=d.size()&&
+      uint64_t(pages+1)*4<=d.size()-pt&&rt<=d.size()&&
+      u32(pt+uint64_t(pages)*4)<=d.size()-rt;
+    std::cout<<"RM_PALETTE_FVF_LE_PAL_CONSUMER_TABLES valid="<<(valid?1:0)
+             <<" dataBase="<<base<<"\n";
+    if(valid){
+     const uint64_t firstPage=u32(obj+12),objectPages=u32(obj+16),virtualSize=u32(obj);
+     const auto mapCode=[&](int64_t offset)->int64_t{
+      if(offset<0||uint64_t(offset)>=virtualSize)return -1;
+      const uint64_t logical=uint64_t(offset)/size;
+      if(logical>=objectPages)return -1;
+      const uint64_t index=firstPage+logical;
+      if(index<1||index>pages)return -1;
+      const uint64_t p=map+(index-1)*4;
+      const uint32_t physical=(uint32_t(d[size_t(p)])<<16)|
+        (uint32_t(d[size_t(p)+1])<<8)|uint32_t(d[size_t(p)+2]);
+      if(physical<1||physical>pages)return -1;
+      const uint64_t file=base+uint64_t(physical-1)*size+uint64_t(offset)%size;
+      return file<d.size()?int64_t(file):-1;
+     };
+     const auto hex=[&](const char* region,uint64_t from,uint64_t to){
+      to=std::min(to,uint64_t(d.size()));
+      for(uint64_t p=from;p<to;p+=16){
+       std::cout<<"RM_PALETTE_FVF_LE_PAL_CONSUMER_HEX region="<<region
+                <<" file="<<p<<" hex=";
+       for(uint64_t j=p;j<std::min(p+16,to);++j){
+        if(j!=p)std::cout<<" ";
+        std::cout<<std::hex<<std::setw(2)<<std::setfill('0')
+                 <<unsigned(d[size_t(j)]);
+       }
+       std::cout<<std::dec<<std::setfill(' ')<<"\n";
+      }
+     };
+     struct Site179{const char* name;uint64_t operand;};
+     const std::vector<Site179> sites={
+       {"initializer",510408},{"paletteConsumerA",1010629},
+       {"paletteConsumerB",1012261}};
+     for(const auto& s:sites){
+      const bool inRange=s.operand>=24&&s.operand+64<=d.size();
+      const bool match=inRange&&u32(s.operand)==0x11F868;
+      std::cout<<"RM_PALETTE_FVF_LE_PAL_CONSUMER_REFERENCE name="<<s.name
+               <<" operandFile="<<s.operand
+               <<" rawImmediate="<<u32(s.operand)
+               <<" matchesBuffer="<<(match?1:0)
+               <<" precedingOpcode="<<(s.operand>0?unsigned(d[size_t(s.operand-1)]):0)
+               <<" instructionRole=notDecoded\n";
+      if(!inRange)continue;
+      hex(s.name,s.operand-32,s.operand+80);
+      const uint64_t end=std::min(uint64_t(d.size()),s.operand+80);
+      uint64_t calls=0;
+      for(uint64_t p=s.operand+4;p+5<=end;++p){
+       if(d[size_t(p)]!=0xE8)continue;
+       const uint64_t raw=u32(p+1);
+       const int64_t disp=raw>=0x80000000ULL?
+         int64_t(raw)-0x100000000LL:int64_t(raw);
+       const int64_t dest=mapCode(int64_t(p+5-base)+disp);
+       if(dest<0)continue;
+       ++calls;
+       if(calls<=12)
+        std::cout<<"RM_PALETTE_FVF_LE_PAL_CONSUMER_CALL_CANDIDATE name="
+                 <<s.name<<" sourceFile="<<p<<" targetFile="<<dest
+                 <<" instructionDecoded=0\n";
+      }
+      std::cout<<"RM_PALETTE_FVF_LE_PAL_CONSUMER_SITE_SUMMARY name="<<s.name
+               <<" boundedCallCandidates="<<calls<<"\n";
+     }
+     hex("postCopyHelper",562937,563080);
+     hex("vgaDacWriter",1358100,1358138);
+     // Enumerate LE fixups targeting Object 2 offset 0x11F868 if it
+     // is within Object 2; the raw absolute immediate is not itself
+     // proof of a relocation.
+     const uint64_t object2Virtual=u32(obj+24);
+     const uint64_t object2Base=u32(obj+24+4);
+     const uint64_t candidateOffset=0x11F868ULL>=object2Base?
+       0x11F868ULL-object2Base:0;
+     uint64_t fixupMatches=0;
+     const uint64_t recordBytes=u32(pt+uint64_t(pages)*4);
+     for(uint32_t page=1;page<=pages;++page){
+      const uint64_t start=u32(pt+uint64_t(page-1)*4);
+      const uint64_t end=u32(pt+uint64_t(page)*4);
+      if(end<start||end>recordBytes)continue;
+      uint64_t at=rt+start;
+      while(at<rt+end){
+       if(rt+end-at<7)break;
+       const uint8_t type=d[size_t(at)],flags=d[size_t(at+1)];
+       if(type!=7||(flags!=0&&flags!=16))break;
+       const uint64_t n=flags==16?9:7;
+       if(rt+end-at<n)break;
+       const uint32_t targetObj=unsigned(d[size_t(at+4)]);
+       const uint32_t targetOffset=flags==16?u32(at+5):u16(at+5);
+       if(targetObj==2&&0x11F868ULL>=object2Base&&
+          candidateOffset<object2Virtual&&targetOffset==candidateOffset){
+        ++fixupMatches;
+        if(fixupMatches<=16)
+         std::cout<<"RM_PALETTE_FVF_LE_PAL_CONSUMER_FIXUP"
+                  <<" sourcePage="<<page<<" recordFile="<<at
+                  <<" targetObject=2 targetOffset="<<targetOffset<<"\n";
+       }
+       at+=n;
+      }
+     }
+     std::cout<<"RM_PALETTE_FVF_LE_PAL_CONSUMER_RELOCATION"
+              <<" object2PreferredBase="<<object2Base
+              <<" candidateObject2Offset="<<candidateOffset
+              <<" candidateWithinObject2="<<
+                 (0x11F868ULL>=object2Base&&candidateOffset<object2Virtual?1:0)
+              <<" matchingFixups="<<fixupMatches
+              <<" rawAbsoluteOperandNotRelocationProof=1\n";
+     std::cout<<"RM_PALETTE_FVF_LE_PAL_CONSUMER_SUMMARY"
+              <<" bufferImmediate=0x11F868"
+              <<" sitesExamined="<<sites.size()
+              <<" postCopyHelperExamined=1"
+              <<" vgaDacWriterCompared=1"
+              <<" actualBufferUse=unverified"
+              <<" paletteHardwareSlots=unverified\n";
+    }
+   }
+   std::cout<<"RM_PALETTE_FVF_LE_PAL_CONSUMER_LIMITATION"
+            <<" boundedRawCallScan=1"
+            <<" fullInstructionDecoder=0"
+            <<" registerSemantics=notExecuted"
+            <<" directVgaDataFlow=notProven\n";
+  }
+ }
+
  std::cout<<"NOTE: Trailer plausibility does not establish palette ownership.\n";
  std::cout<<"NOTE: Palette overlap is numerical only; it does not establish RM palette provenance.\n";
  return 0;
