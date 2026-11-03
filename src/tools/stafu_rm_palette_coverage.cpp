@@ -5844,6 +5844,104 @@ int main(int argc,char** argv){
   }
  }
 
+
+ // Milestone 164: compare BWP header-size and candidate-offset hypotheses.
+ {
+  std::ifstream in164(std::filesystem::path(argv[1])/"STTNG.OVL",std::ios::binary);
+  if(!in164){
+   std::cout<<"RM_PALETTE_FVF_BWP_RELATION_STATUS read=0\n";
+  }else{
+   const std::vector<uint8_t> d164((std::istreambuf_iterator<char>(in164)),
+                                   std::istreambuf_iterator<char>());
+   const auto u16_164=[&](size_t p)->uint32_t{
+    return p+2<=d164.size()?uint32_t(d164[p])|(uint32_t(d164[p+1])<<8):0;
+   };
+   const auto u32_164=[&](size_t p)->uint32_t{
+    return p+4<=d164.size()?uint32_t(d164[p])|(uint32_t(d164[p+1])<<8)|
+      (uint32_t(d164[p+2])<<16)|(uint32_t(d164[p+3])<<24):0;
+   };
+   const uint32_t pages164=u16_164(4),last164=u16_164(2);
+   const size_t base164=pages164?size_t(uint64_t(pages164-1)*512+
+     (last164?last164:512)):0;
+   const bool bwp164=base164+4<=d164.size()&&
+     d164[base164]=='B'&&d164[base164+1]=='W'&&
+     d164[base164+2]=='P'&&d164[base164+3]==0;
+   std::cout<<"RM_PALETTE_FVF_BWP_RELATION_STATUS read=1 bytes="<<d164.size()
+            <<" boundary="<<base164<<" bwpSignature="<<(bwp164?1:0)
+            <<" schemaValidated=0\n";
+   if(bwp164){
+    const uint32_t headerCandidate164=u32_164(base164+4);
+    const size_t vmm164=base164+112;
+    const bool vmmMatch164=vmm164+8<=d164.size()&&
+      std::equal(d164.begin()+vmm164,d164.begin()+vmm164+8,
+                 std::vector<uint8_t>{'V','M','M','.','E','X','P',0}.begin());
+    std::cout<<"RM_PALETTE_FVF_BWP_RELATION_HEADER candidateBytes="
+             <<headerCandidate164<<" vmmRelative=112"
+             <<" vmmEndRelative=120"
+             <<" candidateEndAbsolute="<<uint64_t(base164)+headerCandidate164
+             <<" vmmWithinCandidate="<<(headerCandidate164>=120?1:0)
+             <<" vmmStartsWithinCandidate="<<(headerCandidate164>112?1:0)
+             <<" vmmMatch="<<(vmmMatch164?1:0)
+             <<" headerSizeInterpretation=unverified\n";
+    struct Candidate164{const char* name;size_t field;};
+    const std::vector<Candidate164> candidates164={
+      {"value_123076",28},{"value_60496",32},
+      {"value_152",36},{"value_7",52}
+    };
+    for(const auto& candidate:candidates164){
+     const uint32_t value=u32_164(base164+candidate.field);
+     for(size_t mode=0;mode<2;++mode){
+      const uint64_t target=mode?uint64_t(base164)+value:uint64_t(value);
+      const bool valid=target<d164.size();
+      const size_t p=valid?size_t(target):0;
+      std::cout<<"RM_PALETTE_FVF_BWP_RELATION_TARGET name="<<candidate.name
+               <<" fieldRelative="<<candidate.field<<" value="<<value
+               <<" interpretation="<<(mode?"bwpRelative":"absolute")
+               <<" target="<<target<<" inFile="<<(valid?1:0);
+      if(valid){
+       std::cout<<" u16="<<u16_164(p)<<" u32="<<u32_164(p)
+                <<" firstBytes=";
+       for(size_t j=p;j<std::min(p+8,d164.size());++j){
+        if(j!=p)std::cout<<" ";
+        std::cout<<std::hex<<std::setw(2)<<std::setfill('0')
+                 <<unsigned(d164[j]);
+       }
+       std::cout<<std::dec<<std::setfill(' ');
+      }
+      std::cout<<" structuralValidation=0\n";
+      if(!valid)continue;
+      const size_t start=p>=32?p-32:0;
+      const size_t end=std::min(p+96,d164.size());
+      for(size_t at=start;at<end;at+=16){
+       std::cout<<"RM_PALETTE_FVF_BWP_RELATION_HEX name="<<candidate.name
+                <<" interpretation="<<(mode?"bwpRelative":"absolute")
+                <<" offset="<<at<<" hex=";
+       for(size_t j=at;j<std::min(at+16,end);++j){
+        if(j!=at)std::cout<<" ";
+        std::cout<<std::hex<<std::setw(2)<<std::setfill('0')
+                 <<unsigned(d164[j]);
+       }
+       std::cout<<std::dec<<std::setfill(' ')<<"\n";
+      }
+     }
+    }
+    std::cout<<"RM_PALETTE_FVF_BWP_RELATION_ARITHMETIC"
+             <<" declaredMZBytes="<<base164
+             <<" bwpPlus118="<<uint64_t(base164)+118
+             <<" vmmStart="<<vmm164
+             <<" vmmEnd="<<vmm164+8
+             <<" codeLikeSampleStart=62788"
+             <<" relationships=observationalOnly\n";
+   }
+   std::cout<<"RM_PALETTE_FVF_BWP_RELATION_LIMITATION"
+            <<" fieldSemantics=unverified"
+            <<" candidateTables=unverified"
+            <<" runtimeMapping=unverified"
+            <<" immediate0xF84Meaning=unverified"
+            <<" rmUpperPaletteProvenance=unverified\n";
+  }
+ }
+
  std::cout<<"NOTE: Trailer plausibility does not establish palette ownership.\n";
  std::cout<<"NOTE: Palette overlap is numerical only; it does not establish RM palette provenance.\n";
  return 0;
