@@ -4715,6 +4715,123 @@ int main(int argc,char** argv){
   }
  }
 
+
+ // Milestone 152: inspect the caller frame and search incoming references.
+ {
+  std::ifstream in152(std::filesystem::path(argv[1])/"STTNG.OVL",std::ios::binary);
+  if(!in152){
+   std::cout<<"RM_PALETTE_FVF_PARENT_TRACE_STATUS read=0\n";
+  }else{
+   const std::vector<uint8_t> d152(
+    (std::istreambuf_iterator<char>(in152)),std::istreambuf_iterator<char>());
+   std::cout<<"RM_PALETTE_FVF_PARENT_TRACE_STATUS read=1 bytes="
+            <<d152.size()<<" scope=callerFrameAndIncomingCallCandidates\n";
+   struct Region152{const char* name;size_t start;size_t end;};
+   const std::vector<Region152> regions152={
+    {"parent_prologue_search",533984,534176},
+    {"parent_argument_preparation",534160,534368},
+    {"parent_fvf_call",534352,534496},
+    {"parent_followthrough",534480,534640},
+    {"parent_predecessor",533792,534000}
+   };
+   for(const auto& region:regions152){
+    for(size_t p=region.start;p<std::min(region.end,d152.size());p+=16){
+     std::cout<<"RM_PALETTE_FVF_PARENT_TRACE_HEX region="<<region.name
+              <<" offset="<<p<<" hex=";
+     for(size_t j=p;j<std::min(p+16,std::min(region.end,d152.size()));++j){
+      if(j!=p)std::cout<<" ";
+      std::cout<<std::hex<<std::setw(2)<<std::setfill('0')<<unsigned(d152[j]);
+     }
+     std::cout<<std::dec<<std::setfill(' ')<<"\n";
+    }
+   }
+   struct Call152{const char* name;size_t offset;int64_t expected;};
+   const std::vector<Call152> calls152={
+    {"parent_to_fvf_initializer",534428,522820},
+    {"fvf_initializer_to_owner",523016,518988},
+    {"owner_to_setup_wrapper",519007,563005}
+   };
+   size_t matched152=0;
+   for(const auto& call:calls152){
+    int64_t target=-1;
+    if(call.offset+5<=d152.size()&&d152[call.offset]==0xe8){
+     const uint32_t u=uint32_t(d152[call.offset+1])|
+       (uint32_t(d152[call.offset+2])<<8)|
+       (uint32_t(d152[call.offset+3])<<16)|
+       (uint32_t(d152[call.offset+4])<<24);
+     target=int64_t(call.offset)+5+int64_t(int32_t(u));
+    }
+    const bool match=target==call.expected;
+    matched152+=match?1:0;
+    std::cout<<"RM_PALETTE_FVF_PARENT_TRACE_CALL name="<<call.name
+             <<" offset="<<call.offset<<" target="<<target
+             <<" expected="<<call.expected<<" match="<<(match?1:0)<<"\n";
+   }
+   std::cout<<"RM_PALETTE_FVF_PARENT_TRACE_CALL_SUMMARY matched="
+            <<matched152<<" total="<<calls152.size()<<"\n";
+   struct Pattern152{const char* name;size_t begin;size_t end;
+                     std::vector<uint8_t> bytes;};
+   const std::vector<Pattern152> patterns152={
+    {"parent_frame_argument_load",534384,534432,{0x8b,0x45,0x14,0x50}},
+    {"parent_constant_second_argument",534400,534432,{0xb8,0x00,0xa6,0x09,0x00,0x50}},
+    {"parent_call_stack_cleanup",534428,534448,{0x83,0xc4,0x08}},
+    {"parent_return_status_store",534428,534448,{0x89,0x45,0xfc}}
+   };
+   for(const auto& pat:patterns152){
+    bool found=false;size_t where=0;
+    const size_t limit=std::min(pat.end,d152.size());
+    for(size_t p=pat.begin;p+pat.bytes.size()<=limit;++p){
+     if(std::equal(pat.bytes.begin(),pat.bytes.end(),d152.begin()+p)){
+      found=true;where=p;break;
+     }
+    }
+    std::cout<<"RM_PALETTE_FVF_PARENT_TRACE_PATTERN name="<<pat.name
+             <<" found="<<(found?1:0)
+             <<" offset="<<(found?int64_t(where):-1)<<"\n";
+   }
+   // Search for direct calls entering the plausible parent-function window.
+   // Raw byte matches are candidates, not decoded instruction boundaries.
+   const int64_t windowStart152=533984,windowEnd152=534428;
+   size_t incoming152=0;
+   for(size_t p=0;p+5<=d152.size();++p){
+    if(d152[p]!=0xe8)continue;
+    const uint32_t u=uint32_t(d152[p+1])|
+      (uint32_t(d152[p+2])<<8)|
+      (uint32_t(d152[p+3])<<16)|
+      (uint32_t(d152[p+4])<<24);
+    const int64_t target=int64_t(p)+5+int64_t(int32_t(u));
+    if(target<windowStart152||target>=windowEnd152)continue;
+    ++incoming152;
+    if(incoming152<=64){
+     std::cout<<"RM_PALETTE_FVF_PARENT_TRACE_INCOMING offset="<<p
+              <<" target="<<target<<" candidate="<<incoming152
+              <<" boundaryVerified=0\n";
+     const size_t start=p>32?p-32:0;
+     const size_t end=std::min(p+24,d152.size());
+     for(size_t q=start;q<end;q+=16){
+      std::cout<<"RM_PALETTE_FVF_PARENT_TRACE_INCOMING_HEX"
+               <<" callOffset="<<p<<" offset="<<q<<" hex=";
+      for(size_t j=q;j<std::min(q+16,end);++j){
+       if(j!=q)std::cout<<" ";
+       std::cout<<std::hex<<std::setw(2)<<std::setfill('0')<<unsigned(d152[j]);
+      }
+      std::cout<<std::dec<<std::setfill(' ')<<"\n";
+     }
+    }
+   }
+   std::cout<<"RM_PALETTE_FVF_PARENT_TRACE_INCOMING_SUMMARY candidates="
+            <<incoming152<<" displayed="<<std::min<size_t>(incoming152,64)
+            <<" targetBegin="<<windowStart152<<" targetEnd="<<windowEnd152
+            <<" limitation=entryAndInstructionBoundariesNotVerified\n";
+   std::cout<<"RM_PALETTE_FVF_PARENT_TRACE_LIMITATION"
+            <<" parentFunctionEntry=unverified"
+            <<" ebpFrameProvenance=unverified"
+            <<" resourceKeyIdentity=unverified"
+            <<" fvfResourceIdentity=unverified"
+            <<" rmUpperPaletteProvenance=unverified\n";
+  }
+ }
+
  std::cout<<"NOTE: Trailer plausibility does not establish palette ownership.\n";
  std::cout<<"NOTE: Palette overlap is numerical only; it does not establish RM palette provenance.\n";
  return 0;
