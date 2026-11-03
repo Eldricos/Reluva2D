@@ -3795,7 +3795,7 @@ int main(int argc,char** argv){
     {"header_16",519166},
     {"variable_read",519249},
     {"followup_read",519293},
-    {"reader_wrapper_forward",563089}
+    {"reader_wrapper_forward",563092}
    };
    for(const auto& call:calls142){
     int64_t target=-1;
@@ -3813,7 +3813,7 @@ int main(int argc,char** argv){
    const std::vector<uint8_t> signature142={
     0x81,0xB8,0xCC,0x01,0x00,0x00,0x46,0x56,0x46,0x20
    };
-   size_t signatureOffset142=523146;
+   size_t signatureOffset142=523149;
    bool signatureMatch142=signatureOffset142+signature142.size()<=d142.size()&&
      std::equal(signature142.begin(),signature142.end(),d142.begin()+signatureOffset142);
    std::cout<<"RM_PALETTE_FVF_READER_SIGNATURE offset="
