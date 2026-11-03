@@ -5295,6 +5295,102 @@ int main(int argc,char** argv){
   }
  }
 
+
+ // Milestone 158: verify corrected CALL boundaries and inspect resource lookup.
+ {
+  std::ifstream in158(std::filesystem::path(argv[1])/"STTNG.OVL",std::ios::binary);
+  if(!in158){
+   std::cout<<"RM_PALETTE_FVF_RESOURCE_LOOKUP_STATUS read=0\n";
+  }else{
+   const std::vector<uint8_t> d158(
+    (std::istreambuf_iterator<char>(in158)),std::istreambuf_iterator<char>());
+   std::cout<<"RM_PALETTE_FVF_RESOURCE_LOOKUP_STATUS read=1 bytes="
+            <<d158.size()<<" wrapper=562864 lowerLevel=513376"
+            <<" constant=0xF84 scope=verifiedCallOffsetsAndLookup\n";
+   struct Call158{const char* name;size_t offset;int64_t expected;};
+   const std::vector<Call158> calls158={
+    {"source_acquisition",531033,562864},
+    {"record_count_line_advance",531290,1157552},
+    {"table_allocation",531354,587664},
+    {"first_field_conversion",531542,1168988},
+    {"next_record_line_advance",531789,1157552},
+    {"source_release",531810,562937}
+   };
+   size_t matched158=0;
+   for(const auto& call:calls158){
+    int64_t target=-1;
+    if(call.offset+5<=d158.size()&&d158[call.offset]==0xe8){
+     const uint32_t u=uint32_t(d158[call.offset+1])|
+       (uint32_t(d158[call.offset+2])<<8)|
+       (uint32_t(d158[call.offset+3])<<16)|
+       (uint32_t(d158[call.offset+4])<<24);
+     target=int64_t(call.offset)+5+int64_t(int32_t(u));
+    }
+    const bool match=target==call.expected;
+    matched158+=match?1:0;
+    std::cout<<"RM_PALETTE_FVF_RESOURCE_LOOKUP_CALL name="<<call.name
+             <<" offset="<<call.offset<<" target="<<target
+             <<" expected="<<call.expected<<" match="<<(match?1:0)
+             <<" instructionBoundaryVerified=0\n";
+   }
+   std::cout<<"RM_PALETTE_FVF_RESOURCE_LOOKUP_CALL_SUMMARY matched="
+            <<matched158<<" total="<<calls158.size()<<"\n";
+   struct Region158{const char* name;size_t begin;size_t end;};
+   const std::vector<Region158> regions158={
+    {"source_callsite",531016,531064},
+    {"wrapper",562864,562936},
+    {"lookup_predecessor",513280,513376},
+    {"lookup_entry",513376,513568},
+    {"lookup_body",513568,513824},
+    {"lookup_followthrough",513824,514080},
+    {"release_callsite",531792,531824},
+    {"release_wrapper",562928,563008}
+   };
+   for(const auto& region:regions158){
+    for(size_t p=region.begin;p<std::min(region.end,d158.size());p+=16){
+     std::cout<<"RM_PALETTE_FVF_RESOURCE_LOOKUP_HEX region="<<region.name
+              <<" offset="<<p<<" hex=";
+     for(size_t j=p;j<std::min(p+16,std::min(region.end,d158.size()));++j){
+      if(j!=p)std::cout<<" ";
+      std::cout<<std::hex<<std::setw(2)<<std::setfill('0')<<unsigned(d158[j]);
+     }
+     std::cout<<std::dec<<std::setfill(' ')<<"\n";
+    }
+   }
+   struct Pattern158{const char* name;size_t begin;size_t end;
+                     std::vector<uint8_t> bytes;};
+   const std::vector<Pattern158> patterns158={
+    {"source_constant",531024,531040,{0xb8,0x84,0x0f,0x00,0x00}},
+    {"source_call",531024,531040,{0xe8,0x52,0x7c,0x00,0x00}},
+    {"wrapper_global_context",562880,562912,{0xb8,0xfc,0xaa,0x09,0x00}},
+    {"wrapper_four_arg_cleanup",562896,562920,{0x83,0xc4,0x10}},
+    {"source_buffer_end",531040,531056,{0x03,0x45,0xe4}}
+   };
+   size_t matchedPatterns158=0;
+   for(const auto& pat:patterns158){
+    bool found=false;size_t where=0;
+    const size_t limit=std::min(pat.end,d158.size());
+    for(size_t p=pat.begin;p+pat.bytes.size()<=limit;++p){
+     if(std::equal(pat.bytes.begin(),pat.bytes.end(),d158.begin()+p)){
+      found=true;where=p;break;
+     }
+    }
+    matchedPatterns158+=found?1:0;
+    std::cout<<"RM_PALETTE_FVF_RESOURCE_LOOKUP_PATTERN name="<<pat.name
+             <<" found="<<(found?1:0)
+             <<" offset="<<(found?int64_t(where):-1)<<"\n";
+   }
+   std::cout<<"RM_PALETTE_FVF_RESOURCE_LOOKUP_PATTERN_SUMMARY matched="
+            <<matchedPatterns158<<" total="<<patterns158.size()<<"\n";
+   std::cout<<"RM_PALETTE_FVF_RESOURCE_LOOKUP_LIMITATION"
+            <<" lowerLevelDisassembly=partial"
+            <<" constant0xF84Meaning=unverified"
+            <<" sourceTextIdentity=unverified"
+            <<" fvfResourceIdentity=unverified"
+            <<" rmUpperPaletteProvenance=unverified\n";
+  }
+ }
+
  std::cout<<"NOTE: Trailer plausibility does not establish palette ownership.\n";
  std::cout<<"NOTE: Palette overlap is numerical only; it does not establish RM palette provenance.\n";
  return 0;
