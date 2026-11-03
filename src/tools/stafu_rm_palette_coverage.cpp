@@ -5006,6 +5006,109 @@ int main(int argc,char** argv){
   }
  }
 
+
+ // Milestone 155: trace table allocation and writes without assigning field semantics.
+ {
+  std::ifstream in155(std::filesystem::path(argv[1])/"STTNG.OVL",std::ios::binary);
+  if(!in155){
+   std::cout<<"RM_PALETTE_FVF_TABLE_POPULATION_STATUS read=0\n";
+  }else{
+   const std::vector<uint8_t> d155(
+    (std::istreambuf_iterator<char>(in155)),std::istreambuf_iterator<char>());
+   std::cout<<"RM_PALETTE_FVF_TABLE_POPULATION_STATUS read=1 bytes="
+            <<d155.size()<<" tableGlobal=0x9A630 countGlobal=0x9A62C"
+            <<" scope=tableLifecycleAndFieldWrites\n";
+   struct Region155{const char* name;size_t begin;size_t end;};
+   const std::vector<Region155> regions155={
+    {"table_lifecycle_predecessor",530944,531200},
+    {"table_lifecycle_allocation",531200,531456},
+    {"table_lifecycle_population",531456,531712},
+    {"table_lifecycle_cleanup",531712,531904},
+    {"table_record_update",531904,532192},
+    {"table_record_copy",532192,532336},
+    {"table_lookup_and_dispatch",532320,532512}
+   };
+   for(const auto& region:regions155){
+    for(size_t p=region.begin;p<std::min(region.end,d155.size());p+=16){
+     std::cout<<"RM_PALETTE_FVF_TABLE_POPULATION_HEX region="<<region.name
+              <<" offset="<<p<<" hex=";
+     for(size_t j=p;j<std::min(p+16,std::min(region.end,d155.size()));++j){
+      if(j!=p)std::cout<<" ";
+      std::cout<<std::hex<<std::setw(2)<<std::setfill('0')<<unsigned(d155[j]);
+     }
+     std::cout<<std::dec<<std::setfill(' ')<<"\n";
+    }
+   }
+   // Exact global-address references are raw candidates, not decoded instructions.
+   struct Global155{const char* name;uint32_t address;};
+   const std::vector<Global155> globals155={
+    {"table_pointer",0x0009a630},{"table_count",0x0009a62c}
+   };
+   for(const auto& g:globals155){
+    size_t count=0;
+    for(size_t p=0;p+4<=d155.size();++p){
+     const uint32_t u=uint32_t(d155[p])|
+       (uint32_t(d155[p+1])<<8)|
+       (uint32_t(d155[p+2])<<16)|
+       (uint32_t(d155[p+3])<<24);
+     if(u!=g.address)continue;
+     ++count;
+     if(count<=80){
+      std::cout<<"RM_PALETTE_FVF_TABLE_POPULATION_GLOBAL_REF name="<<g.name
+               <<" address="<<g.address<<" operandOffset="<<p
+               <<" candidate="<<count<<" instructionBoundaryVerified=0\n";
+      const size_t start=p>16?p-16:0;
+      const size_t end=std::min(p+20,d155.size());
+      std::cout<<"RM_PALETTE_FVF_TABLE_POPULATION_GLOBAL_HEX name="<<g.name
+               <<" operandOffset="<<p<<" start="<<start<<" hex=";
+      for(size_t j=start;j<end;++j){
+       if(j!=start)std::cout<<" ";
+       std::cout<<std::hex<<std::setw(2)<<std::setfill('0')<<unsigned(d155[j]);
+      }
+      std::cout<<std::dec<<std::setfill(' ')<<"\n";
+     }
+    }
+    std::cout<<"RM_PALETTE_FVF_TABLE_POPULATION_GLOBAL_SUMMARY name="<<g.name
+             <<" candidates="<<count<<" displayed="<<std::min<size_t>(count,80)
+             <<" limitation=rawAddressMatches\n";
+   }
+   struct Pattern155{const char* name;size_t begin;size_t end;
+                     std::vector<uint8_t> bytes;};
+   const std::vector<Pattern155> patterns155={
+    {"table_count_compare",531888,532416,{0x3b,0x05,0x2c,0xa6,0x09,0x00}},
+    {"table_pointer_read",531888,532416,{0x8b,0x15,0x30,0xa6,0x09,0x00}},
+    {"record_stride_16",531888,532416,{0xc1,0xe0,0x04}},
+    {"record_byte_flag_write",531888,532016,{0x88,0x50,0x0c}},
+    {"record_field4_store",532192,532320,{0x89,0x50,0x04}},
+    {"record_field8_load",532272,532320,{0x8b,0x50,0x08}},
+    {"record_field4_dispatch",532352,532416,{0xff,0x70,0x04}}
+   };
+   size_t matched155=0;
+   for(const auto& pat:patterns155){
+    bool found=false;size_t where=0;
+    const size_t limit=std::min(pat.end,d155.size());
+    for(size_t p=pat.begin;p+pat.bytes.size()<=limit;++p){
+     if(std::equal(pat.bytes.begin(),pat.bytes.end(),d155.begin()+p)){
+      found=true;where=p;break;
+     }
+    }
+    matched155+=found?1:0;
+    std::cout<<"RM_PALETTE_FVF_TABLE_POPULATION_PATTERN name="<<pat.name
+             <<" found="<<(found?1:0)
+             <<" offset="<<(found?int64_t(where):-1)<<"\n";
+   }
+   std::cout<<"RM_PALETTE_FVF_TABLE_POPULATION_PATTERN_SUMMARY matched="
+            <<matched155<<" total="<<patterns155.size()<<"\n";
+   std::cout<<"RM_PALETTE_FVF_TABLE_POPULATION_LIMITATION"
+            <<" globalRefs=rawCandidates"
+            <<" allocationIdentity=unverified"
+            <<" recordFieldTypes=unverified"
+            <<" tableContents=unverified"
+            <<" fvfResourceIdentity=unverified"
+            <<" rmUpperPaletteProvenance=unverified\n";
+  }
+ }
+
  std::cout<<"NOTE: Trailer plausibility does not establish palette ownership.\n";
  std::cout<<"NOTE: Palette overlap is numerical only; it does not establish RM palette provenance.\n";
  return 0;
