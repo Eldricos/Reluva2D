@@ -4832,6 +4832,93 @@ int main(int argc,char** argv){
   }
  }
 
+
+ // Milestone 153: earlier parent-frame evidence and incoming call candidates.
+ {
+  std::ifstream in153(std::filesystem::path(argv[1])/"STTNG.OVL",std::ios::binary);
+  if(!in153){
+   std::cout<<"RM_PALETTE_FVF_PARENT_ENTRY_STATUS read=0\n";
+  }else{
+   const std::vector<uint8_t> d153(
+    (std::istreambuf_iterator<char>(in153)),std::istreambuf_iterator<char>());
+   std::cout<<"RM_PALETTE_FVF_PARENT_ENTRY_STATUS read=1 bytes="
+            <<d153.size()<<" scope=prologueFrameAndIncomingCandidates\n";
+   struct Region153{const char* name;size_t start;size_t end;};
+   const std::vector<Region153> regions153={
+    {"earlier_prologue",532992,533248},
+    {"entry_candidate_context",533232,533488},
+    {"frame_setup_and_locals",533472,533728},
+    {"predecessor_to_initialization",533712,533984},
+    {"argument_forwarding",534384,534448}
+   };
+   for(const auto& region:regions153){
+    for(size_t p=region.start;p<std::min(region.end,d153.size());p+=16){
+     std::cout<<"RM_PALETTE_FVF_PARENT_ENTRY_HEX region="<<region.name
+              <<" offset="<<p<<" hex=";
+     for(size_t j=p;j<std::min(p+16,std::min(region.end,d153.size()));++j){
+      if(j!=p)std::cout<<" ";
+      std::cout<<std::hex<<std::setw(2)<<std::setfill('0')<<unsigned(d153[j]);
+     }
+     std::cout<<std::dec<<std::setfill(' ')<<"\n";
+    }
+   }
+   const std::vector<std::vector<uint8_t>> prologues153={
+    {0x55,0x89,0xe5},{0x55,0x8b,0xec},
+    {0x55,0x89,0xe5,0x83,0xec},{0x55,0x8b,0xec,0x83,0xec}};
+   size_t prologueCount153=0;
+   for(size_t p=532992;p<std::min<size_t>(534428,d153.size());++p){
+    for(size_t i=0;i<prologues153.size();++i){
+     const auto& bytes=prologues153[i];
+     if(p+bytes.size()>d153.size()||
+        !std::equal(bytes.begin(),bytes.end(),d153.begin()+p))continue;
+     ++prologueCount153;
+     std::cout<<"RM_PALETTE_FVF_PARENT_ENTRY_PROLOGUE offset="<<p
+              <<" pattern="<<i<<" candidate="<<prologueCount153
+              <<" instructionBoundaryVerified=0\n";
+    }
+   }
+   std::cout<<"RM_PALETTE_FVF_PARENT_ENTRY_PROLOGUE_SUMMARY candidates="
+            <<prologueCount153<<" scanBegin=532992 scanEnd=534428\n";
+   size_t incoming153=0;
+   for(size_t p=0;p+5<=d153.size();++p){
+    if(d153[p]!=0xe8)continue;
+    const uint32_t u=uint32_t(d153[p+1])|
+      (uint32_t(d153[p+2])<<8)|
+      (uint32_t(d153[p+3])<<16)|
+      (uint32_t(d153[p+4])<<24);
+    const int64_t target=int64_t(p)+5+int64_t(int32_t(u));
+    if(target<532992||target>=533984)continue;
+    ++incoming153;
+    if(incoming153<=64){
+     std::cout<<"RM_PALETTE_FVF_PARENT_ENTRY_INCOMING offset="<<p
+              <<" target="<<target<<" candidate="<<incoming153
+              <<" instructionBoundaryVerified=0\n";
+     const size_t start=p>48?p-48:0;
+     const size_t end=std::min(p+24,d153.size());
+     for(size_t q=start;q<end;q+=16){
+      std::cout<<"RM_PALETTE_FVF_PARENT_ENTRY_INCOMING_HEX"
+               <<" callOffset="<<p<<" offset="<<q<<" hex=";
+      for(size_t j=q;j<std::min(q+16,end);++j){
+       if(j!=q)std::cout<<" ";
+       std::cout<<std::hex<<std::setw(2)<<std::setfill('0')<<unsigned(d153[j]);
+      }
+      std::cout<<std::dec<<std::setfill(' ')<<"\n";
+     }
+    }
+   }
+   std::cout<<"RM_PALETTE_FVF_PARENT_ENTRY_INCOMING_SUMMARY candidates="
+            <<incoming153<<" displayed="<<std::min<size_t>(incoming153,64)
+            <<" targetBegin=532992 targetEnd=533984"
+            <<" limitation=rawOpcodeAndEntryNotVerified\n";
+   std::cout<<"RM_PALETTE_FVF_PARENT_ENTRY_LIMITATION"
+            <<" parentEntry=unverified"
+            <<" stackFrameMapping=unverified"
+            <<" incomingInstructionBoundaries=unverified"
+            <<" resourceKeyOrigin=unverified"
+            <<" rmUpperPaletteProvenance=unverified\n";
+  }
+ }
+
  std::cout<<"NOTE: Trailer plausibility does not establish palette ownership.\n";
  std::cout<<"NOTE: Palette overlap is numerical only; it does not establish RM palette provenance.\n";
  return 0;
