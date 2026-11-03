@@ -3596,9 +3596,9 @@ int main(int argc,char** argv){
    struct Anchor139{const char* name;size_t offset;std::vector<uint8_t> bytes;};
    const std::vector<Anchor139> anchors139={
     {"table_pointer_load",522167,{0xA1,0x88,0x97,0x09,0x00}},
-    {"table_header_read",522181,{0x8B,0x18}},
-    {"table_index_global_read",522183,{0x66,0x8B,0x15,0x94,0x97,0x09,0x00}},
-    {"transform_copy_dwords",521837,{0xF2,0xA5}},
+    {"table_header_read",522182,{0x8B,0x18}},
+    {"table_index_global_read",522184,{0x66,0x8B,0x15,0x94,0x97,0x09,0x00}},
+    {"transform_copy_dwords",521838,{0xF2,0xA5}},
     {"transform_copy_bytes",521845,{0xF2,0xA4}}
    };
    size_t matched139=0;
@@ -3702,6 +3702,74 @@ int main(int argc,char** argv){
             <<" expansionPurpose=unverified"
             <<" ownerSetupRole=unverified"
             <<" resourceIdentity=unverified"
+            <<" rmUpperPaletteProvenance=unverified\n";
+  }
+ }
+
+
+ // Milestone 141: identify bounded owner-setup reads and their
+ // surrounding stream/source setup. No source format is assumed.
+ {
+  std::ifstream in141(std::filesystem::path(argv[1])/"STTNG.OVL",std::ios::binary);
+  if(!in141){
+   std::cout<<"RM_PALETTE_OWNER_READER_STATUS read=0\n";
+  }else{
+   const std::vector<uint8_t> d141(
+    (std::istreambuf_iterator<char>(in141)),std::istreambuf_iterator<char>());
+   std::cout<<"RM_PALETTE_OWNER_READER_STATUS read=1 bytes="
+            <<d141.size()<<" scope=boundedReaderCallsAndHeader\n";
+   struct Region141{const char* name;size_t start;size_t end;};
+   const std::vector<Region141> regions141={
+    {"owner_setup_prologue",518976,519064},
+    {"owner_header_96_read",519008,519072},
+    {"owner_header_44_read",519072,519136},
+    {"owner_header_16_read",519136,519200},
+    {"owner_variable_read",519192,519296},
+    {"owner_followup_reads",519288,519488},
+    {"owner_reader_initialization",522880,523040},
+    {"reader_candidate_context",562624,562880},
+    {"reader_candidate_continuation",562880,563104},
+    {"owner_header_field_consumers",523032,523216}
+   };
+   for(const auto& region:regions141){
+    for(size_t p=region.start;p<std::min(region.end,d141.size());p+=16){
+     std::cout<<"RM_PALETTE_OWNER_READER_HEX region="<<region.name
+              <<" offset="<<p<<" hex=";
+     for(size_t j=p;j<std::min(p+16,std::min(region.end,d141.size()));++j){
+      if(j!=p)std::cout<<" ";
+      std::cout<<std::hex<<std::setw(2)<<std::setfill('0')<<unsigned(d141[j]);
+     }
+     std::cout<<std::dec<<std::setfill(' ')<<"\n";
+    }
+   }
+   struct Call141{const char* name;size_t offset;};
+   const std::vector<Call141> calls141={
+    {"owner_setup_first",519005},
+    {"owner_header_96",519036},
+    {"owner_header_skip",519073},
+    {"owner_header_44",519100},
+    {"owner_header_16",519164},
+    {"owner_variable",519249},
+    {"owner_followup",519291}
+   };
+   for(const auto& call:calls141){
+    int64_t target=-1;
+    if(call.offset+5<=d141.size()&&d141[call.offset]==0xE8){
+     const uint32_t u=uint32_t(d141[call.offset+1])|
+       (uint32_t(d141[call.offset+2])<<8)|
+       (uint32_t(d141[call.offset+3])<<16)|
+       (uint32_t(d141[call.offset+4])<<24);
+     target=int64_t(call.offset)+5+int64_t(int32_t(u));
+    }
+    std::cout<<"RM_PALETTE_OWNER_READER_CALL name="<<call.name
+             <<" offset="<<call.offset<<" target="<<target
+             <<" note=rawCallOffsetRequiresVerification\n";
+   }
+   std::cout<<"RM_PALETTE_OWNER_READER_LIMITATION"
+            <<" readerFunction=unverified"
+            <<" streamType=unverified"
+            <<" fvfHeaderLayout=unverified"
+            <<" sourceResource=unverified"
             <<" rmUpperPaletteProvenance=unverified\n";
   }
  }
