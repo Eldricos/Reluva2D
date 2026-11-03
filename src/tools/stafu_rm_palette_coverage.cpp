@@ -5942,6 +5942,92 @@ int main(int argc,char** argv){
   }
  }
 
+
+ // Milestone 165: enumerate BW-prefixed candidates and test bounded linkage.
+ {
+  std::ifstream in165(std::filesystem::path(argv[1])/"STTNG.OVL",std::ios::binary);
+  if(!in165){
+   std::cout<<"RM_PALETTE_FVF_BW_CHAIN_STATUS read=0\n";
+  }else{
+   const std::vector<uint8_t> d165((std::istreambuf_iterator<char>(in165)),
+                                   std::istreambuf_iterator<char>());
+   const auto u16_165=[&](size_t p)->uint32_t{
+    return p+2<=d165.size()?uint32_t(d165[p])|(uint32_t(d165[p+1])<<8):0;
+   };
+   const auto u32_165=[&](size_t p)->uint32_t{
+    return p+4<=d165.size()?uint32_t(d165[p])|(uint32_t(d165[p+1])<<8)|
+      (uint32_t(d165[p+2])<<16)|(uint32_t(d165[p+3])<<24):0;
+   };
+   const uint32_t pages165=u16_165(4),last165=u16_165(2);
+   const size_t base165=pages165?size_t(uint64_t(pages165-1)*512+
+     (last165?last165:512)):0;
+   std::vector<size_t> matches165;
+   for(size_t p=0;p+2<=d165.size();++p){
+    if(d165[p]=='B'&&d165[p+1]=='W')matches165.push_back(p);
+   }
+   std::cout<<"RM_PALETTE_FVF_BW_CHAIN_STATUS read=1 bytes="<<d165.size()
+            <<" mzBoundary="<<base165<<" bwPrefixCount="<<matches165.size()
+            <<" classification=unverified\n";
+   for(size_t i=0;i<matches165.size();++i){
+    const size_t p=matches165[i];
+    std::cout<<"RM_PALETTE_FVF_BW_CHAIN_CANDIDATE index="<<i
+             <<" offset="<<p<<" relativeToBoundary="<<int64_t(p)-int64_t(base165)
+             <<" nextTwo="<<u16_165(p+2)
+             <<" field4="<<u32_165(p+4)
+             <<" field8="<<u32_165(p+8)
+             <<" field28="<<u32_165(p+28)
+             <<" field32="<<u32_165(p+32)
+             <<" withinFile="<<(p+36<=d165.size()?1:0)
+             <<" structuralValidation=0\n";
+   }
+   const bool first165=base165+36<=d165.size()&&
+     d165[base165]=='B'&&d165[base165+1]=='W';
+   const uint32_t link165=first165?u32_165(base165+32):0;
+   const uint64_t target165=uint64_t(base165)+link165;
+   const bool second165=first165&&target165+4<=d165.size()&&
+     d165[size_t(target165)]=='B'&&d165[size_t(target165)+1]=='W';
+   std::cout<<"RM_PALETTE_FVF_BW_CHAIN_LINK from="<<base165
+            <<" fieldRelative=32 value="<<link165
+            <<" target="<<target165
+            <<" targetHasBW="<<(second165?1:0)
+            <<" mappingInterpretation=bwpRelativeHypothesis\n";
+   if(second165){
+    const size_t p=size_t(target165);
+    for(size_t field=4;field<=64;field+=4){
+     const uint32_t value=u32_165(p+field);
+     const uint64_t absolute=value,relative=uint64_t(p)+value;
+     const bool absBW=absolute+2<=d165.size()&&
+       d165[size_t(absolute)]=='B'&&d165[size_t(absolute)+1]=='W';
+     const bool relBW=relative+2<=d165.size()&&
+       d165[size_t(relative)]=='B'&&d165[size_t(relative)+1]=='W';
+     std::cout<<"RM_PALETTE_FVF_BW_CHAIN_SECOND_FIELD relative="<<field
+              <<" value="<<value
+              <<" absoluteTarget="<<absolute<<" absoluteHasBW="<<(absBW?1:0)
+              <<" relativeTarget="<<relative<<" relativeHasBW="<<(relBW?1:0)
+              <<" meaning=unverified\n";
+    }
+   }
+   for(size_t p:matches165){
+    if(p+64>d165.size())continue;
+    for(size_t at=p;at<p+64;at+=16){
+     std::cout<<"RM_PALETTE_FVF_BW_CHAIN_HEX candidateOffset="<<p
+              <<" offset="<<at<<" hex=";
+     for(size_t j=at;j<at+16;++j){
+      if(j!=at)std::cout<<" ";
+      std::cout<<std::hex<<std::setw(2)<<std::setfill('0')<<unsigned(d165[j]);
+     }
+     std::cout<<std::dec<<std::setfill(' ')<<"\n";
+    }
+   }
+   std::cout<<"RM_PALETTE_FVF_BW_CHAIN_LIMITATION"
+            <<" bwPrefixMayOccurInCodeOrData=1"
+            <<" chainSchema=unverified"
+            <<" runtimeMapping=unverified"
+            <<" immediate0xF84Meaning=unverified"
+            <<" rmUpperPaletteProvenance=unverified\n";
+  }
+ }
+
  std::cout<<"NOTE: Trailer plausibility does not establish palette ownership.\n";
  std::cout<<"NOTE: Palette overlap is numerical only; it does not establish RM palette provenance.\n";
  return 0;
