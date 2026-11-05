@@ -161,10 +161,13 @@ int stafuArchiveList(const char* path);
 int stafuArchiveCompare(const char* zipPath, const char* dirPath);
 
 int stafuSprPayloadCatalog(const char* installed, const char* cd, const char* optionalName);
+int stafuSprShortPayloads(const char* installed, const char* cd, const char* optionalName);
 int stafuSprPayloadDiff(const char* installed, const char* cd, const char* name,
                         const char* record, const char* first, const char* second);
 
 int stafuToolMain(int argc, char** argv) {
+    if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-short-payloads") == 0)
+        return stafuSprShortPayloads(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-payload-catalog") == 0)
         return stafuSprPayloadCatalog(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if (argc == 9 && std::strcmp(argv[2], "spr-payload-diff") == 0)
