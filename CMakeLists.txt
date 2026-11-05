@@ -476,6 +476,10 @@ if(RELUVA_BUILD_TESTS)
     target_link_libraries(reluva_stafu_spr_bit_survey_tests PRIVATE reluva_engines reluva_warnings)
     add_test(NAME stafu_spr_bit_survey COMMAND reluva_stafu_spr_bit_survey_tests)
 
+    add_executable(reluva_stafu_spr_middle_blocks_tests tests/test_stafu_spr_middle_blocks.cpp)
+    target_link_libraries(reluva_stafu_spr_middle_blocks_tests PRIVATE reluva_engines reluva_warnings)
+    add_test(NAME stafu_spr_middle_blocks COMMAND reluva_stafu_spr_middle_blocks_tests)
+
     add_executable(reluva_stafu_spr_byte_shift_tests tests/test_stafu_spr_byte_shift.cpp)
     target_link_libraries(reluva_stafu_spr_byte_shift_tests PRIVATE reluva_engines reluva_warnings)
     add_test(NAME stafu_spr_byte_shift COMMAND reluva_stafu_spr_byte_shift_tests)
