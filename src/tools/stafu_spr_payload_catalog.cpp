@@ -270,3 +270,123 @@ int stafuSprOffsetCorrelate(const char* installed,const char* cd,const char* opt
     std::puts("SPR_OFFSET_NOTE candidate hits are numerical correlations, not validated pointers or decoded images.");
     return failures?1:0;
 }
+
+
+// Milestone 221: read-only analysis of runs of four-byte candidate references.
+// A shared displacement is inferred only when multiple values align to known
+// image-data starts; arithmetic progression alone is not a pointer proof.
+int stafuSprReferenceAnalysis(const char* installed,const char* cd,const char* optionalName) {
+    reluva::stafu::ResourceManager manager;
+    std::string error;
+    if(!manager.open(installed,cd,error)) {
+        std::fprintf(stderr,"spr-reference-analysis: %s\n",error.c_str());return 1;
+    }
+    const std::vector<std::string> names=optionalName
+        ?std::vector<std::string>{optionalName}
+        :std::vector<std::string>{"BRDGDATA.SPR","BRDGPICA.SPR","BRDGRIKR.SPR",
+                                  "BRDGTROI.SPR","BRDGWORF.SPR"};
+    int failures=0;
+    for(const auto& name:names) {
+        std::vector<uint8_t> bytes;
+        if(!manager.read(name,bytes,error)) {
+            std::fprintf(stderr,"spr-reference-analysis: %s: %s\n",name.c_str(),error.c_str());
+            ++failures;continue;
+        }
+        reluva::stafu::SprSequenceIndex index;
+        if(!index.build(bytes,error)) {
+            std::fprintf(stderr,"spr-reference-analysis: %s: %s\n",name.c_str(),error.c_str());
+            ++failures;continue;
+        }
+        struct Source {size_t image,chunk;uint32_t value;};
+        struct Boundary {size_t record,chunk,offset;};
+        std::vector<Boundary> boundaries;
+        for(size_t r=0;r<index.records().size();++r)
+            for(size_t c=0;c<index.records()[r].events.size();++c) {
+                const auto& e=index.records()[r].events[c];
+                if(e.hasImageHeader&&e.imageDataSize>4)
+                    boundaries.push_back({r,c,e.imageDataOffset});
+            }
+        size_t total=0;
+        std::printf("SPR_REFERENCE_RESOURCE resource=%s size=%zu records=%zu imageDataStarts=%zu\n",
+                    name.c_str(),bytes.size(),index.records().size(),boundaries.size());
+        for(size_t r=0;r<index.records().size();++r) {
+            const auto& rec=index.records()[r];
+            std::vector<Source> run;
+            auto flush=[&]() {
+                if(run.empty())return;
+                ++total;
+                std::map<int64_t,std::vector<size_t>> displacementMatches;
+                for(size_t i=0;i<run.size();++i)
+                    for(const auto& boundary:boundaries) {
+                        const int64_t displacement=static_cast<int64_t>(boundary.offset)-
+                            static_cast<int64_t>(run[i].value);
+                        displacementMatches[displacement].push_back(i);
+                    }
+                size_t bestCount=0;
+                int64_t bestDisplacement=0;
+                for(const auto& [d,indices]:displacementMatches) {
+                    std::set<size_t> unique(indices.begin(),indices.end());
+                    if(unique.size()>bestCount ||
+                       (unique.size()==bestCount && bestCount && std::abs(d)<std::abs(bestDisplacement))) {
+                        bestCount=unique.size();bestDisplacement=d;
+                    }
+                }
+                std::printf("  SPR_REFERENCE_RUN record=%zu firstImage=%zu lastImage=%zu count=%zu values=",
+                            r,run.front().image,run.back().image,run.size());
+                for(size_t i=0;i<run.size();++i)
+                    std::printf("%s%u",i?",":"",run[i].value);
+                std::printf("\n");
+                std::printf("    DELTAS");
+                for(size_t i=1;i<run.size();++i)
+                    std::printf(" %lld",static_cast<long long>(
+                        static_cast<int64_t>(run[i].value)-run[i-1].value));
+                std::printf("\n");
+                // Exact matches under the zero-base and record-base hypotheses.
+                for(const auto& [label,base]:std::array<std::pair<const char*,size_t>,2>{{
+                        {"absolute",0},{"record-relative",rec.start}}}) {
+                    size_t hits=0;
+                    for(const auto& src:run) {
+                        const uint64_t target=uint64_t(base)+src.value;
+                        for(const auto& b:boundaries)
+                            if(target==b.offset) {++hits;break;}
+                    }
+                    std::printf("    BASE_TEST base=%s displacement=%zu exactImageDataStarts=%zu/%zu\n",
+                                label,base,hits,run.size());
+                }
+                if(bestCount>=2) {
+                    std::printf("    SHARED_DISPLACEMENT delta=%lld matches=%zu/%zu status=candidate-only\n",
+                                static_cast<long long>(bestDisplacement),bestCount,run.size());
+                    for(size_t i=0;i<run.size();++i) {
+                        const int64_t target=static_cast<int64_t>(run[i].value)+bestDisplacement;
+                        for(const auto& b:boundaries)
+                            if(target==static_cast<int64_t>(b.offset)) {
+                                std::printf("      MATCH image=%zu value=%u target=0x%zx record=%zu chunk=%zu\n",
+                                            run[i].image,run[i].value,b.offset,b.record,b.chunk);
+                                break;
+                            }
+                    }
+                } else std::puts("    SHARED_DISPLACEMENT status=no-multi-value-match");
+                run.clear();
+            };
+            size_t ordinal=0;
+            for(size_t c=0;c<rec.events.size();++c) {
+                const auto& e=rec.events[c];
+                if(e.tag!="PMOC"&&e.tag!="MOCS")continue;
+                reluva::stafu::SprImagePayloadAccessor::View view;
+                if(reluva::stafu::SprImagePayloadAccessor::get(bytes,e,view)&&
+                   view.size==4&&view.marker==0x00030000) {
+                    const auto* b=view.data;
+                    const uint32_t value=uint32_t(b[0])|(uint32_t(b[1])<<8)|
+                                         (uint32_t(b[2])<<16)|(uint32_t(b[3])<<24);
+                    if(!run.empty()&&ordinal!=run.back().image+1)flush();
+                    run.push_back({ordinal,c,value});
+                } else flush();
+                ++ordinal;
+            }
+            flush();
+        }
+        std::printf("SPR_REFERENCE_SUMMARY resource=%s runs=%zu\n",name.c_str(),total);
+    }
+    std::puts("SPR_REFERENCE_NOTE displacements are exploratory; matching a boundary does not establish reference semantics.");
+    return failures?1:0;
+}
