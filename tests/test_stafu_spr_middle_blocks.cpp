@@ -18,6 +18,6 @@ int main() {
     assert(!equal.empty()&&equal[0].shift==0&&equal[0].length==88);
     auto none=findSprMiddleBlocks(a.data(),a.size(),b.data(),b.size(),99,0);
     assert(none.empty());
-    assert(findSprMiddleBlocks(nullptr,1,b.data(),b.size()).empty());
+    assert(findSprMiddleBlocks(nullptr,1,b.data(),b.size(),0,0).empty());
     assert(findSprMiddleBlocks(a.data(),a.size(),b.data(),b.size(),0,0,-1).empty());
 }
