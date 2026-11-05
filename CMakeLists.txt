@@ -354,6 +354,11 @@ if(RELUVA_BUILD_TESTS)
     target_link_libraries(reluva_stafu_color_img_probe_tests PRIVATE reluva_engines reluva_warnings)
     add_test(NAME stafu_color_img_probe COMMAND reluva_stafu_color_img_probe_tests)
 
+    # Milestone 211: exact bridge palette assembly and RGBA conversion.
+    add_executable(reluva_stafu_bridge_palette_tests tests/test_stafu_bridge_palette.cpp)
+    target_link_libraries(reluva_stafu_bridge_palette_tests PRIVATE reluva_engines reluva_warnings)
+    add_test(NAME stafu_bridge_palette COMMAND reluva_stafu_bridge_palette_tests)
+
     add_executable(reluva_stafu_rm_standard_palette_tests tests/test_stafu_rm_standard_palette.cpp)
     target_link_libraries(reluva_stafu_rm_standard_palette_tests PRIVATE reluva_engines reluva_warnings)
     add_test(NAME stafu_rm_standard_palette COMMAND reluva_stafu_rm_standard_palette_tests)
