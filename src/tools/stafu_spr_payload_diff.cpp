@@ -125,21 +125,21 @@ int stafuSprPayloadDiff(const char* installed, const char* cd, const char* name,
     }
     const auto blocks=reluva::stafu::findSprMiddleBlocks(
         a.view.data,a.view.size,b.view.data,b.view.size,prefix,suffix,32,16);
-    std::printf("  MIDDLE_BLOCKS minLength=16 shiftRange=[-32,+32] total=%zu\\n",blocks.size());
+    std::printf("  MIDDLE_BLOCKS minLength=16 shiftRange=[-32,+32] total=%zu\n",blocks.size());
     for(size_t i=0;i<std::min<size_t>(blocks.size(),12);++i) {
         const auto& m=blocks[i];
-        std::printf("  block[%zu] delta=%+d A=[%zu,%zu) B=[%zu,%zu) length=%zu\\n",
+        std::printf("  block[%zu] delta=%+d A=[%zu,%zu) B=[%zu,%zu) length=%zu\n",
                     i,m.shift,m.a,m.a+m.length,m.b,m.b+m.length,m.length);
     }
     auto boundaryDump=[](const char* label,const uint8_t* data,size_t length,size_t center) {
         const size_t begin=center>32?center-32:0;
         const size_t end=std::min(length,center+(length-center>=32?32:length-center));
-        std::printf("  BOUNDARY %s center=%zu range=[%zu,%zu)\\n",label,center,begin,end);
+        std::printf("  BOUNDARY %s center=%zu range=[%zu,%zu)\n",label,center,begin,end);
         for(size_t p=begin;p<end;p+=16) {
             const size_t stop=std::min(end,p+16);
             std::printf("    %06zx:",p);
             for(size_t j=p;j<stop;++j)std::printf(" %02x",unsigned(data[j]));
-            std::putchar('\\n');
+            std::putchar('\n');
         }
     };
     boundaryDump("prefix-end A",a.view.data,a.view.size,prefix);
