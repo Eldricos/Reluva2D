@@ -9,6 +9,7 @@
 #include "engines/stafu/rm_working_geometry.h"
 #include "engines/stafu/rm_candidate_palette.h"
 #include "engines/stafu/rm_standard_palette.h"
+#include "engines/stafu/bridge_palette.h"
 #include <SDL3/SDL.h>
 #include <imgui.h>
 #include <algorithm>
@@ -29,6 +30,7 @@ public:
         loadStandardPalette(resources);
         loadRm(0,"BRIDGE.RM",resources);
         loadRm(1,"VIEWSCR.RM",resources);
+        loadVerifiedBridge(resources);
     }
     ~StafuBridgeScene() {
         for(auto& item:images_)if(item.texture)SDL_DestroyTexture(item.texture);
@@ -116,10 +118,27 @@ private:
         SDL_SetTextureScaleMode(item.texture,SDL_SCALEMODE_NEAREST);
         updateRmShift(index);
     }
+    void loadVerifiedBridge(const stafu::ResourceManager& resources) {
+        std::vector<uint8_t> bridge, standard;
+        if(!resources.read("BRIDGE.RM",bridge,verifiedBridgeError_))return;
+        if(!resources.read("STANDARD.PAL",standard,verifiedBridgeError_,4096))return;
+        std::array<uint8_t,stafu::kBridgePaletteBytes> palette{};
+        if(!stafu::assembleBridgePalette(bridge,standard,palette)) {
+            verifiedBridgeError_="Invalid bridge resource size or VGA6 palette";
+            return;
+        }
+        if(!stafu::renderBridgeRgba(bridge,palette,verifiedBridgeRgba_)) {
+            verifiedBridgeError_="Bridge indexed raster conversion failed";
+            return;
+        }
+        verifiedBridgeError_.clear();
+    }
     void updateRmShift(size_t index) {
         auto& item=rmImages_[index];
         if(!item.texture||rmOriginal_[index].empty())return;
         std::vector<uint8_t> source=rmOriginal_[index];
+        if(rmPaletteMode_==5 && index==0 && !verifiedBridgeRgba_.empty())
+            source=verifiedBridgeRgba_;
         if(rmPaletteMode_==3&&!standardPalette_.empty()) {
             std::vector<uint8_t> indices(source.size()/4);
             for(size_t i=0;i<indices.size();++i)indices[i]=source[i*4];
@@ -153,11 +172,13 @@ private:
     }
     void drawRm() {
         ImGui::TextWrapped("RM working geometry: 640 x 480, rotate right 256, left section down 1. "
-                           "Alignment visually verified; original color palette remains unknown.");
+                           "Alignment visually verified. Bridge palette verified against DOSBox-X.");
         if(ImGui::RadioButton("BRIDGE.RM",rmSelected_==0))rmSelected_=0;
         ImGui::SameLine();
-        if(ImGui::RadioButton("VIEWSCR.RM",rmSelected_==1))rmSelected_=1;
-        ImGui::TextDisabled("Palette preview is experimental; IMG palettes are not verified as RM palettes.");
+        if(rmPaletteMode_!=5) {
+            if(ImGui::RadioButton("VIEWSCR.RM",rmSelected_==1))rmSelected_=1;
+        } else ImGui::TextDisabled("VIEWSCR.RM palette not established; bridge-only preview.");
+        ImGui::TextDisabled("IMG palette modes are experimental; verified palette applies to BRIDGE.RM only.");
         bool paletteChanged=false;
         if(ImGui::RadioButton("Grayscale (verified baseline)",rmPaletteMode_==0)){
             rmPaletteMode_=0;paletteChanged=true;
@@ -174,6 +195,14 @@ private:
         }
         if(ImGui::RadioButton("color.img GIF palette (experimental)",rmPaletteMode_==4)){
             rmPaletteMode_=4;paletteChanged=true;
+        }
+        if(ImGui::RadioButton("Verified BRIDGE.RM + STANDARD.PAL (bridge only)",rmPaletteMode_==5)){
+            rmPaletteMode_=5;rmSelected_=0;paletteChanged=true;
+        }
+        if(rmPaletteMode_==5) {
+            ImGui::TextDisabled("Palette bytes verified; RGB expansion and scene composition remain provisional.");
+            if(!verifiedBridgeError_.empty())
+                ImGui::TextDisabled("Verified bridge unavailable: %s",verifiedBridgeError_.c_str());
         }
         if(rmPaletteMode_==3&&standardPalette_.empty())
             ImGui::TextDisabled("standard.pal unavailable: %s",standardPaletteError_.c_str());
@@ -253,6 +282,8 @@ private:
     std::string paletteErrors_[3];
     std::vector<uint8_t> standardPalette_;
     std::string standardPaletteError_;
+    std::vector<uint8_t> verifiedBridgeRgba_;
+    std::string verifiedBridgeError_;
     int rmPaletteMode_=0;
     bool showRm_=false;
     int rmSelected_=0;
