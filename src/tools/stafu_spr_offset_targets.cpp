@@ -271,3 +271,133 @@ int stafuSprReferenceResolve(const char* installed,const char* cd,const char* op
     std::puts("SPR_RESOLVE_NOTE imageDataOffset-value anchors are observational; matching metadata or offsets does not prove image reuse, decoding, or pointer semantics.");
     return failures?1:0;
 }
+
+
+// Milestone 225: validate every candidate, including singleton references.
+// No image bytes are decoded or modified.
+int stafuSprReferenceValidate(const char* installed,const char* cd,const char* optionalName) {
+    reluva::stafu::ResourceManager manager;
+    std::string error;
+    if(!manager.open(installed,cd,error)) {
+        std::fprintf(stderr,"spr-reference-validate: %s\n",error.c_str());return 1;
+    }
+    const std::vector<std::string> names=optionalName
+        ?std::vector<std::string>{optionalName}
+        :std::vector<std::string>{"BRDGDATA.SPR","BRDGPICA.SPR","BRDGRIKR.SPR",
+                                  "BRDGTROI.SPR","BRDGWORF.SPR"};
+    int failures=0;
+    for(const auto& name:names) {
+        std::vector<uint8_t> bytes;
+        if(!manager.read(name,bytes,error)) {
+            std::fprintf(stderr,"spr-reference-validate: %s: %s\n",name.c_str(),error.c_str());
+            ++failures;continue;
+        }
+        reluva::stafu::SprSequenceIndex index;
+        if(!index.build(bytes,error)) {
+            std::fprintf(stderr,"spr-reference-validate: %s: %s\n",name.c_str(),error.c_str());
+            ++failures;continue;
+        }
+        struct Node {
+            size_t record,image,chunk,offset,size;
+            uint32_t a,b,marker,value;
+            std::string tag;
+            bool candidate;
+        };
+        std::vector<Node> nodes;
+        std::map<size_t,std::vector<size_t>> byOffset;
+        const auto& records=index.records();
+        for(size_t r=0;r<records.size();++r) {
+            size_t ordinal=0;
+            for(size_t c=0;c<records[r].events.size();++c) {
+                const auto& e=records[r].events[c];
+                if(e.tag!="PMOC"&&e.tag!="MOCS")continue;
+                reluva::stafu::SprImagePayloadAccessor::View view;
+                if(reluva::stafu::SprImagePayloadAccessor::get(bytes,e,view)) {
+                    const bool candidate=view.size==4&&view.marker==0x00030000;
+                    uint32_t value=0;
+                    if(candidate) {
+                        const auto* p=view.data;
+                        value=uint32_t(p[0])|(uint32_t(p[1])<<8)|
+                              (uint32_t(p[2])<<16)|(uint32_t(p[3])<<24);
+                    }
+                    byOffset[view.offset].push_back(nodes.size());
+                    nodes.push_back({r,ordinal,c,view.offset,view.size,
+                                     view.headerA,view.headerB,view.marker,value,
+                                     e.tag,candidate});
+                }
+                ++ordinal;
+            }
+        }
+        size_t candidates=0,exact=0,compatible=0,mismatch=0,missing=0,
+               outOfRange=0,forward=0,backward=0,ambiguous=0,chains=0,cycles=0;
+        std::vector<int> edge(nodes.size(),-1);
+        std::printf("SPR_VALIDATE_RESOURCE resource=%s records=%zu images=%zu\n",
+                    name.c_str(),records.size(),nodes.size());
+        for(size_t i=0;i<nodes.size();++i) {
+            const auto& src=nodes[i];
+            if(!src.candidate)continue;
+            ++candidates;
+            if(src.value>src.offset) {
+                ++outOfRange;
+                std::printf("  SPR_VALIDATE_SOURCE record=%zu image=%zu offset=0x%zx value=%u status=underflow\n",
+                            src.record,src.image,src.offset,src.value);
+                continue;
+            }
+            const size_t targetOffset=src.offset-src.value;
+            const auto found=byOffset.find(targetOffset);
+            if(found==byOffset.end()) {
+                ++missing;
+                std::printf("  SPR_VALIDATE_SOURCE record=%zu image=%zu offset=0x%zx value=%u target=0x%zx status=missing\n",
+                            src.record,src.image,src.offset,src.value,targetOffset);
+                continue;
+            }
+            ++exact;
+            if(found->second.size()>1)++ambiguous;
+            int selected=-1;
+            for(const size_t j:found->second) {
+                const auto& dst=nodes[j];
+                if(src.tag==dst.tag&&src.a==dst.a&&src.b==dst.b) {
+                    selected=static_cast<int>(j);
+                    break;
+                }
+            }
+            if(selected<0) {
+                ++mismatch;
+                selected=static_cast<int>(found->second.front());
+            } else ++compatible;
+            edge[i]=selected;
+            const auto& dst=nodes[static_cast<size_t>(selected)];
+            if(dst.offset<src.offset)++backward;
+            else if(dst.offset>src.offset)++forward;
+            std::printf("  SPR_VALIDATE_SOURCE record=%zu image=%zu offset=0x%zx value=%u target=0x%zx status=%s targetRecord=%zu targetImage=%zu targetTag=%s targetDims=%u/%u targetMarker=0x%08x targetSize=%zu targetCandidate=%s matches=%zu\n",
+                        src.record,src.image,src.offset,src.value,targetOffset,
+                        src.tag==dst.tag&&src.a==dst.a&&src.b==dst.b?"compatible":"metadataMismatch",
+                        dst.record,dst.image,dst.tag.c_str(),dst.a,dst.b,
+                        dst.marker,dst.size,dst.candidate?"yes":"no",found->second.size());
+        }
+        // Follow edges without recursion, bounding traversal by the number of nodes.
+        // Count a chain when a candidate points to another candidate.
+        for(size_t i=0;i<nodes.size();++i) {
+            if(!nodes[i].candidate||edge[i]<0)continue;
+            if(nodes[static_cast<size_t>(edge[i])].candidate)++chains;
+            std::vector<unsigned char> seen(nodes.size(),0);
+            int current=static_cast<int>(i);
+            for(size_t step=0;current>=0&&step<=nodes.size();++step) {
+                const size_t at=static_cast<size_t>(current);
+                if(seen[at]) {
+                    ++cycles;
+                    std::printf("  SPR_VALIDATE_CYCLE sourceRecord=%zu sourceImage=%zu atRecord=%zu atImage=%zu\n",
+                                nodes[i].record,nodes[i].image,nodes[at].record,nodes[at].image);
+                    break;
+                }
+                seen[at]=1;
+                current=edge[at];
+            }
+        }
+        std::printf("SPR_VALIDATE_SUMMARY resource=%s candidates=%zu exact=%zu compatible=%zu metadataMismatch=%zu missing=%zu underflow=%zu ambiguous=%zu backward=%zu forward=%zu directChains=%zu cycleSources=%zu\n",
+                    name.c_str(),candidates,exact,compatible,mismatch,missing,
+                    outOfRange,ambiguous,backward,forward,chains,cycles);
+    }
+    std::puts("SPR_VALIDATE_NOTE candidate offset interpretation only; no sprite reconstruction or decoding performed.");
+    return failures?1:0;
+}
