@@ -8,6 +8,12 @@
 
 namespace reluva::stafu {
 namespace {
+// Original DOS resource names are ASCII; normalize only A-Z for lookup.
+std::string foldedName(std::string name) {
+    for (char& c : name)
+        if (c >= 'A' && c <= 'Z') c = char(c + ('a' - 'A'));
+    return name;
+}
 uint16_t u16(const uint8_t* p) { return uint16_t(p[0]) | uint16_t(uint16_t(p[1]) << 8); }
 uint32_t u32(const uint8_t* p) {
     return uint32_t(p[0]) | (uint32_t(p[1]) << 8) | (uint32_t(p[2]) << 16) | (uint32_t(p[3]) << 24);
@@ -73,8 +79,8 @@ bool ZipArchive::open(const std::filesystem::path& path, std::string& error) {
         entry.flags = u16(p + 8); entry.method = u16(p + 10);
         entry.crc32 = u32(p + 16); entry.compressedSize = u32(p + 20);
         entry.uncompressedSize = u32(p + 24); entry.localOffset = u32(p + 42);
-        if (!lookup.emplace(entry.name, parsed.size()).second) {
-            error = "duplicate ZIP entry name"; return false;
+        if (!lookup.emplace(foldedName(entry.name), parsed.size()).second) {
+            error = "duplicate ZIP entry name (case-insensitive)"; return false;
         }
         parsed.push_back(std::move(entry));
         pos += recordLen;
@@ -86,7 +92,7 @@ bool ZipArchive::open(const std::filesystem::path& path, std::string& error) {
     return true;
 }
 const ZipEntry* ZipArchive::find(const std::string& name) const {
-    auto it = index_.find(name);
+    auto it = index_.find(foldedName(name));
     return it == index_.end() ? nullptr : &entries_[it->second];
 }
 bool ZipArchive::read(const std::string& name, std::vector<uint8_t>& bytes,
