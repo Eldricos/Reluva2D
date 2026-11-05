@@ -3,6 +3,7 @@
 #include "engines/stafu/resource_manager.h"
 #include "engines/stafu/spr_sequence_index.h"
 #include "engines/stafu/spr_image_payload.h"
+#include "engines/stafu/spr_offset_correlation.h"
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
@@ -200,5 +201,72 @@ int stafuSprShortPayloads(const char* installed,const char* cd,const char* optio
                     tag.c_str(),marker,a,b,length,count,values.size());
     }
     std::puts("SPR_SHORT_NOTE values are opaque raw image-data bytes; integer interpretations are diagnostic only.");
+    return failures?1:0;
+}
+
+
+// Milestone 220: test short four-byte values as hypothetical byte offsets.
+int stafuSprOffsetCorrelate(const char* installed,const char* cd,const char* optionalName) {
+    reluva::stafu::ResourceManager manager;
+    std::string error;
+    if(!manager.open(installed,cd,error)) {
+        std::fprintf(stderr,"spr-offset-correlate: %s\n",error.c_str());return 1;
+    }
+    const std::vector<std::string> names=optionalName
+        ?std::vector<std::string>{optionalName}
+        :std::vector<std::string>{"BRDGDATA.SPR","BRDGPICA.SPR","BRDGRIKR.SPR",
+                                  "BRDGTROI.SPR","BRDGWORF.SPR"};
+    int failures=0;
+    for(const auto& name:names) {
+        std::vector<uint8_t> bytes;
+        if(!manager.read(name,bytes,error)) {
+            std::fprintf(stderr,"spr-offset-correlate: %s: %s\n",name.c_str(),error.c_str());
+            ++failures;continue;
+        }
+        reluva::stafu::SprSequenceIndex index;
+        if(!index.build(bytes,error)) {
+            std::fprintf(stderr,"spr-offset-correlate: %s: %s\n",name.c_str(),error.c_str());
+            ++failures;continue;
+        }
+        size_t total=0,absoluteValid=0,relativeValid=0,boundaryHits=0;
+        std::printf("SPR_OFFSET_RESOURCE resource=%s size=%zu records=%zu\n",
+                    name.c_str(),bytes.size(),index.records().size());
+        for(size_t r=0;r<index.records().size();++r) {
+            const auto& events=index.records()[r].events;
+            size_t image=0;
+            for(size_t c=0;c<events.size();++c) {
+                const auto& e=events[c];
+                if(e.tag!="PMOC"&&e.tag!="MOCS")continue;
+                reluva::stafu::SprImagePayloadAccessor::View view;
+                if(reluva::stafu::SprImagePayloadAccessor::get(bytes,e,view)&&view.size==4) {
+                    const auto* b=view.data;
+                    const uint32_t le=uint32_t(b[0])|(uint32_t(b[1])<<8)|
+                        (uint32_t(b[2])<<16)|(uint32_t(b[3])<<24);
+                    const uint32_t be=(uint32_t(b[0])<<24)|(uint32_t(b[1])<<16)|
+                        (uint32_t(b[2])<<8)|uint32_t(b[3]);
+                    ++total;
+                    std::printf("  SPR_OFFSET_SOURCE record=%zu image=%zu chunk=%zu tag=%s marker=0x%08x bytes=%02x%02x%02x%02x le=%u be=%u\n",
+                                r,image,c,e.tag.c_str(),view.marker,unsigned(b[0]),unsigned(b[1]),
+                                unsigned(b[2]),unsigned(b[3]),le,be);
+                    for(const auto& [endian,value]:std::array<std::pair<const char*,uint32_t>,2>{{{"LE",le},{"BE",be}}}) {
+                        const auto matches=reluva::stafu::correlateSprOffset(value,bytes.size(),index,r);
+                        if(matches.empty())
+                            std::printf("    CANDIDATE endian=%s value=%u base=none status=out-of-range\n",endian,value);
+                        for(const auto& m:matches) {
+                            if(std::string(m.base)=="absolute")++absoluteValid;
+                            else ++relativeValid;
+                            if(std::string(m.boundary)!="none")++boundaryHits;
+                            std::printf("    CANDIDATE endian=%s value=%u base=%s target=0x%zx region=%s boundary=%s record=%zu chunk=%zu\n",
+                                        endian,value,m.base,m.target,m.region,m.boundary,m.record,m.chunk);
+                        }
+                    }
+                }
+                ++image;
+            }
+        }
+        std::printf("SPR_OFFSET_SUMMARY resource=%s fourByteSources=%zu absoluteInRange=%zu relativeInRange=%zu boundaryHits=%zu\n",
+                    name.c_str(),total,absoluteValid,relativeValid,boundaryHits);
+    }
+    std::puts("SPR_OFFSET_NOTE candidate hits are numerical correlations, not validated pointers or decoded images.");
     return failures?1:0;
 }
