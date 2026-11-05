@@ -120,8 +120,14 @@ private:
     }
     void loadVerifiedBridge(const stafu::ResourceManager& resources) {
         std::vector<uint8_t> bridge, standard;
-        if(!resources.read("BRIDGE.RM",bridge,verifiedBridgeError_))return;
-        if(!resources.read("STANDARD.PAL",standard,verifiedBridgeError_,4096))return;
+        if(!resources.read("BRIDGE.RM",bridge,verifiedBridgeError_)) {
+            verifiedBridgeError_="BRIDGE.RM: "+verifiedBridgeError_;
+            return;
+        }
+        if(!resources.read("STANDARD.PAL",standard,verifiedBridgeError_,4096)) {
+            verifiedBridgeError_="STANDARD.PAL: "+verifiedBridgeError_;
+            return;
+        }
         std::array<uint8_t,stafu::kBridgePaletteBytes> palette{};
         if(!stafu::assembleBridgePalette(bridge,standard,palette)) {
             verifiedBridgeError_="Invalid bridge resource size or VGA6 palette";
@@ -137,8 +143,14 @@ private:
         auto& item=rmImages_[index];
         if(!item.texture||rmOriginal_[index].empty())return;
         std::vector<uint8_t> source=rmOriginal_[index];
-        if(rmPaletteMode_==5 && index==0 && !verifiedBridgeRgba_.empty())
+        if(rmPaletteMode_==5 && index==0) {
+            if(verifiedBridgeRgba_.empty()) {
+                item.error=verifiedBridgeError_.empty() ?
+                    "Verified bridge RGBA buffer unavailable" : verifiedBridgeError_;
+                return; // Never silently display grayscale as verified color.
+            }
             source=verifiedBridgeRgba_;
+        }
         if(rmPaletteMode_==3&&!standardPalette_.empty()) {
             std::vector<uint8_t> indices(source.size()/4);
             for(size_t i=0;i<indices.size();++i)indices[i]=source[i*4];
@@ -264,6 +276,10 @@ private:
         ImGui::Separator();
         const auto& item=rmImages_[rmSelected_];
         if(!item.texture){ImGui::TextDisabled("Resource unavailable: %s",item.error.c_str());return;}
+        if(rmPaletteMode_==5 && verifiedBridgeRgba_.empty()) {
+            ImGui::TextDisabled("Verified color preview unavailable; grayscale texture is hidden.");
+            return;
+        }
         // Scrollable viewport preserves the full 640x480 image at native pixel size.
         ImGui::BeginChild("RM raster viewport",ImVec2(0,0),ImGuiChildFlags_Borders);
         ImGui::Image(reinterpret_cast<ImTextureID>(item.texture),ImVec2(640,480));
