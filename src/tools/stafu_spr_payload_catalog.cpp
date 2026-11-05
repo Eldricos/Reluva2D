@@ -24,13 +24,7 @@ struct Key {
 struct Stats {
     size_t count=0,minData=0,maxData=0,small=0;
 };
-void inspect(const char* name,const std::vector<uint8_t>& bytes) {
-    reluva::stafu::SprSequenceIndex index;
-    std::string error;
-    if(!index.build(bytes,error)) {
-        std::printf("SPR_CATALOG_ERROR resource=%s reason=%s\n",name,error.c_str());
-        return;
-    }
+void inspect(const char* name,const reluva::stafu::SprSequenceIndex& index) {
     std::map<Key,Stats> groups;
     size_t count=0,shortChunks=0;
     std::printf("SPR_CATALOG resource=%s records=%zu\n",name,index.records().size());
@@ -41,7 +35,7 @@ void inspect(const char* name,const std::vector<uint8_t>& bytes) {
             const auto& e=events[i];
             if(e.tag!="PMOC"&&e.tag!="MOCS")continue;
             const bool header=e.hasImageHeader;
-            const size_t dataLength=header?e.imageDataSize:0;
+            const size_t dataLength=header?e.imageDataSize:e.payloadSize;
             Key key{e.tag,header?e.marker:0,header?e.headerA:0,
                     header?e.headerB:0,header};
             auto& stats=groups[key];
@@ -106,7 +100,7 @@ int stafuSprPayloadCatalog(const char* installed,const char* cd,const char* opti
             std::fprintf(stderr,"spr-payload-catalog: %s: invalid SPR: %s\n",name.c_str(),error.c_str());
             ++failures;continue;
         }
-        inspect(name.c_str(),bytes);
+        inspect(name.c_str(),index);
     }
     std::puts("SPR_CATALOG_NOTE marker/dimensions are candidate fields only; imageData excludes 12-byte candidate header.");
     return failures?1:0;
