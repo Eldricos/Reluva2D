@@ -391,3 +391,134 @@ int stafuSprReferenceAnalysis(const char* installed,const char* cd,const char* o
     std::puts("SPR_REFERENCE_NOTE displacements are exploratory; matching a boundary does not establish reference semantics.");
     return failures?1:0;
 }
+
+
+// Milestone 222: compare opaque four-byte value sequences without decoding.
+int stafuSprValuePatterns(const char* installed,const char* cd,const char* optionalName) {
+    reluva::stafu::ResourceManager manager;
+    std::string error;
+    if(!manager.open(installed,cd,error)) {
+        std::fprintf(stderr,"spr-value-patterns: %s\n",error.c_str());return 1;
+    }
+    const std::vector<std::string> names=optionalName
+        ?std::vector<std::string>{optionalName}
+        :std::vector<std::string>{"BRDGDATA.SPR","BRDGPICA.SPR","BRDGRIKR.SPR",
+                                  "BRDGTROI.SPR","BRDGWORF.SPR"};
+    int failures=0;
+    for(const auto& name:names) {
+        std::vector<uint8_t> bytes;
+        if(!manager.read(name,bytes,error)) {
+            std::fprintf(stderr,"spr-value-patterns: %s: %s\n",name.c_str(),error.c_str());
+            ++failures;continue;
+        }
+        reluva::stafu::SprSequenceIndex index;
+        if(!index.build(bytes,error)) {
+            std::fprintf(stderr,"spr-value-patterns: %s: %s\n",name.c_str(),error.c_str());
+            ++failures;continue;
+        }
+        struct Item {
+            size_t record,image,chunk;
+            uint32_t value,a,b;
+            std::string tag,prev,next;
+        };
+        struct Run {std::vector<Item> items;std::vector<int64_t> deltas;};
+        std::vector<Run> runs;
+        std::map<std::vector<int64_t>,std::vector<std::pair<size_t,size_t>>> motifs;
+        size_t values=0;
+        for(size_t r=0;r<index.records().size();++r) {
+            const auto& events=index.records()[r].events;
+            Run run;
+            auto flush=[&]() {
+                if(run.items.empty())return;
+                for(size_t i=1;i<run.items.size();++i)
+                    run.deltas.push_back(static_cast<int64_t>(run.items[i].value)-
+                                         static_cast<int64_t>(run.items[i-1].value));
+                runs.push_back(std::move(run));
+                run=Run{};
+            };
+            size_t ordinal=0;
+            for(size_t c=0;c<events.size();++c) {
+                const auto& e=events[c];
+                if(e.tag!="PMOC"&&e.tag!="MOCS")continue;
+                reluva::stafu::SprImagePayloadAccessor::View view;
+                if(reluva::stafu::SprImagePayloadAccessor::get(bytes,e,view)&&
+                   view.size==4&&view.marker==0x00030000) {
+                    const auto* b=view.data;
+                    const uint32_t value=uint32_t(b[0])|(uint32_t(b[1])<<8)|
+                                         (uint32_t(b[2])<<16)|(uint32_t(b[3])<<24);
+                    if(!run.items.empty()&&ordinal!=run.items.back().image+1)flush();
+                    run.items.push_back({r,ordinal,c,value,view.headerA,view.headerB,e.tag,
+                        c?events[c-1].tag:"START",
+                        c+1<events.size()?events[c+1].tag:"END"});
+                    ++values;
+                } else flush();
+                ++ordinal;
+            }
+            flush();
+        }
+        std::printf("SPR_PATTERN_RESOURCE resource=%s records=%zu runs=%zu values=%zu\n",
+                    name.c_str(),index.records().size(),runs.size(),values);
+        size_t regularTotal=0;
+        for(size_t ri=0;ri<runs.size();++ri) {
+            const auto& run=runs[ri];
+            size_t regular=0;
+            for(int64_t d:run.deltas)if(d==36||d==40)++regular;
+            regularTotal+=regular;
+            const auto& first=run.items.front();
+            std::printf("  SPR_PATTERN_RUN id=%zu record=%zu firstImage=%zu lastImage=%zu count=%zu increments36or40=%zu/%zu\n",
+                        ri,first.record,first.image,run.items.back().image,
+                        run.items.size(),regular,run.deltas.size());
+            for(size_t i=0;i<run.items.size();++i) {
+                const auto& x=run.items[i];
+                std::printf("    ITEM image=%zu chunk=%zu value=%u normalized=%lld tag=%s dims=%u/%u prev=%s next=%s",
+                            x.image,x.chunk,x.value,
+                            static_cast<long long>(static_cast<int64_t>(x.value)-first.value),
+                            x.tag.c_str(),x.a,x.b,x.prev.c_str(),x.next.c_str());
+                if(i)std::printf(" delta=%lld",static_cast<long long>(run.deltas[i-1]));
+                std::printf("\n");
+            }
+            // A motif of 3 adjacent differences spans 4 consecutive values.
+            for(size_t i=0;i+3<=run.deltas.size();++i) {
+                std::vector<int64_t> key(run.deltas.begin()+i,run.deltas.begin()+i+3);
+                motifs[key].push_back({ri,i});
+            }
+        }
+        size_t repeats=0;
+        for(const auto& [key,occurrences]:motifs) {
+            if(occurrences.size()<2)continue;
+            ++repeats;
+            std::printf("  SPR_PATTERN_REPEAT deltas=%lld,%lld,%lld occurrences=%zu",
+                        static_cast<long long>(key[0]),static_cast<long long>(key[1]),
+                        static_cast<long long>(key[2]),occurrences.size());
+            for(const auto& [ri,at]:occurrences) {
+                const auto& item=runs[ri].items[at];
+                std::printf(" r%zu:image%zu",item.record,item.image);
+            }
+            std::printf("\n");
+        }
+        // Cross-run, translation-invariant matching of >=4 consecutive values.
+        size_t comparisons=0;
+        for(size_t a=0;a<runs.size();++a)
+            for(size_t b=a+1;b<runs.size();++b) {
+                size_t best=0,ai=0,bi=0;
+                for(size_t i=0;i<runs[a].deltas.size();++i)
+                    for(size_t j=0;j<runs[b].deltas.size();++j) {
+                        size_t n=0;
+                        while(i+n<runs[a].deltas.size()&&j+n<runs[b].deltas.size()&&
+                              runs[a].deltas[i+n]==runs[b].deltas[j+n])++n;
+                        if(n>best){best=n;ai=i;bi=j;}
+                    }
+                if(best<3)continue;
+                ++comparisons;
+                const auto& x=runs[a].items[ai];
+                const auto& y=runs[b].items[bi];
+                std::printf("  SPR_PATTERN_CROSS_RUN recordA=%zu imageA=%zu recordB=%zu imageB=%zu matchingValues=%zu baseDifference=%lld\n",
+                            x.record,x.image,y.record,y.image,best+1,
+                            static_cast<long long>(static_cast<int64_t>(y.value)-x.value));
+            }
+        std::printf("SPR_PATTERN_SUMMARY resource=%s values=%zu runs=%zu regularIncrements=%zu motifsRepeated=%zu crossRunMatches=%zu\n",
+                    name.c_str(),values,runs.size(),regularTotal,repeats,comparisons);
+    }
+    std::puts("SPR_PATTERN_NOTE numerical motifs and candidate dimensions are descriptive, not decoded sprite semantics.");
+    return failures?1:0;
+}
