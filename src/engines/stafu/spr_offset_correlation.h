@@ -16,7 +16,7 @@ struct SprOffsetMatch {
     size_t chunk=0;
 };
 inline std::vector<SprOffsetMatch> correlateSprOffset(
-    uint32_t value,size_t fileSize,const SprSequenceIndex& index) {
+    uint32_t value,size_t fileSize,const SprSequenceIndex& index,size_t sourceRecord) {
     std::vector<SprOffsetMatch> out;
     auto classify=[&](size_t target,const char* base) {
         if(target>=fileSize)return;
@@ -51,15 +51,15 @@ inline std::vector<SprOffsetMatch> correlateSprOffset(
         out.push_back(match);
     };
     classify(value,"absolute");
-    for(size_t r=0;r<index.records().size();++r) {
+    if(sourceRecord<index.records().size()) {
+        const size_t r=sourceRecord;
         const auto& rec=index.records()[r];
-        if(value>rec.end-rec.start)continue;
-        if(rec.start>fileSize-value)continue;
-        const size_t target=rec.start+value;
-        if(target>=rec.end)continue;
-        // Only retain a record-relative interpretation for the record containing target.
-        classify(target,"record-relative");
-        out.back().record=r;
+        if(value<=rec.end-rec.start) {
+            if(rec.start<=fileSize-value) {
+                const size_t target=rec.start+value;
+                if(target<rec.end)classify(target,"record-relative");
+            }
+        }
     }
     return out;
 }
