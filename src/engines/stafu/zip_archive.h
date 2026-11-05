@@ -14,7 +14,7 @@ struct ZipEntry {
 };
 // Read-only ZIP reader. Open once, look up entries repeatedly.
 // Each read validates local headers, data boundaries, uncompressed size and CRC-32.
-// Entry names are case-sensitive. No ZIP64, multi-disk or encrypted ZIP support.
+// Entry lookup is ASCII case-insensitive; case-colliding entries are rejected. No ZIP64, multi-disk or encrypted ZIP support.
 class ZipArchive {
 public:
     bool open(const std::filesystem::path& path, std::string& error);
