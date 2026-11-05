@@ -23,6 +23,19 @@ int main() {
     assert(rgba[0] == bridgeExpandVga6(43) && rgba[3] == 255);
     assert(rgba[4] == 255 && rgba[5] == bridgeExpandVga6(31) && rgba[6] == 0);
     assert(rgba[8] == bridgeExpandVga6(1) && rgba[9] == bridgeExpandVga6(2));
+    // The 384-byte palette header must never be treated as image pixels.
+    // Check the first two adjacent pixels, the last pixel of row zero,
+    // and the first pixel of row one without any geometry rotation.
+    bridge[0] = 12; // Palette component, not the first pixel index.
+    bridge[384] = 128;
+    bridge[384 + 639] = 255;
+    bridge[384 + 640] = 0;
+    assert(renderBridgeRgba(bridge, palette, rgba));
+    assert(rgba[0] == 255 && rgba[1] == bridgeExpandVga6(31));
+    assert(rgba[4] == 255 && rgba[5] == bridgeExpandVga6(31));
+    assert(rgba[639 * 4] == bridgeExpandVga6(1));
+    assert(rgba[640 * 4] == bridgeExpandVga6(43));
+    assert(rgba[640 * 4 + 1] == bridgeExpandVga6(26));
     auto bad = standard; bad[0] = 64;
     assert(!assembleBridgePalette(bridge, bad, palette));
     bad = standard; bad.pop_back();
