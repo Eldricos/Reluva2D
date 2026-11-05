@@ -4,6 +4,7 @@
 #include "engines/stafu/resource_manager.h"
 #include "engines/stafu/spr_sequence_index.h"
 #include "engines/stafu/spr_image_payload.h"
+#include "engines/stafu/spr_byte_shift.h"
 #include <algorithm>
 #include <cstddef>
 #include <cstdio>
@@ -104,6 +105,25 @@ int stafuSprPayloadDiff(const char* installed, const char* cd, const char* name,
     }
     if (ranges.size()>kMaxRanges)
         std::printf("  omittedChangeRuns=%zu (first %zu shown)\n",ranges.size()-kMaxRanges,kMaxRanges);
+    const auto shifts=reluva::stafu::surveySprByteShifts(
+        a.view.data,a.view.size,b.view.data,b.view.size,32);
+    std::puts("  SHIFT_SURVEY shift=B_index-A_index; ranked by longest exact matching run:");
+    for(size_t i=0;i<std::min<size_t>(shifts.size(),8);++i) {
+        const auto& m=shifts[i];
+        std::printf("  shift[%zu] delta=%+d longest=%zu A=[%zu,%zu) B=[%zu,%zu) equal=%zu/%zu\\n",
+                    i,m.shift,m.length,m.startA,m.startA+m.length,
+                    m.startB,m.startB+m.length,m.equal,m.compared);
+    }
+    if(prefix && suffix) {
+        const size_t endA=a.view.size-suffix,endB=b.view.size-suffix;
+        std::printf("  END_ALIGNED_RESYNC prefixEnds=%zu,%zu suffixStarts=%zu,%zu "
+                    "netShift=%lld middleLengths=%zu,%zu\\n",
+                    prefix,prefix,endA,endB,
+                    static_cast<long long>(endB)-static_cast<long long>(endA),
+                    endA>=prefix?endA-prefix:0,endB>=prefix?endB-prefix:0);
+    }
+    std::puts("Shift survey tests fixed offsets only ([-32,+32]); a long match is "
+              "not proof of a single insertion/deletion or a codec boundary.");
     std::puts("Byte-aligned comparisons only; suffix is aligned to each payload end. "
               "Different lengths can shift bytes, so ranges do not identify decoded pixel changes.");
     std::puts("The 12-byte candidate image header is excluded; no decoding or format semantics inferred.");
