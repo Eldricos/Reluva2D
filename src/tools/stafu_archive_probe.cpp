@@ -160,10 +160,13 @@ int stafuArchiveTest(const char* path, const char* entry);
 int stafuArchiveList(const char* path);
 int stafuArchiveCompare(const char* zipPath, const char* dirPath);
 
+int stafuSprPayloadCatalog(const char* installed, const char* cd, const char* optionalName);
 int stafuSprPayloadDiff(const char* installed, const char* cd, const char* name,
                         const char* record, const char* first, const char* second);
 
 int stafuToolMain(int argc, char** argv) {
+    if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-payload-catalog") == 0)
+        return stafuSprPayloadCatalog(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if (argc == 9 && std::strcmp(argv[2], "spr-payload-diff") == 0)
         return stafuSprPayloadDiff(argv[3],argv[4],argv[5],argv[6],argv[7],argv[8]);
     if (argc == 6 && std::strcmp(argv[2], "spr-structure") == 0)
@@ -265,7 +268,8 @@ int stafuToolMain(int argc, char** argv) {
     if (argc == 4 && std::strcmp(argv[2], "archive-probe") == 0)
         return probe(argv[3]);
     std::fprintf(stderr,
-        "STAFU usage:\n"        "  reluva-tool -stafu spr-payload-diff <installed> <cd> <entry> <record> <imageA> <imageB>\n"
+        "STAFU usage:\n"        "  reluva-tool -stafu spr-payload-catalog <installed> <cd> [resource.SPR]\n"
+        "  reluva-tool -stafu spr-payload-diff <installed> <cd> <entry> <record> <imageA> <imageB>\n"
 
         "  reluva-tool -stafu install-from-cd <cd> <new-destination>\n"
         "  reluva-tool -stafu install-stage <installed> <cd> <new-destination>\n"
