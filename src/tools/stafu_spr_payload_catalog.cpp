@@ -2,10 +2,13 @@
 // Read-only catalog of observed PMOC/MOCS payload structures; no codec assumptions.
 #include "engines/stafu/resource_manager.h"
 #include "engines/stafu/spr_sequence_index.h"
+#include "engines/stafu/spr_image_payload.h"
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
+#include <array>
+#include <set>
 #include <map>
 #include <string>
 #include <tuple>
@@ -103,5 +106,99 @@ int stafuSprPayloadCatalog(const char* installed,const char* cd,const char* opti
         inspect(name.c_str(),index);
     }
     std::puts("SPR_CATALOG_NOTE marker/dimensions are candidate fields only; imageData excludes 12-byte candidate header.");
+    return failures?1:0;
+}
+
+
+// Milestone 219: inspect short image data without assigning control semantics.
+int stafuSprShortPayloads(const char* installed,const char* cd,const char* optionalName) {
+    reluva::stafu::ResourceManager manager;
+    std::string error;
+    if(!manager.open(installed,cd,error)) {
+        std::fprintf(stderr,"spr-short-payloads: %s\n",error.c_str());return 1;
+    }
+    const std::vector<std::string> names=optionalName
+        ?std::vector<std::string>{optionalName}
+        :std::vector<std::string>{"BRDGDATA.SPR","BRDGPICA.SPR","BRDGRIKR.SPR",
+                                  "BRDGTROI.SPR","BRDGWORF.SPR"};
+    using Bytes=std::vector<uint8_t>;
+    using Group=std::tuple<std::string,uint32_t,uint32_t,uint32_t,size_t>;
+    std::map<Group,std::map<Bytes,size_t>> global;
+    int failures=0;
+    for(const auto& name:names) {
+        Bytes bytes;
+        if(!manager.read(name,bytes,error)) {
+            std::fprintf(stderr,"spr-short-payloads: %s: %s\n",name.c_str(),error.c_str());
+            ++failures;continue;
+        }
+        reluva::stafu::SprSequenceIndex index;
+        if(!index.build(bytes,error)) {
+            std::fprintf(stderr,"spr-short-payloads: %s: %s\n",name.c_str(),error.c_str());
+            ++failures;continue;
+        }
+        std::map<Group,std::map<Bytes,size_t>> local;
+        std::map<Bytes,std::set<size_t>> recordOccurrences;
+        size_t shortCount=0;
+        std::printf("SPR_SHORT_RESOURCE resource=%s records=%zu\n",name.c_str(),index.records().size());
+        for(size_t r=0;r<index.records().size();++r) {
+            const auto& events=index.records()[r].events;
+            size_t ordinal=0;
+            for(size_t i=0;i<events.size();++i) {
+                const auto& e=events[i];
+                if(e.tag!="PMOC"&&e.tag!="MOCS")continue;
+                reluva::stafu::SprImagePayloadAccessor::View view;
+                if(reluva::stafu::SprImagePayloadAccessor::get(bytes,e,view)&&view.size<=4) {
+                    const Bytes value(view.data,view.data+view.size);
+                    const Group group{e.tag,view.marker,view.headerA,view.headerB,view.size};
+                    ++local[group][value];++global[group][value];
+                    recordOccurrences[value].insert(r);
+                    ++shortCount;
+                    std::printf("  SPR_SHORT record=%zu image=%zu chunk=%zu tag=%s marker=0x%08x dims=%u/%u size=%zu bytes=",
+                                r,ordinal,i,e.tag.c_str(),view.marker,view.headerA,view.headerB,view.size);
+                    for(uint8_t b:value)std::printf("%02x",unsigned(b));
+                    if(value.size()==4) {
+                        const uint32_t le=uint32_t(value[0])|(uint32_t(value[1])<<8)|
+                            (uint32_t(value[2])<<16)|(uint32_t(value[3])<<24);
+                        const uint32_t be=(uint32_t(value[0])<<24)|(uint32_t(value[1])<<16)|
+                            (uint32_t(value[2])<<8)|uint32_t(value[3]);
+                        std::printf(" le32=%u be32=%u",le,be);
+                    } else std::printf(" le32=NA be32=NA");
+                    std::printf(" prev=%s next=%s offset=0x%zx\n",
+                                i?events[i-1].tag.c_str():"START",
+                                i+1<events.size()?events[i+1].tag.c_str():"END",view.offset);
+                }
+                ++ordinal;
+            }
+        }
+        std::printf("SPR_SHORT_SUMMARY resource=%s count=%zu groups=%zu uniqueValues=%zu\n",
+                    name.c_str(),shortCount,local.size(),recordOccurrences.size());
+        for(const auto& [g,values]:local) {
+            const auto& [tag,marker,a,b,length]=g;
+            size_t total=0;
+            for(const auto& [v,n]:values)total+=n;
+            std::printf("  SPR_SHORT_GROUP tag=%s marker=0x%08x dims=%u/%u size=%zu count=%zu unique=%zu\n",
+                        tag.c_str(),marker,a,b,length,total,values.size());
+            for(const auto& [v,n]:values) {
+                std::printf("    VALUE bytes=");
+                for(uint8_t byte:v)std::printf("%02x",unsigned(byte));
+                std::printf(" count=%zu\n",n);
+            }
+        }
+        for(const auto& [value,records]:recordOccurrences) {
+            if(records.size()<2)continue;
+            std::printf("  SPR_SHORT_CROSS_RECORD bytes=");
+            for(uint8_t byte:value)std::printf("%02x",unsigned(byte));
+            std::printf(" recordCount=%zu\n",records.size());
+        }
+    }
+    std::printf("SPR_SHORT_GLOBAL groups=%zu\n",global.size());
+    for(const auto& [g,values]:global) {
+        const auto& [tag,marker,a,b,length]=g;
+        size_t count=0;
+        for(const auto& [v,n]:values)count+=n;
+        std::printf("  SPR_SHORT_GLOBAL_GROUP tag=%s marker=0x%08x dims=%u/%u size=%zu count=%zu unique=%zu\n",
+                    tag.c_str(),marker,a,b,length,count,values.size());
+    }
+    std::puts("SPR_SHORT_NOTE values are opaque raw image-data bytes; integer interpretations are diagnostic only.");
     return failures?1:0;
 }
