@@ -169,8 +169,12 @@ private:
                 }
             }
         }
+        // The verified BRIDGE.RM raster already starts after its 384-byte palette
+        // header and matches DOSBox-X without the experimental RM transforms.
         std::vector<uint8_t> shifted;
-        if(!rmGeometryDebug_) {
+        if(rmPaletteMode_==5 && index==0) {
+            shifted=std::move(source);
+        } else if(!rmGeometryDebug_) {
             if(!stafu::decodeRmWorkingGeometryRgba(source.data(),source.size(),shifted))return;
         } else if(rmAssemblyMode_ && rmShift_[index]==256) {
             if(!stafu::assembleRmSectionsRgba(source.data(),source.size(),
@@ -183,8 +187,8 @@ private:
             item.error=SDL_GetError();
     }
     void drawRm() {
-        ImGui::TextWrapped("RM working geometry: 640 x 480, rotate right 256, left section down 1. "
-                           "Alignment visually verified. Bridge palette verified against DOSBox-X.");
+        ImGui::TextWrapped("Verified BRIDGE.RM uses the unshifted 640 x 480 raster (384-byte palette header skipped). "
+                           "Other RM modes retain experimental geometry adjustments.");
         if(ImGui::RadioButton("BRIDGE.RM",rmSelected_==0))rmSelected_=0;
         ImGui::SameLine();
         if(rmPaletteMode_!=5) {
@@ -212,7 +216,7 @@ private:
             rmPaletteMode_=5;rmSelected_=0;paletteChanged=true;
         }
         if(rmPaletteMode_==5) {
-            ImGui::TextDisabled("Palette bytes verified; RGB expansion and scene composition remain provisional.");
+            ImGui::TextDisabled("Unshifted raster matches DOSBox-X visually; RGB expansion and full scene composition remain provisional.");
             if(!verifiedBridgeError_.empty())
                 ImGui::TextDisabled("Verified bridge unavailable: %s",verifiedBridgeError_.c_str());
         }
@@ -224,10 +228,12 @@ private:
             updateRmShift(0);
             updateRmShift(1);
         }
-        if(ImGui::Checkbox("Enable geometry debugging controls",&rmGeometryDebug_)) {
+        if(rmPaletteMode_==5)
+            ImGui::TextDisabled("Geometry adjustments apply to experimental modes only.");
+        if(rmPaletteMode_!=5 && ImGui::Checkbox("Enable geometry debugging controls",&rmGeometryDebug_)) {
             updateRmShift(0);updateRmShift(1);
         }
-        if(rmGeometryDebug_) {
+        if(rmPaletteMode_!=5 && rmGeometryDebug_) {
         ImGui::TextDisabled("Shift direction: positive moves pixels right; negative moves pixels left.");
         bool changed=ImGui::SliderInt("Horizontal shift (pixels)",&rmShift_[rmSelected_],-639,639);
         if(ImGui::Button("Left 1")){--rmShift_[rmSelected_];changed=true;}
@@ -270,8 +276,8 @@ private:
             }
             ImGui::TextDisabled("At right shift 0, split assembly matches the existing +256 rotation with left vertical shift.");
         }
-        } else {
-            ImGui::TextDisabled("Using verified geometry (+256 horizontal, +1 left vertical, 0 right vertical).");
+        } else if(rmPaletteMode_!=5) {
+            ImGui::TextDisabled("Using experimental grayscale geometry (+256 horizontal, +1 left vertical, 0 right vertical).");
         }
         ImGui::Separator();
         const auto& item=rmImages_[rmSelected_];
