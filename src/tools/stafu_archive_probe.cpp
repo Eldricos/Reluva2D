@@ -162,10 +162,13 @@ int stafuArchiveCompare(const char* zipPath, const char* dirPath);
 
 int stafuSprPayloadCatalog(const char* installed, const char* cd, const char* optionalName);
 int stafuSprShortPayloads(const char* installed, const char* cd, const char* optionalName);
+int stafuSprOffsetCorrelate(const char* installed, const char* cd, const char* optionalName);
 int stafuSprPayloadDiff(const char* installed, const char* cd, const char* name,
                         const char* record, const char* first, const char* second);
 
 int stafuToolMain(int argc, char** argv) {
+    if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-offset-correlate") == 0)
+        return stafuSprOffsetCorrelate(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-short-payloads") == 0)
         return stafuSprShortPayloads(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-payload-catalog") == 0)
@@ -272,6 +275,7 @@ int stafuToolMain(int argc, char** argv) {
         return probe(argv[3]);
     std::fprintf(stderr,
         "STAFU usage:\n"        "  reluva-tool -stafu spr-payload-catalog <installed> <cd> [resource.SPR]\n"
+        "  reluva-tool -stafu spr-offset-correlate <installed> <cd> [resource.SPR]\n"
         "  reluva-tool -stafu spr-payload-diff <installed> <cd> <entry> <record> <imageA> <imageB>\n"
 
         "  reluva-tool -stafu install-from-cd <cd> <new-destination>\n"
