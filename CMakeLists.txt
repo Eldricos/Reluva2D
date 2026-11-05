@@ -139,6 +139,7 @@ add_executable(reluva-tool
     src/tools/stafu_computer_navigation.cpp
     src/tools/stafu_computer_content_audit.cpp
     src/tools/stafu_spr_structure.cpp
+    src/tools/stafu_spr_payload_diff.cpp
     src/tools/stafu_bridge_inventory.cpp
     src/tools/stafu_computer_browse.cpp
     src/tools/stafu_install_analyze.cpp
