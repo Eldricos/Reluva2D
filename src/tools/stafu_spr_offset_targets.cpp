@@ -158,3 +158,116 @@ int stafuSprOffsetTargets(const char* installed,const char* cd,const char* optio
     std::puts("SPR_TARGET_NOTE exact matches and stable anchors are structural evidence, not proof of pointer semantics.");
     return failures?1:0;
 }
+
+
+// Milestone 224: resolve repeated source-offset anchors to observed image chunks.
+// The relation imageDataOffset - value = anchor is a hypothesis, not a pointer.
+int stafuSprReferenceResolve(const char* installed,const char* cd,const char* optionalName) {
+    reluva::stafu::ResourceManager manager;
+    std::string error;
+    if(!manager.open(installed,cd,error)) {
+        std::fprintf(stderr,"spr-reference-resolve: %s\n",error.c_str());return 1;
+    }
+    const std::vector<std::string> names=optionalName
+        ?std::vector<std::string>{optionalName}
+        :std::vector<std::string>{"BRDGDATA.SPR","BRDGPICA.SPR","BRDGRIKR.SPR",
+                                  "BRDGTROI.SPR","BRDGWORF.SPR"};
+    int failures=0;
+    for(const auto& name:names) {
+        std::vector<uint8_t> bytes;
+        if(!manager.read(name,bytes,error)) {
+            std::fprintf(stderr,"spr-reference-resolve: %s: %s\n",name.c_str(),error.c_str());
+            ++failures;continue;
+        }
+        reluva::stafu::SprSequenceIndex index;
+        if(!index.build(bytes,error)) {
+            std::fprintf(stderr,"spr-reference-resolve: %s: %s\n",name.c_str(),error.c_str());
+            ++failures;continue;
+        }
+        struct Image {
+            size_t record,image,chunk,offset,size;
+            std::string tag;
+            uint32_t marker,a,b;
+        };
+        struct Source {
+            size_t record,image,chunk,offset;
+            uint32_t value;
+        };
+        using GroupKey=std::tuple<std::string,uint32_t,uint32_t,int64_t>;
+        std::vector<Image> images;
+        std::map<GroupKey,std::vector<Source>> groups;
+        const auto& records=index.records();
+        for(size_t r=0;r<records.size();++r) {
+            size_t ordinal=0;
+            for(size_t c=0;c<records[r].events.size();++c) {
+                const auto& e=records[r].events[c];
+                if(e.tag!="PMOC"&&e.tag!="MOCS")continue;
+                reluva::stafu::SprImagePayloadAccessor::View view;
+                if(!reluva::stafu::SprImagePayloadAccessor::get(bytes,e,view)) {
+                    ++ordinal;continue;
+                }
+                images.push_back({r,ordinal,c,view.offset,view.size,e.tag,
+                                  view.marker,view.headerA,view.headerB});
+                if(view.size==4&&view.marker==0x00030000) {
+                    const auto* p=view.data;
+                    const uint32_t value=uint32_t(p[0])|(uint32_t(p[1])<<8)|
+                                         (uint32_t(p[2])<<16)|(uint32_t(p[3])<<24);
+                    const int64_t anchor=static_cast<int64_t>(view.offset)-
+                                         static_cast<int64_t>(value);
+                    groups[{e.tag,view.headerA,view.headerB,anchor}].push_back(
+                        {r,ordinal,c,view.offset,value});
+                }
+                ++ordinal;
+            }
+        }
+        size_t repeated=0,exact=0,compatible=0,backward=0,forward=0;
+        std::printf("SPR_RESOLVE_RESOURCE resource=%s records=%zu images=%zu groups=%zu\n",
+                    name.c_str(),records.size(),images.size(),groups.size());
+        for(const auto& [key,sources]:groups) {
+            if(sources.size()<2)continue;
+            ++repeated;
+            const auto& [tag,a,b,anchor]=key;
+            std::vector<const Image*> targets;
+            for(const auto& im:images)
+                if(anchor>=0&&static_cast<uint64_t>(anchor)==im.offset)
+                    targets.push_back(&im);
+            if(!targets.empty())++exact;
+            bool match=false;
+            for(const auto* im:targets)
+                if(im->tag==tag&&im->a==a&&im->b==b)match=true;
+            if(match)++compatible;
+            std::printf("  SPR_RESOLVE_GROUP tag=%s dims=%u/%u anchor=%lld count=%zu exactImageStarts=%zu compatibleTarget=%s\n",
+                        tag.c_str(),a,b,static_cast<long long>(anchor),
+                        sources.size(),targets.size(),match?"yes":"no");
+            for(const auto* im:targets) {
+                std::printf("    TARGET record=%zu image=%zu chunk=%zu tag=%s dims=%u/%u marker=0x%08x imageDataSize=%zu headerMatch=%s\n",
+                            im->record,im->image,im->chunk,im->tag.c_str(),im->a,im->b,
+                            im->marker,im->size,
+                            im->tag==tag&&im->a==a&&im->b==b?"yes":"no");
+            }
+            for(const auto& src:sources) {
+                const char* direction="unknown";
+                if(!targets.empty()) {
+                    if(src.offset>targets.front()->offset){direction="after";++forward;}
+                    else if(src.offset<targets.front()->offset){direction="before";++backward;}
+                    else direction="same";
+                }
+                // Value is the distance from the proposed anchor to the source
+                // image-data offset, not necessarily a target-file pointer.
+                std::printf("    SOURCE record=%zu image=%zu chunk=%zu imageData=0x%zx value=%u relativeToAnchor=%s",
+                            src.record,src.image,src.chunk,src.offset,src.value,direction);
+                if(!targets.empty()) {
+                    const auto* im=targets.front();
+                    const bool inside=src.offset>=im->offset&&
+                                      src.offset-im->offset<im->size;
+                    std::printf(" withinTargetPayload=%s",inside?"yes":"no");
+                }
+                std::printf("\n");
+            }
+        }
+        std::printf("SPR_RESOLVE_SUMMARY resource=%s repeatedGroups=%zu exactAnchorGroups=%zu compatibleAnchorGroups=%zu sourcesBefore=%zu sourcesAfter=%zu\n",
+                    name.c_str(),repeated,exact,compatible,backward,forward);
+    }
+    std::puts("SPR_RESOLVE_NOTE imageDataOffset-value anchors are observational; matching metadata or offsets does not prove image reuse, decoding, or pointer semantics.");
+    return failures?1:0;
+}
