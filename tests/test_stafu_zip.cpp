@@ -70,6 +70,12 @@ int main() {
     CHECK(zip.open(path, error));
     CHECK(zip.size() == 3);
     CHECK(zip.find("stored.txt") != nullptr);
+    CHECK(zip.find("STORED.TXT") != nullptr);
+    CHECK(zip.find("DEFLATED.TXT") != nullptr);
+    CHECK(zip.read("STORED.TXT", bytes, error));
+    CHECK(std::string(bytes.begin(), bytes.end()) == "hello");
+    CHECK(zip.read("DEFLATED.TXT", bytes, error));
+    CHECK(bytes.size() == 100000);
     CHECK(zip.find("missing") == nullptr);
     CHECK(zip.read("stored.txt", bytes, error));
     CHECK(std::string(bytes.begin(), bytes.end()) == "hello");
@@ -86,6 +92,11 @@ int main() {
     damaged = original;
     damaged.resize(12); // invalid archive
     write(path, damaged);
+    CHECK(!zip.open(path, error));
+    CHECK(zip.size() == 0);
+    // Ambiguous case-folded names must not resolve unpredictably.
+    write(path, makeZip({{"standard.pal", "one", 0},
+                         {"STANDARD.PAL", "two", 0}}));
     CHECK(!zip.open(path, error));
     CHECK(zip.size() == 0);
     std::filesystem::remove(path);
