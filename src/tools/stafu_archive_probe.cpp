@@ -162,6 +162,7 @@ int stafuArchiveCompare(const char* zipPath, const char* dirPath);
 
 int stafuSprPayloadCatalog(const char* installed, const char* cd, const char* optionalName);
 int stafuSprShortPayloads(const char* installed, const char* cd, const char* optionalName);
+int stafuSprOffsetTargets(const char* installed, const char* cd, const char* optionalName);
 int stafuSprValuePatterns(const char* installed, const char* cd, const char* optionalName);
 int stafuSprReferenceAnalysis(const char* installed, const char* cd, const char* optionalName);
 int stafuSprOffsetCorrelate(const char* installed, const char* cd, const char* optionalName);
@@ -169,6 +170,8 @@ int stafuSprPayloadDiff(const char* installed, const char* cd, const char* name,
                         const char* record, const char* first, const char* second);
 
 int stafuToolMain(int argc, char** argv) {
+    if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-offset-targets") == 0)
+        return stafuSprOffsetTargets(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-value-patterns") == 0)
         return stafuSprValuePatterns(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-reference-analysis") == 0)
@@ -281,6 +284,7 @@ int stafuToolMain(int argc, char** argv) {
         return probe(argv[3]);
     std::fprintf(stderr,
         "STAFU usage:\n"        "  reluva-tool -stafu spr-payload-catalog <installed> <cd> [resource.SPR]\n"
+        "  reluva-tool -stafu spr-offset-targets <installed> <cd> [resource.SPR]\n"
         "  reluva-tool -stafu spr-value-patterns <installed> <cd> [resource.SPR]\n"
         "  reluva-tool -stafu spr-reference-analysis <installed> <cd> [resource.SPR]\n"
         "  reluva-tool -stafu spr-offset-correlate <installed> <cd> [resource.SPR]\n"
