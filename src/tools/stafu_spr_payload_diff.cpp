@@ -5,6 +5,7 @@
 #include "engines/stafu/spr_sequence_index.h"
 #include "engines/stafu/spr_image_payload.h"
 #include "engines/stafu/spr_byte_shift.h"
+#include "engines/stafu/spr_middle_blocks.h"
 #include <algorithm>
 #include <cstddef>
 #include <cstdio>
@@ -110,17 +111,42 @@ int stafuSprPayloadDiff(const char* installed, const char* cd, const char* name,
     std::puts("  SHIFT_SURVEY shift=B_index-A_index; ranked by longest exact matching run:");
     for(size_t i=0;i<std::min<size_t>(shifts.size(),8);++i) {
         const auto& m=shifts[i];
-        std::printf("  shift[%zu] delta=%+d longest=%zu A=[%zu,%zu) B=[%zu,%zu) equal=%zu/%zu\\n",
+        std::printf("  shift[%zu] delta=%+d longest=%zu A=[%zu,%zu) B=[%zu,%zu) equal=%zu/%zu\n",
                     i,m.shift,m.length,m.startA,m.startA+m.length,
                     m.startB,m.startB+m.length,m.equal,m.compared);
     }
     if(prefix && suffix) {
         const size_t endA=a.view.size-suffix,endB=b.view.size-suffix;
         std::printf("  END_ALIGNED_RESYNC prefixEnds=%zu,%zu suffixStarts=%zu,%zu "
-                    "netShift=%lld middleLengths=%zu,%zu\\n",
+                    "netShift=%lld middleLengths=%zu,%zu\n",
                     prefix,prefix,endA,endB,
                     static_cast<long long>(endB)-static_cast<long long>(endA),
                     endA>=prefix?endA-prefix:0,endB>=prefix?endB-prefix:0);
+    }
+    const auto blocks=reluva::stafu::findSprMiddleBlocks(
+        a.view.data,a.view.size,b.view.data,b.view.size,prefix,suffix,32,16);
+    std::printf("  MIDDLE_BLOCKS minLength=16 shiftRange=[-32,+32] total=%zu\\n",blocks.size());
+    for(size_t i=0;i<std::min<size_t>(blocks.size(),12);++i) {
+        const auto& m=blocks[i];
+        std::printf("  block[%zu] delta=%+d A=[%zu,%zu) B=[%zu,%zu) length=%zu\\n",
+                    i,m.shift,m.a,m.a+m.length,m.b,m.b+m.length,m.length);
+    }
+    auto boundaryDump=[](const char* label,const uint8_t* data,size_t length,size_t center) {
+        const size_t begin=center>32?center-32:0;
+        const size_t end=std::min(length,center+(length-center>=32?32:length-center));
+        std::printf("  BOUNDARY %s center=%zu range=[%zu,%zu)\\n",label,center,begin,end);
+        for(size_t p=begin;p<end;p+=16) {
+            const size_t stop=std::min(end,p+16);
+            std::printf("    %06zx:",p);
+            for(size_t j=p;j<stop;++j)std::printf(" %02x",unsigned(data[j]));
+            std::putchar('\\n');
+        }
+    };
+    boundaryDump("prefix-end A",a.view.data,a.view.size,prefix);
+    boundaryDump("prefix-end B",b.view.data,b.view.size,prefix);
+    if(suffix) {
+        boundaryDump("suffix-start A",a.view.data,a.view.size,a.view.size-suffix);
+        boundaryDump("suffix-start B",b.view.data,b.view.size,b.view.size-suffix);
     }
     std::puts("Shift survey tests fixed offsets only ([-32,+32]); a long match is "
               "not proof of a single insertion/deletion or a codec boundary.");
