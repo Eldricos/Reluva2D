@@ -401,3 +401,120 @@ int stafuSprReferenceValidate(const char* installed,const char* cd,const char* o
     std::puts("SPR_VALIDATE_NOTE candidate offset interpretation only; no sprite reconstruction or decoding performed.");
     return failures?1:0;
 }
+
+
+// Milestone 228: observational payload-size/prefix and cross-tag comparisons.
+// This deliberately does not infer pixel decoding semantics.
+int stafuSprPayloadStructureCompare(const char* installed,const char* cd,const char* optionalName) {
+    reluva::stafu::ResourceManager manager;
+    std::string error;
+    if(!manager.open(installed,cd,error)) {
+        std::fprintf(stderr,"spr-payload-structure: %s\n",error.c_str());return 1;
+    }
+    const std::vector<std::string> names=optionalName
+        ?std::vector<std::string>{optionalName}
+        :std::vector<std::string>{"BRDGDATA.SPR","BRDGPICA.SPR","BRDGRIKR.SPR",
+                                  "BRDGTROI.SPR","BRDGWORF.SPR"};
+    int failures=0;
+    for(const auto& name:names) {
+        std::vector<uint8_t> bytes;
+        if(!manager.read(name,bytes,error)) {
+            std::fprintf(stderr,"spr-payload-structure: %s: %s\n",name.c_str(),error.c_str());
+            ++failures;continue;
+        }
+        reluva::stafu::SprSequenceIndex index;
+        if(!index.build(bytes,error)) {
+            std::fprintf(stderr,"spr-payload-structure: %s: %s\n",name.c_str(),error.c_str());
+            ++failures;continue;
+        }
+        struct Image {
+            size_t record,ordinal,offset,size;
+            uint32_t a,b,marker,value;
+            std::string tag;
+            bool reference;
+        };
+        std::vector<Image> images;
+        std::map<size_t,size_t> offsets;
+        std::map<size_t,size_t> sizes;
+        const auto& records=index.records();
+        for(size_t r=0;r<records.size();++r) {
+            size_t ordinal=0;
+            for(const auto& event:records[r].events) {
+                if(event.tag!="PMOC"&&event.tag!="MOCS")continue;
+                reluva::stafu::SprImagePayloadAccessor::View view;
+                if(reluva::stafu::SprImagePayloadAccessor::get(bytes,event,view)) {
+                    const bool reference=view.size==4&&view.marker==0x00030000;
+                    uint32_t value=0;
+                    if(reference) {
+                        const auto* p=view.data;
+                        value=uint32_t(p[0])|(uint32_t(p[1])<<8)|
+                              (uint32_t(p[2])<<16)|(uint32_t(p[3])<<24);
+                    }
+                    offsets.emplace(view.offset,images.size());
+                    images.push_back({r,ordinal,view.offset,view.size,view.headerA,
+                                      view.headerB,view.marker,value,event.tag,reference});
+                    if(!reference)++sizes[view.size];
+                }
+                ++ordinal;
+            }
+        }
+        size_t references=0,exact=0,tagOnly=0,dimensionMismatch=0,shortRefs=0;
+        std::printf("SPR_STRUCTURE_RESOURCE resource=%s records=%zu images=%zu\n",
+                    name.c_str(),records.size(),images.size());
+        for(const auto& [size,count]:sizes)
+            if(size<=16)
+                std::printf("SPR_STRUCTURE_SHORT_SIZE resource=%s size=%zu count=%zu\n",
+                            name.c_str(),size,count);
+        for(const auto& im:images) {
+            if(im.reference)continue;
+            if(im.size>16)continue;
+            std::printf("SPR_STRUCTURE_SHORT resource=%s record=%zu image=%zu tag=%s dims=%u/%u marker=0x%08x offset=0x%zx size=%zu prefix=",
+                        name.c_str(),im.record,im.ordinal,im.tag.c_str(),im.a,im.b,
+                        im.marker,im.offset,im.size);
+            for(size_t b=0;b<im.size;++b)std::printf("%02x",unsigned(bytes[im.offset+b]));
+            std::printf("\n");
+        }
+        for(const auto& src:images) {
+            if(!src.reference)continue;
+            ++references;
+            if(src.value>src.offset)continue;
+            const auto it=offsets.find(src.offset-src.value);
+            if(it==offsets.end())continue;
+            ++exact;
+            const auto& dst=images[it->second];
+            const bool dims=src.a==dst.a&&src.b==dst.b;
+            const bool tag=src.tag==dst.tag;
+            if(dims&&!tag)++tagOnly;
+            if(!dims)++dimensionMismatch;
+            if(dst.size<=16)++shortRefs;
+            if((dims&&!tag)||dst.size<=16) {
+                std::printf("SPR_STRUCTURE_REFERENCE resource=%s sourceRecord=%zu sourceImage=%zu sourceTag=%s sourceDims=%u/%u sourceMarker=0x%08x sourceOffset=0x%zx targetRecord=%zu targetImage=%zu targetTag=%s targetDims=%u/%u targetMarker=0x%08x targetOffset=0x%zx targetSize=%zu classification=%s\n",
+                            name.c_str(),src.record,src.ordinal,src.tag.c_str(),src.a,src.b,
+                            src.marker,src.offset,dst.record,dst.ordinal,dst.tag.c_str(),
+                            dst.a,dst.b,dst.marker,dst.offset,dst.size,
+                            !dims?"dimensionMismatch":!tag?"tagOnlyMismatch":"shortTarget");
+            }
+        }
+        // Compare each short payload to other non-reference payloads of the same
+        // tag and dimensions. Prefix equality is not a decoding assertion.
+        for(const auto& src:images) {
+            if(src.reference||src.size>16)continue;
+            size_t peers=0,prefixMatches=0;
+            for(const auto& dst:images) {
+                if(&src==&dst||dst.reference||src.tag!=dst.tag||
+                   src.a!=dst.a||src.b!=dst.b)continue;
+                ++peers;
+                const size_t n=std::min<size_t>(src.size,dst.size);
+                if(n&&std::equal(bytes.begin()+src.offset,
+                                 bytes.begin()+src.offset+n,bytes.begin()+dst.offset))
+                    ++prefixMatches;
+            }
+            std::printf("SPR_STRUCTURE_PEERS resource=%s offset=0x%zx dims=%u/%u tag=%s sameMetadataPeers=%zu prefixMatches=%zu\n",
+                        name.c_str(),src.offset,src.a,src.b,src.tag.c_str(),peers,prefixMatches);
+        }
+        std::printf("SPR_STRUCTURE_SUMMARY resource=%s references=%zu exactTargets=%zu tagOnlyMismatch=%zu dimensionMismatch=%zu shortTargetReferences=%zu\n",
+                    name.c_str(),references,exact,tagOnly,dimensionMismatch,shortRefs);
+    }
+    std::puts("SPR_STRUCTURE_NOTE read-only structural comparison; prefix matching and marker values do not establish image encoding or renderability.");
+    return failures?1:0;
+}
