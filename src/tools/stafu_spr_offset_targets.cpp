@@ -815,3 +815,111 @@ int stafuSprBitAlignment(const char* installed,const char* cd,const char* option
     std::puts("SPR_ALIGN_NOTE MSB-first exploratory comparisons only; a shifted match or 24-bit occurrence does not establish token boundaries, bit order, or codec semantics.");
     return failures?1:0;
 }
+
+
+// Milestone 232: read-only divergence localization between adjacent direct frames.
+int stafuSprDivergenceSurvey(const char* installed,const char* cd,const char* optionalName) {
+    reluva::stafu::ResourceManager manager;
+    std::string error;
+    if(!manager.open(installed,cd,error)) {
+        std::fprintf(stderr,"spr-divergence: %s\n",error.c_str());return 1;
+    }
+    const std::vector<std::string> names=optionalName
+        ?std::vector<std::string>{optionalName}
+        :std::vector<std::string>{"BRDGDATA.SPR","BRDGPICA.SPR","BRDGRIKR.SPR",
+                                  "BRDGTROI.SPR","BRDGWORF.SPR"};
+    int failures=0;
+    for(const auto& name:names) {
+        std::vector<uint8_t> bytes;
+        if(!manager.read(name,bytes,error)) {
+            std::fprintf(stderr,"spr-divergence: %s: %s\n",name.c_str(),error.c_str());
+            ++failures;continue;
+        }
+        reluva::stafu::SprSequenceIndex index;
+        if(!index.build(bytes,error)) {
+            std::fprintf(stderr,"spr-divergence: %s: %s\n",name.c_str(),error.c_str());
+            ++failures;continue;
+        }
+        struct Sample {
+            size_t record,ordinal,offset,size;
+            uint32_t a,b,marker;
+            std::string tag;
+        };
+        std::vector<Sample> samples;
+        for(size_t ri=0;ri<index.records().size();++ri) {
+            size_t ordinal=0;
+            for(const auto& e:index.records()[ri].events) {
+                if(e.tag!="PMOC"&&e.tag!="MOCS")continue;
+                reluva::stafu::SprImagePayloadAccessor::View v;
+                if(reluva::stafu::SprImagePayloadAccessor::get(bytes,e,v)&&
+                   !(v.marker==0x00030000&&v.size==4))
+                    samples.push_back({ri,ordinal,v.offset,v.size,v.headerA,v.headerB,v.marker,e.tag});
+                ++ordinal;
+            }
+        }
+        size_t pairs=0,sharedSuffixPairs=0,localizedPairs=0,identicalPairs=0;
+        size_t bitBoundaryCounts[8]={};
+        for(size_t i=1;i<samples.size();++i) {
+            const auto& a=samples[i-1];
+            const auto& b=samples[i];
+            if(a.record!=b.record||a.tag!=b.tag||a.marker!=b.marker||
+               a.a!=b.a||a.b!=b.b)continue;
+            ++pairs;
+            const size_t common=std::min(a.size,b.size);
+            size_t prefix=0;
+            while(prefix<common&&bytes[a.offset+prefix]==bytes[b.offset+prefix])++prefix;
+            size_t suffix=0;
+            while(suffix<common-prefix&&
+                  bytes[a.offset+a.size-1-suffix]==bytes[b.offset+b.size-1-suffix])++suffix;
+            const size_t middleA=a.size-prefix-suffix;
+            const size_t middleB=b.size-prefix-suffix;
+            if(suffix)++sharedSuffixPairs;
+            if(!middleA&&!middleB)++identicalPairs;
+            // A localized difference means at least 75% of the longer payload
+            // is explained by exact shared prefix and suffix, and both changed
+            // middle regions are <= 64 bytes.
+            const size_t longest=std::max(a.size,b.size);
+            const bool localized=(middleA<=64&&middleB<=64&&
+                (prefix+suffix)*4>=longest*3);
+            if(localized)++localizedPairs;
+            size_t bitInByte=0;
+            if(prefix<common) {
+                const uint8_t diff=bytes[a.offset+prefix]^bytes[b.offset+prefix];
+                while(bitInByte<8&&!(diff&(0x80u>>bitInByte)))++bitInByte;
+                if(bitInByte<8)++bitBoundaryCounts[bitInByte];
+            }
+            size_t sameTailWindow=0,comparedTailWindow=0;
+            // Equal-position comparisons after the first differing byte,
+            // independently of suffix alignment.
+            const size_t end=std::min(common,prefix+1+256);
+            for(size_t j=prefix+1;j<end;++j) {
+                ++comparedTailWindow;
+                if(bytes[a.offset+j]==bytes[b.offset+j])++sameTailWindow;
+            }
+            auto hexContext=[&](const Sample& s)->std::string {
+                std::string out;
+                const size_t start=prefix>4?prefix-4:0;
+                const size_t end=std::min(s.size,prefix+9);
+                char tmp[4];
+                for(size_t j=start;j<end;++j) {
+                    std::snprintf(tmp,sizeof(tmp),"%02x",bytes[s.offset+j]);
+                    if(!out.empty())out+="_";
+                    out+=tmp;
+                }
+                return out.empty()?"none":out;
+            };
+            std::printf("SPR_DIV_PAIR resource=%s record=%zu imageA=%zu imageB=%zu tag=%s marker=0x%08x dims=%u/%u sizeA=%zu sizeB=%zu prefixBytes=%zu firstDiffBit=%zu suffixBytes=%zu middleA=%zu middleB=%zu tailWindowSame=%zu tailWindowCompared=%zu localized=%u contextA=%s contextB=%s\n",
+                        name.c_str(),a.record,a.ordinal,b.ordinal,a.tag.c_str(),a.marker,
+                        a.a,a.b,a.size,b.size,prefix,
+                        prefix<common?prefix*8+bitInByte:common*8,
+                        suffix,middleA,middleB,sameTailWindow,comparedTailWindow,
+                        localized?1u:0u,hexContext(a).c_str(),hexContext(b).c_str());
+        }
+        std::printf("SPR_DIV_SUMMARY resource=%s direct=%zu neighborPairs=%zu sharedSuffixPairs=%zu localizedPairs=%zu identicalPairs=%zu firstDifferenceBitWithinByte=",
+                    name.c_str(),samples.size(),pairs,sharedSuffixPairs,localizedPairs,identicalPairs);
+        for(size_t k=0;k<8;++k)std::printf("%s%zu:%zu",k?",":"",k,bitBoundaryCounts[k]);
+        std::printf("\n");
+    }
+    std::puts("SPR_DIV_NOTE exact prefixes/suffixes and fixed-position windows are descriptive; byte-aligned suffixes are not evidence of token boundaries or a codec.");
+    return failures?1:0;
+}
