@@ -6,6 +6,7 @@ int stafuSprDisplacementSegments(const char*,const char*,const char*);
 int stafuSprInteriorVerify(const char*,const char*,const char*);
 int stafuSprMaximalSpans(const char*,const char*,const char*);
 int stafuSprSpanReconcile(const char*,const char*,const char*);
+int stafuSprM267ConstrainedCorrespondence(const char*,const char*,const char*);
 int stafuSprM266ShortMatchSignificance(const char*,const char*,const char*);
 int stafuSprM265BoundaryRefinement(const char*,const char*,const char*);
 int stafuSprM264StableAnchors(const char*,const char*,const char*);
@@ -224,6 +225,8 @@ int stafuToolMain(int argc, char** argv) {
         return stafuSprMaximalSpans(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-span-reconcile") == 0)
         return stafuSprSpanReconcile(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
+    if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-m267-constrained-correspondence") == 0)
+        return stafuSprM267ConstrainedCorrespondence(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-m266-short-match-significance") == 0)
         return stafuSprM266ShortMatchSignificance(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-m265-boundary-refinement") == 0)
