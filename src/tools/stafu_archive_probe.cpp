@@ -1,4 +1,5 @@
 int stafuSprCommonBlocks(const char*,const char*,const char*);
+int stafuSprDisplacementCoherence(const char*,const char*,const char*);
 int stafuSprDivergenceSurvey(const char*,const char*,const char*);
 int stafuSprBitAlignment(const char*,const char*,const char*);
 int stafuSprBitPatternSurvey(const char*,const char*,const char*);
@@ -179,6 +180,8 @@ int stafuSprPayloadDiff(const char* installed, const char* cd, const char* name,
                         const char* record, const char* first, const char* second);
 
 int stafuToolMain(int argc, char** argv) {
+    if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-displacement-coherence") == 0)
+        return stafuSprDisplacementCoherence(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-common-blocks") == 0)
         return stafuSprCommonBlocks(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-divergence") == 0)
