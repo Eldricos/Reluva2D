@@ -1,3 +1,4 @@
+int stafuSprBitPatternSurvey(const char*,const char*,const char*);
 int stafuSprEncodingSurvey(const char*,const char*,const char*);
 int stafuSprPayloadStructureCompare(const char*,const char*,const char*);
 int stafuSprResolvedInspect(const char*,const char*,const char*);
@@ -175,6 +176,8 @@ int stafuSprPayloadDiff(const char* installed, const char* cd, const char* name,
                         const char* record, const char* first, const char* second);
 
 int stafuToolMain(int argc, char** argv) {
+    if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-bit-patterns") == 0)
+        return stafuSprBitPatternSurvey(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-encoding-survey") == 0)
         return stafuSprEncodingSurvey(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-payload-structure") == 0)
