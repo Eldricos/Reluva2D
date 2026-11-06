@@ -717,3 +717,101 @@ int stafuSprBitPatternSurvey(const char* installed,const char* cd,const char* op
     std::puts("SPR_BITS_NOTE byte histograms, 3-byte sequences and shared prefixes are descriptive only; no codec inference or decoding.");
     return failures?1:0;
 }
+
+
+// Milestone 231: observational bit alignment of neighboring direct SPR payloads.
+// Bit order is explicitly MSB-first for this diagnostic, not a codec assertion.
+int stafuSprBitAlignment(const char* installed,const char* cd,const char* optionalName) {
+    reluva::stafu::ResourceManager manager;
+    std::string error;
+    if(!manager.open(installed,cd,error)) {
+        std::fprintf(stderr,"spr-bit-alignment: %s\n",error.c_str());return 1;
+    }
+    const std::vector<std::string> names=optionalName
+        ?std::vector<std::string>{optionalName}
+        :std::vector<std::string>{"BRDGDATA.SPR","BRDGPICA.SPR","BRDGRIKR.SPR",
+                                  "BRDGTROI.SPR","BRDGWORF.SPR"};
+    int failures=0;
+    for(const auto& name:names) {
+        std::vector<uint8_t> bytes;
+        if(!manager.read(name,bytes,error)) {
+            std::fprintf(stderr,"spr-bit-alignment: %s: %s\n",name.c_str(),error.c_str());
+            ++failures;continue;
+        }
+        reluva::stafu::SprSequenceIndex index;
+        if(!index.build(bytes,error)) {
+            std::fprintf(stderr,"spr-bit-alignment: %s: %s\n",name.c_str(),error.c_str());
+            ++failures;continue;
+        }
+        struct Sample {
+            size_t record,ordinal,offset,size;
+            uint32_t a,b,marker;
+            std::string tag;
+        };
+        std::vector<Sample> samples;
+        for(size_t ri=0;ri<index.records().size();++ri) {
+            size_t ordinal=0;
+            for(const auto& e:index.records()[ri].events) {
+                if(e.tag!="PMOC"&&e.tag!="MOCS")continue;
+                reluva::stafu::SprImagePayloadAccessor::View v;
+                if(reluva::stafu::SprImagePayloadAccessor::get(bytes,e,v)&&
+                   !(v.marker==0x00030000&&v.size==4))
+                    samples.push_back({ri,ordinal,v.offset,v.size,v.headerA,v.headerB,v.marker,e.tag});
+                ++ordinal;
+            }
+        }
+        auto bit=[&bytes](const Sample& s,size_t pos)->unsigned {
+            return (bytes[s.offset+pos/8]>>(7-(pos%8)))&1u;
+        };
+        size_t pairs=0,shiftWins=0,needleAligned=0,needleUnaligned=0;
+        for(size_t i=1;i<samples.size();++i) {
+            const auto& a=samples[i-1];
+            const auto& b=samples[i];
+            if(a.record!=b.record||a.tag!=b.tag||a.marker!=b.marker||
+               a.a!=b.a||a.b!=b.b)continue;
+            ++pairs;
+            size_t bestShift=0,bestBits=0,unshiftedBits=0;
+            // Compare the beginning of A to the beginning of B at shifts 0..7.
+            // Cap comparisons at 2048 bits to bound diagnostic work.
+            for(size_t shift=0;shift<8;++shift) {
+                const size_t maxBits=std::min<size_t>(
+                    2048,std::min(a.size*8,b.size*8>shift?b.size*8-shift:0));
+                size_t matched=0;
+                while(matched<maxBits&&bit(a,matched)==bit(b,matched+shift))++matched;
+                if(shift==0)unshiftedBits=matched;
+                if(matched>bestBits){bestBits=matched;bestShift=shift;}
+            }
+            if(bestShift)++shiftWins;
+            std::printf("SPR_ALIGN_PAIR resource=%s record=%zu imageA=%zu imageB=%zu tag=%s marker=0x%08x dims=%u/%u sizeA=%zu sizeB=%zu prefixBits0=%zu bestShiftBits=%zu bestPrefixBits=%zu\n",
+                        name.c_str(),a.record,a.ordinal,b.ordinal,a.tag.c_str(),a.marker,
+                        a.a,a.b,a.size,b.size,unshiftedBits,bestShift,bestBits);
+        }
+        // Search for the exact 24-bit pattern 3F CA 30 at all bit positions,
+        // including positions that are not byte-aligned. MSB-first only.
+        for(const auto& s:samples) {
+            const unsigned needle[3]={0x3f,0xca,0x30};
+            size_t aligned=0,unaligned=0;
+            for(size_t start=0;start+24<=s.size*8;++start) {
+                bool match=true;
+                for(size_t k=0;k<24;++k)
+                    if(bit(s,start+k)!=((needle[k/8]>>(7-(k%8)))&1u)){
+                        match=false;break;
+                    }
+                if(match) {
+                    if(start%8==0)++aligned;
+                    else ++unaligned;
+                }
+            }
+            if(aligned||unaligned) {
+                needleAligned+=aligned;needleUnaligned+=unaligned;
+                std::printf("SPR_ALIGN_NEEDLE resource=%s record=%zu image=%zu tag=%s marker=0x%08x size=%zu aligned=%zu unaligned=%zu\n",
+                            name.c_str(),s.record,s.ordinal,s.tag.c_str(),s.marker,
+                            s.size,aligned,unaligned);
+            }
+        }
+        std::printf("SPR_ALIGN_SUMMARY resource=%s direct=%zu neighborPairs=%zu shiftedBestPairs=%zu needleAligned=%zu needleUnaligned=%zu\n",
+                    name.c_str(),samples.size(),pairs,shiftWins,needleAligned,needleUnaligned);
+    }
+    std::puts("SPR_ALIGN_NOTE MSB-first exploratory comparisons only; a shifted match or 24-bit occurrence does not establish token boundaries, bit order, or codec semantics.");
+    return failures?1:0;
+}
