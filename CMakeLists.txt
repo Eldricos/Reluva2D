@@ -152,6 +152,7 @@ add_executable(reluva-tool
     src/tools/stafu_spr_maximal_spans.cpp
     src/tools/stafu_spr_span_gaps.cpp
     src/tools/stafu_spr_gap_content.cpp
+    src/tools/stafu_spr_local_differences.cpp
     src/tools/stafu_spr_span_reconcile.cpp
     src/tools/stafu_bridge_inventory.cpp
     src/tools/stafu_computer_browse.cpp
