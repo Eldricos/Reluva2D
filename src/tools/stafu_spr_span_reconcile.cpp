@@ -93,7 +93,7 @@ struct GapResult {
     size_t bestEqual=0, bestCompared=0;
     int bestShift=0;
 };
-GapResult compareContent(const uint8_t* a,size_t sa,size_t na,const uint8_t* b,size_t sb,size_t nb){
+static GapResult compareContent(const uint8_t* a,size_t sa,size_t na,const uint8_t* b,size_t sb,size_t nb){
     GapResult r;
     const size_t n=std::min(na,nb);
     size_t run=0;
@@ -128,7 +128,7 @@ GapResult compareContent(const uint8_t* a,size_t sa,size_t na,const uint8_t* b,s
     }
     return r;
 }
-void emitGaps(const std::string& name,size_t record,size_t imageA,size_t imageB,
+static void emitGaps(const std::string& name,size_t record,size_t imageA,size_t imageB,
                const std::vector<Match>& matches,const uint8_t* dataA,size_t bitsA,
                const uint8_t* dataB,size_t bitsB,size_t& spans,size_t& gaps,
                size_t& unequal,size_t& rejected,size_t& detail,
