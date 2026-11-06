@@ -595,3 +595,125 @@ int stafuSprEncodingSurvey(const char* installed,const char* cd,const char* opti
     std::puts("SPR_ENCODING_NOTE observational byte lengths and prefixes only; no decompression, pixel interpretation, or codec identification.");
     return failures?1:0;
 }
+
+
+// Milestone 230: bounded, read-only byte-pattern analysis; no bitstream decoding.
+int stafuSprBitPatternSurvey(const char* installed,const char* cd,const char* optionalName) {
+    reluva::stafu::ResourceManager manager;
+    std::string error;
+    if(!manager.open(installed,cd,error)) {
+        std::fprintf(stderr,"spr-bit-patterns: %s\n",error.c_str());return 1;
+    }
+    const std::vector<std::string> names=optionalName
+        ?std::vector<std::string>{optionalName}
+        :std::vector<std::string>{"BRDGDATA.SPR","BRDGPICA.SPR","BRDGRIKR.SPR",
+                                  "BRDGTROI.SPR","BRDGWORF.SPR"};
+    int failures=0;
+    for(const auto& name:names) {
+        std::vector<uint8_t> bytes;
+        if(!manager.read(name,bytes,error)) {
+            std::fprintf(stderr,"spr-bit-patterns: %s: %s\n",name.c_str(),error.c_str());
+            ++failures;continue;
+        }
+        reluva::stafu::SprSequenceIndex index;
+        if(!index.build(bytes,error)) {
+            std::fprintf(stderr,"spr-bit-patterns: %s: %s\n",name.c_str(),error.c_str());
+            ++failures;continue;
+        }
+        struct Sample {
+            size_t record,ordinal,offset,size;
+            uint32_t a,b,marker;
+            std::string tag;
+        };
+        std::vector<Sample> samples;
+        std::map<uint32_t,std::vector<size_t>> byMarker;
+        size_t references=0;
+        for(size_t ri=0;ri<index.records().size();++ri) {
+            size_t ordinal=0;
+            for(const auto& e:index.records()[ri].events) {
+                if(e.tag!="PMOC"&&e.tag!="MOCS")continue;
+                reluva::stafu::SprImagePayloadAccessor::View v;
+                if(reluva::stafu::SprImagePayloadAccessor::get(bytes,e,v)) {
+                    if(v.marker==0x00030000&&v.size==4)++references;
+                    else {
+                        byMarker[v.marker].push_back(samples.size());
+                        samples.push_back({ri,ordinal,v.offset,v.size,v.headerA,v.headerB,v.marker,e.tag});
+                    }
+                }
+                ++ordinal;
+            }
+        }
+        std::printf("SPR_BITS_RESOURCE resource=%s direct=%zu references=%zu\n",
+                    name.c_str(),samples.size(),references);
+        for(const auto& [marker,indices]:byMarker) {
+            size_t histogram[256]={};
+            size_t total=0,adjacentEqual=0,tripletMatches=0;
+            std::map<uint32_t,size_t> triples;
+            for(size_t idx:indices) {
+                const auto& s=samples[idx];
+                for(size_t j=0;j<s.size;++j) {
+                    ++histogram[bytes[s.offset+j]];++total;
+                    if(j&&bytes[s.offset+j]==bytes[s.offset+j-1])++adjacentEqual;
+                    if(j>=2) {
+                        const uint32_t k=(uint32_t(bytes[s.offset+j-2])<<16)|
+                                         (uint32_t(bytes[s.offset+j-1])<<8)|bytes[s.offset+j];
+                        ++triples[k];
+                    }
+                }
+            }
+            std::vector<std::pair<size_t,unsigned>> ranked;
+            for(unsigned b=0;b<256;++b)if(histogram[b])ranked.push_back({histogram[b],b});
+            std::sort(ranked.begin(),ranked.end(),[](const auto& a,const auto& b){
+                return a.first!=b.first?a.first>b.first:a.second<b.second;
+            });
+            std::printf("SPR_BITS_MARKER resource=%s marker=0x%08x images=%zu bytes=%zu adjacentEqual=%zu distinctBytes=%zu topBytes=",
+                        name.c_str(),marker,indices.size(),total,adjacentEqual,ranked.size());
+            for(size_t j=0;j<std::min<size_t>(8,ranked.size());++j)
+                std::printf("%s%02x:%zu",j?",":"",ranked[j].second,ranked[j].first);
+            std::printf("\n");
+            std::vector<std::pair<size_t,uint32_t>> rankedTriples;
+            for(const auto& [key,count]:triples)if(count>=2)rankedTriples.push_back({count,key});
+            std::sort(rankedTriples.begin(),rankedTriples.end(),[](const auto& a,const auto& b){
+                return a.first!=b.first?a.first>b.first:a.second<b.second;
+            });
+            std::printf("SPR_BITS_TRIPLES resource=%s marker=0x%08x repeatedDistinct=%zu top=",
+                        name.c_str(),marker,rankedTriples.size());
+            for(size_t j=0;j<std::min<size_t>(8,rankedTriples.size());++j)
+                std::printf("%s%06x:%zu",j?",":"",rankedTriples[j].second,rankedTriples[j].first);
+            std::printf("\n");
+        }
+        size_t pairs=0,identicalPrefix12=0;
+        for(size_t i=1;i<samples.size();++i) {
+            const auto& a=samples[i-1];
+            const auto& b=samples[i];
+            if(a.record!=b.record||a.tag!=b.tag||a.marker!=b.marker||
+               a.a!=b.a||a.b!=b.b)continue;
+            ++pairs;
+            const size_t limit=std::min(a.size,b.size);
+            size_t prefix=0;
+            while(prefix<limit&&bytes[a.offset+prefix]==bytes[b.offset+prefix])++prefix;
+            if(prefix>=12)++identicalPrefix12;
+            std::printf("SPR_BITS_NEIGHBOR resource=%s record=%zu imageA=%zu imageB=%zu tag=%s marker=0x%08x dims=%u/%u sizeA=%zu sizeB=%zu commonPrefix=%zu\n",
+                        name.c_str(),a.record,a.ordinal,b.ordinal,a.tag.c_str(),a.marker,
+                        a.a,a.b,a.size,b.size,prefix);
+        }
+        // Exact occurrence of Picard's three-byte payload, including overlapping
+        // matches, within direct-image data only (not resource headers).
+        size_t needleImages=0,needleOccurrences=0;
+        for(const auto& s:samples) {
+            size_t count=0;
+            for(size_t j=0;j+3<=s.size;++j)
+                if(bytes[s.offset+j]==0x3f&&bytes[s.offset+j+1]==0xca&&
+                   bytes[s.offset+j+2]==0x30)++count;
+            if(count) {
+                ++needleImages;needleOccurrences+=count;
+                std::printf("SPR_BITS_NEEDLE resource=%s record=%zu image=%zu tag=%s marker=0x%08x size=%zu matches=%zu\n",
+                            name.c_str(),s.record,s.ordinal,s.tag.c_str(),s.marker,s.size,count);
+            }
+        }
+        std::printf("SPR_BITS_SUMMARY resource=%s direct=%zu neighborPairs=%zu prefixAtLeast12=%zu needleImages=%zu needleOccurrences=%zu\n",
+                    name.c_str(),samples.size(),pairs,identicalPrefix12,needleImages,needleOccurrences);
+    }
+    std::puts("SPR_BITS_NOTE byte histograms, 3-byte sequences and shared prefixes are descriptive only; no codec inference or decoding.");
+    return failures?1:0;
+}
