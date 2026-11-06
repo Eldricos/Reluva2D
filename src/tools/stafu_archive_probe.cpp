@@ -6,6 +6,7 @@ int stafuSprDisplacementSegments(const char*,const char*,const char*);
 int stafuSprInteriorVerify(const char*,const char*,const char*);
 int stafuSprMaximalSpans(const char*,const char*,const char*);
 int stafuSprSpanReconcile(const char*,const char*,const char*);
+int stafuSprM270AnchorSensitivity(const char*,const char*,const char*);
 int stafuSprM269EditPathEnumeration(const char*,const char*,const char*);
 int stafuSprM268SegmentBitAnalysis(const char*,const char*,const char*);
 int stafuSprM267ConstrainedCorrespondence(const char*,const char*,const char*);
@@ -227,6 +228,8 @@ int stafuToolMain(int argc, char** argv) {
         return stafuSprMaximalSpans(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-span-reconcile") == 0)
         return stafuSprSpanReconcile(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
+    if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-m270-anchor-sensitivity") == 0)
+        return stafuSprM270AnchorSensitivity(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-m269-edit-path-enumeration") == 0)
         return stafuSprM269EditPathEnumeration(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-m268-segment-bit-analysis") == 0)
