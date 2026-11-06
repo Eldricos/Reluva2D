@@ -518,3 +518,80 @@ int stafuSprPayloadStructureCompare(const char* installed,const char* cd,const c
     std::puts("SPR_STRUCTURE_NOTE read-only structural comparison; prefix matching and marker values do not establish image encoding or renderability.");
     return failures?1:0;
 }
+
+
+// Milestone 229: read-only direct-image payload encoding survey.
+// A marker is an observed field, not an asserted codec identifier.
+int stafuSprEncodingSurvey(const char* installed,const char* cd,const char* optionalName) {
+    reluva::stafu::ResourceManager manager;
+    std::string error;
+    if(!manager.open(installed,cd,error)) {
+        std::fprintf(stderr,"spr-encoding-survey: %s\n",error.c_str());return 1;
+    }
+    const std::vector<std::string> names=optionalName
+        ?std::vector<std::string>{optionalName}
+        :std::vector<std::string>{"BRDGDATA.SPR","BRDGPICA.SPR","BRDGRIKR.SPR",
+                                  "BRDGTROI.SPR","BRDGWORF.SPR"};
+    int failures=0;
+    for(const auto& name:names) {
+        std::vector<uint8_t> bytes;
+        if(!manager.read(name,bytes,error)) {
+            std::fprintf(stderr,"spr-encoding-survey: %s: %s\n",name.c_str(),error.c_str());
+            ++failures;continue;
+        }
+        reluva::stafu::SprSequenceIndex index;
+        if(!index.build(bytes,error)) {
+            std::fprintf(stderr,"spr-encoding-survey: %s: %s\n",name.c_str(),error.c_str());
+            ++failures;continue;
+        }
+        struct Stats {
+            size_t count=0,minSize=static_cast<size_t>(-1),maxSize=0,total=0;
+            size_t shorterThanArea=0,shortUpTo16=0,zero=0;
+        };
+        std::map<std::pair<std::string,uint32_t>,Stats> stats;
+        size_t direct=0,references=0,invalid=0;
+        std::printf("SPR_ENCODING_RESOURCE resource=%s records=%zu\n",
+                    name.c_str(),index.records().size());
+        for(size_t ri=0;ri<index.records().size();++ri) {
+            size_t ordinal=0;
+            for(const auto& e:index.records()[ri].events) {
+                if(e.tag!="PMOC"&&e.tag!="MOCS")continue;
+                reluva::stafu::SprImagePayloadAccessor::View view;
+                if(!reluva::stafu::SprImagePayloadAccessor::get(bytes,e,view)) {
+                    ++invalid;++ordinal;continue;
+                }
+                if(view.marker==0x00030000&&view.size==4) {
+                    ++references;++ordinal;continue;
+                }
+                ++direct;
+                auto& s=stats[{e.tag,view.marker}];
+                ++s.count;
+                s.minSize=std::min(s.minSize,view.size);
+                s.maxSize=std::max(s.maxSize,view.size);
+                s.total+=view.size;
+                const uint64_t area=uint64_t(view.headerA)*uint64_t(view.headerB);
+                if(view.size<area)++s.shorterThanArea;
+                if(view.size<=16)++s.shortUpTo16;
+                if(!view.size)++s.zero;
+                std::printf("SPR_ENCODING_IMAGE resource=%s record=%zu image=%zu tag=%s dims=%u/%u area=%llu marker=0x%08x offset=0x%zx size=%zu bytesPerArea=",
+                            name.c_str(),ri,ordinal,e.tag.c_str(),view.headerA,view.headerB,
+                            static_cast<unsigned long long>(area),view.marker,view.offset,view.size);
+                if(area)std::printf("%.6f",double(view.size)/double(area));
+                else std::printf("undefined");
+                std::printf(" prefix=");
+                for(size_t i=0;i<std::min<size_t>(view.size,12);++i)
+                    std::printf("%02x",unsigned(view.data[i]));
+                std::printf("\n");
+                ++ordinal;
+            }
+        }
+        for(const auto& [key,s]:stats)
+            std::printf("SPR_ENCODING_GROUP resource=%s tag=%s marker=0x%08x count=%zu minSize=%zu maxSize=%zu totalBytes=%zu belowArea=%zu shortUpTo16=%zu zero=%zu\n",
+                        name.c_str(),key.first.c_str(),key.second,s.count,
+                        s.minSize,s.maxSize,s.total,s.shorterThanArea,s.shortUpTo16,s.zero);
+        std::printf("SPR_ENCODING_SUMMARY resource=%s direct=%zu references=%zu invalid=%zu markerGroups=%zu\n",
+                    name.c_str(),direct,references,invalid,stats.size());
+    }
+    std::puts("SPR_ENCODING_NOTE observational byte lengths and prefixes only; no decompression, pixel interpretation, or codec identification.");
+    return failures?1:0;
+}
