@@ -3,6 +3,7 @@ int stafuSprDisplacementCoherence(const char*,const char*,const char*);
 int stafuSprPeriodCompare(const char*,const char*,const char*);
 int stafuSprBoundaryCorrespondence(const char*,const char*,const char*);
 int stafuSprDisplacementSegments(const char*,const char*,const char*);
+int stafuSprInteriorVerify(const char*,const char*,const char*);
 int stafuSprBitPeriod(const char*,const char*,const char*);
 int stafuSprRepeatedSpacing(const char*,const char*,const char*);
 int stafuSprSubstitutionContext(const char*,const char*,const char*);
@@ -196,6 +197,8 @@ int stafuToolMain(int argc, char** argv) {
         return stafuSprBoundaryCorrespondence(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-displacement-segments") == 0)
         return stafuSprDisplacementSegments(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
+    if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-interior-verify") == 0)
+        return stafuSprInteriorVerify(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-bit-period") == 0)
         return stafuSprBitPeriod(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-repeated-spacing") == 0)
