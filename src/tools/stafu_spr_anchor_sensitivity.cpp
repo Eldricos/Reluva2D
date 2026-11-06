@@ -186,7 +186,7 @@ bool load(const char* installed,const char* cd,const std::string& name,
                 const auto& result=scores[mask];
                 const int penalty=result.cost-baseline.cost;
                 const bool any=result.valid&&penalty==0;
-                const bool all=any&&result.paths==baseline.paths;
+                const bool all=any&&!(result.paths!=baseline.paths);
                 std::printf("SPR_M270_ANCHOR resource=%s interval=%zu substitution=%d mask=%zu constrainedCost=%d penalty=%d constrainedPaths=%s anyOptimal=%d allOptimal=%d valid=%d\n",
                     name.c_str(),ix+1,substitution,mask,result.cost,penalty,result.paths.str().c_str(),
                     any?1:0,all?1:0,result.valid?1:0);
