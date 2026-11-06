@@ -1,3 +1,4 @@
+int stafuSprDivergenceSurvey(const char*,const char*,const char*);
 int stafuSprBitAlignment(const char*,const char*,const char*);
 int stafuSprBitPatternSurvey(const char*,const char*,const char*);
 int stafuSprEncodingSurvey(const char*,const char*,const char*);
@@ -177,6 +178,8 @@ int stafuSprPayloadDiff(const char* installed, const char* cd, const char* name,
                         const char* record, const char* first, const char* second);
 
 int stafuToolMain(int argc, char** argv) {
+    if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-divergence") == 0)
+        return stafuSprDivergenceSurvey(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-bit-alignment") == 0)
         return stafuSprBitAlignment(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-bit-patterns") == 0)
