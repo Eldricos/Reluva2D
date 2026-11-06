@@ -1,3 +1,4 @@
+int stafuSprPayloadStructureCompare(const char*,const char*,const char*);
 int stafuSprResolvedInspect(const char*,const char*,const char*);
 int stafuSprReferenceValidate(const char*,const char*,const char*);
 int stafuSprReferenceResolve(const char*,const char*,const char*);
@@ -173,6 +174,8 @@ int stafuSprPayloadDiff(const char* installed, const char* cd, const char* name,
                         const char* record, const char* first, const char* second);
 
 int stafuToolMain(int argc, char** argv) {
+    if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-payload-structure") == 0)
+        return stafuSprPayloadStructureCompare(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-resolved-inspect") == 0)
         return stafuSprResolvedInspect(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-reference-validate") == 0)
@@ -293,6 +296,7 @@ int stafuToolMain(int argc, char** argv) {
         return probe(argv[3]);
     std::fprintf(stderr,
         "STAFU usage:\n"        "  reluva-tool -stafu spr-resolved-inspect <installed> <cd> [resource.SPR]\\n"
+        "  reluva-tool -stafu spr-payload-structure <installed> <cd> [resource.SPR]\n"
         "  reluva-tool -stafu spr-reference-validate <installed> <cd> [resource.SPR]\n"        "  reluva-tool -stafu spr-reference-resolve <installed> <cd> [resource.SPR]\n"        "  reluva-tool -stafu spr-payload-catalog <installed> <cd> [resource.SPR]\n"
         "  reluva-tool -stafu spr-offset-targets <installed> <cd> [resource.SPR]\n"
         "  reluva-tool -stafu spr-value-patterns <installed> <cd> [resource.SPR]\n"
