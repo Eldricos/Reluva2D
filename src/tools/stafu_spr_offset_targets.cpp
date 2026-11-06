@@ -1052,3 +1052,173 @@ int stafuSprCommonBlocks(const char* installed,const char* cd,const char* option
     std::puts("SPR_BLOCK_NOTE exact byte matches only; greedy longest-first selection is not an optimal alignment, and shared blocks do not establish codec semantics.");
     return failures?1:0;
 }
+
+
+// Milestone 234: read-only displacement coherence across ordered exact matches.
+// Uses maximal 16-byte seed matches, caps candidate work, and groups matches
+// into monotonic, non-overlapping runs at identical displacement.
+int stafuSprDisplacementCoherence(const char* installed,const char* cd,const char* optionalName) {
+    reluva::stafu::ResourceManager manager;
+    std::string error;
+    if(!manager.open(installed,cd,error)) {
+        std::fprintf(stderr,"spr-displacement-coherence: %s\n",error.c_str());return 1;
+    }
+    const std::vector<std::string> names=optionalName
+        ?std::vector<std::string>{optionalName}
+        :std::vector<std::string>{"BRDGDATA.SPR","BRDGPICA.SPR","BRDGRIKR.SPR",
+                                  "BRDGTROI.SPR","BRDGWORF.SPR"};
+    constexpr size_t seed=16,maxCandidates=100000,maxRunLines=16;
+    int failures=0;
+    for(const auto& name:names) {
+        std::vector<uint8_t> bytes;
+        if(!manager.read(name,bytes,error)) {
+            std::fprintf(stderr,"spr-displacement-coherence: %s: %s\n",name.c_str(),error.c_str());
+            ++failures;continue;
+        }
+        reluva::stafu::SprSequenceIndex index;
+        if(!index.build(bytes,error)) {
+            std::fprintf(stderr,"spr-displacement-coherence: %s: %s\n",name.c_str(),error.c_str());
+            ++failures;continue;
+        }
+        struct Sample {size_t record,ordinal,offset,size;uint32_t a,b,marker;std::string tag;};
+        std::vector<Sample> samples;
+        for(size_t ri=0;ri<index.records().size();++ri) {
+            size_t ordinal=0;
+            for(const auto& e:index.records()[ri].events) {
+                if(e.tag!="PMOC"&&e.tag!="MOCS")continue;
+                reluva::stafu::SprImagePayloadAccessor::View v;
+                if(reluva::stafu::SprImagePayloadAccessor::get(bytes,e,v)&&
+                   !(v.marker==0x00030000&&v.size==4))
+                    samples.push_back({ri,ordinal,v.offset,v.size,v.headerA,v.headerB,v.marker,e.tag});
+                ++ordinal;
+            }
+        }
+        size_t pairs=0,pairsWithRuns=0,pairsWithMultiBlockRuns=0,truncatedPairs=0;
+        for(size_t i=1;i<samples.size();++i) {
+            const auto& a=samples[i-1];const auto& b=samples[i];
+            if(a.record!=b.record||a.tag!=b.tag||a.marker!=b.marker||
+               a.a!=b.a||a.b!=b.b)continue;
+            ++pairs;
+            auto hash=[&](size_t offset) {
+                uint64_t h=14695981039346656037ull;
+                for(size_t k=0;k<seed;++k){h^=bytes[offset+k];h*=1099511628211ull;}
+                return h;
+            };
+            std::map<uint64_t,std::vector<size_t>> positions;
+            if(a.size>=seed)for(size_t p=0;p+seed<=a.size;++p)
+                positions[hash(a.offset+p)].push_back(p);
+            struct Block {size_t x,y,n;};
+            std::vector<Block> candidates;
+            bool truncated=false;
+            if(b.size>=seed)for(size_t q=0;q+seed<=b.size&&!truncated;++q) {
+                const auto it=positions.find(hash(b.offset+q));
+                if(it==positions.end())continue;
+                for(size_t p:it->second) {
+                    if(!std::equal(bytes.begin()+a.offset+p,
+                                   bytes.begin()+a.offset+p+seed,
+                                   bytes.begin()+b.offset+q))continue;
+                    if(p&&q&&bytes[a.offset+p-1]==bytes[b.offset+q-1])continue;
+                    size_t n=seed;
+                    while(p+n<a.size&&q+n<b.size&&
+                          bytes[a.offset+p+n]==bytes[b.offset+q+n])++n;
+                    candidates.push_back({p,q,n});
+                    if(candidates.size()>=maxCandidates){truncated=true;break;}
+                }
+            }
+            if(truncated)++truncatedPairs;
+            // Select an ordered, non-overlapping chain by weighted interval
+            // dynamic programming over the candidate match endpoints.
+            // O(N^2) is avoided: use a Fenwick prefix-max over B endpoints,
+            // processing matches in increasing A endpoint batches.
+            std::sort(candidates.begin(),candidates.end(),[](const Block& x,const Block& y){
+                if(x.x+x.n!=y.x+y.n)return x.x+x.n<y.x+y.n;
+                if(x.y+x.n!=y.y+y.n)return x.y+x.n<y.y+y.n;
+                return x.n>y.n;
+            });
+            struct State {size_t score=0,count=0;int last=-1;};
+            std::vector<State> tree(b.size+2),dp(candidates.size());
+            auto better=[](const State& x,const State& y) {
+                return x.score>y.score||(x.score==y.score&&x.count<y.count);
+            };
+            auto query=[&](size_t pos) {
+                State result;
+                for(size_t j=pos+1;j;j-=j&-j)
+                    if(better(tree[j],result))result=tree[j];
+                return result;
+            };
+            auto update=[&](size_t pos,const State& value) {
+                for(size_t j=pos+1;j<tree.size();j+=j&-j)
+                    if(better(value,tree[j]))tree[j]=value;
+            };
+            // Pending updates are released only after their A end is <=
+            // the next match's A start, preventing A overlap.
+            struct Pending {size_t endA,endB;State state;};
+            std::vector<Pending> pending;
+            pending.reserve(candidates.size());
+            size_t released=0;
+            // Separate ordering of pending by endA is guaranteed by candidate sort.
+            for(size_t j=0;j<candidates.size();++j) {
+                const auto& m=candidates[j];
+                while(released<pending.size()&&pending[released].endA<=m.x) {
+                    update(pending[released].endB,pending[released].state);
+                    ++released;
+                }
+                State prev=query(m.y);
+                dp[j]={prev.score+m.n,prev.count+1,static_cast<int>(j)};
+                pending.push_back({m.x+m.n,m.y+m.n,dp[j]});
+                // Retain predecessor index separately for reconstruction.
+            }
+            // Reconstruct through predecessor states, stored by replaying
+            // the prefix-max query result for each candidate.
+            // The chain is calculated in a second bounded pass.
+            tree.assign(b.size+2,State{});
+            released=0;
+            std::vector<int> predecessor(candidates.size(),-1);
+            State best;
+            for(size_t j=0;j<candidates.size();++j) {
+                const auto& m=candidates[j];
+                while(released<j&&candidates[released].x+candidates[released].n<=m.x) {
+                    update(candidates[released].y+candidates[released].n,dp[released]);
+                    ++released;
+                }
+                const State prev=query(m.y);
+                predecessor[j]=prev.last;
+                dp[j]={prev.score+m.n,prev.count+1,static_cast<int>(j)};
+                if(better(dp[j],best))best=dp[j];
+            }
+            std::vector<Block> chain;
+            for(int j=best.last;j>=0;j=predecessor[static_cast<size_t>(j)])
+                chain.push_back(candidates[static_cast<size_t>(j)]);
+            std::reverse(chain.begin(),chain.end());
+            struct Run {size_t firstA,firstB,endA,endB,bytes,blocks;long long delta;};
+            std::vector<Run> runs;
+            for(const auto& m:chain) {
+                const long long d=static_cast<long long>(m.y)-static_cast<long long>(m.x);
+                if(!runs.empty()&&runs.back().delta==d) {
+                    auto& run=runs.back();run.endA=m.x+m.n;run.endB=m.y+m.n;
+                    run.bytes+=m.n;++run.blocks;
+                } else runs.push_back({m.x,m.y,m.x+m.n,m.y+m.n,m.n,1,d});
+            }
+            if(!runs.empty())++pairsWithRuns;
+            bool multi=false;for(const auto& run:runs)if(run.blocks>1)multi=true;
+            if(multi)++pairsWithMultiBlockRuns;
+            size_t matched=0;for(const auto& m:chain)matched+=m.n;
+            std::printf("SPR_COHERENCE_PAIR resource=%s record=%zu imageA=%zu imageB=%zu tag=%s marker=0x%08x dims=%u/%u sizeA=%zu sizeB=%zu candidates=%zu truncated=%u chainBlocks=%zu chainBytes=%zu runs=%zu multiBlock=%u\n",
+                        name.c_str(),a.record,a.ordinal,b.ordinal,a.tag.c_str(),a.marker,
+                        a.a,a.b,a.size,b.size,candidates.size(),truncated?1u:0u,
+                        chain.size(),matched,runs.size(),multi?1u:0u);
+            for(size_t k=0;k<std::min(runs.size(),maxRunLines);++k) {
+                const auto& run=runs[k];
+                const long long change=k?run.delta-runs[k-1].delta:0;
+                std::printf("SPR_COHERENCE_RUN resource=%s record=%zu imageA=%zu imageB=%zu run=%zu blocks=%zu matchedBytes=%zu startA=%zu endA=%zu startB=%zu endB=%zu displacement=%lld deltaFromPrevious=%lld\n",
+                            name.c_str(),a.record,a.ordinal,b.ordinal,k+1,run.blocks,
+                            run.bytes,run.firstA,run.endA,run.firstB,run.endB,run.delta,change);
+            }
+        }
+        std::printf("SPR_COHERENCE_SUMMARY resource=%s direct=%zu neighborPairs=%zu pairsWithRuns=%zu pairsWithMultiBlockRuns=%zu truncatedPairs=%zu minMatchBytes=%zu maxReportedRuns=%zu\n",
+                    name.c_str(),samples.size(),pairs,pairsWithRuns,pairsWithMultiBlockRuns,
+                    truncatedPairs,seed,maxRunLines);
+    }
+    std::puts("SPR_COHERENCE_NOTE byte-exact ordered matches; greedy/weighted alignment is descriptive, and displacement transitions are not proven codec boundaries.");
+    return failures?1:0;
+}
