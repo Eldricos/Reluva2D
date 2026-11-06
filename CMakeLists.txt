@@ -176,6 +176,7 @@ add_executable(reluva-tool
     src/tools/stafu_spr_gap_cost_sensitivity.cpp
     src/tools/stafu_spr_anchor_context.cpp
     src/tools/stafu_spr_cross_interval_context.cpp
+    src/tools/stafu_spr_alternative_chain_inspection.cpp
     src/tools/stafu_spr_span_reconcile.cpp
     src/tools/stafu_bridge_inventory.cpp
     src/tools/stafu_computer_browse.cpp
