@@ -12,7 +12,7 @@
 
 namespace {
 struct Counts {
-    size_t pairs=0,zero=0,oneTo3=0,fourTo7=0,eightTo15=0,sixteenTo31,thirtyTwoPlus=0;
+    size_t pairs=0,zero=0,oneTo3=0,fourTo7=0,eightTo15=0,sixteenTo31=0,thirtyTwoPlus=0;
     size_t maxPrefix=0;
     void add(size_t n) {
         ++pairs;maxPrefix=std::max(maxPrefix,n);
