@@ -179,6 +179,7 @@ add_executable(reluva-tool
     src/tools/stafu_spr_alternative_chain_inspection.cpp
     src/tools/stafu_spr_payload_structural_survey.cpp
     src/tools/stafu_spr_direct_payload_prefix_classification.cpp
+    src/tools/stafu_spr_record2_common_prefix_structure.cpp
     src/tools/stafu_spr_span_reconcile.cpp
     src/tools/stafu_bridge_inventory.cpp
     src/tools/stafu_computer_browse.cpp
