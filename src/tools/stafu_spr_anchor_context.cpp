@@ -140,14 +140,14 @@ bool load(const char* installed,const char* cd,const std::string& name,
         };
         const auto countOccurrences=[&](const uint8_t* source,size_t start,size_t end,
                                         const uint8_t* pattern,size_t at,size_t length,
-                                        size_t& nearest)->size_t{
+                                        size_t reference,size_t& nearest)->size_t{
             size_t count=0;
             nearest=static_cast<size_t>(-1);
             if(end<start||end-start<length)return 0;
             for(size_t pos=start;pos<=end-length;++pos){
                 if(equalRun(source,pos,pattern,at,length)){
                     ++count;
-                    const size_t distance=pos>at?pos-at:at-pos;
+                    const size_t distance=pos>reference?pos-reference:reference-pos;
                     if(distance&&distance<nearest)nearest=distance;
                 }
             }
@@ -172,14 +172,14 @@ bool load(const char* installed,const char* cd,const std::string& name,
                   hit.b+hit.len+fullRight<sb->size*8&&
                   bitAt(a,hit.a+hit.len+fullRight)==bitAt(b,hit.b+hit.len+fullRight))++fullRight;
             size_t nearestA=0,nearestB=0,nearA=0,nearB=0;
-            const size_t countA=countOccurrences(a,v.a0,v.a1,a,hit.a,hit.len,nearestA);
-            const size_t countB=countOccurrences(b,v.b0,v.b1,a,hit.a,hit.len,nearestB);
+            const size_t countA=countOccurrences(a,v.a0,v.a1,a,hit.a,hit.len,hit.a,nearestA);
+            const size_t countB=countOccurrences(b,v.b0,v.b1,a,hit.a,hit.len,hit.b,nearestB);
             const size_t nearStartA=hit.a>32?std::max(v.a0,hit.a-32):v.a0;
             const size_t nearStartB=hit.b>32?std::max(v.b0,hit.b-32):v.b0;
             const size_t nearEndA=std::min(v.a1,hit.a+hit.len+32);
             const size_t nearEndB=std::min(v.b1,hit.b+hit.len+32);
-            const size_t nearbyA=countOccurrences(a,nearStartA,nearEndA,a,hit.a,hit.len,nearA);
-            const size_t nearbyB=countOccurrences(b,nearStartB,nearEndB,a,hit.a,hit.len,nearB);
+            const size_t nearbyA=countOccurrences(a,nearStartA,nearEndA,a,hit.a,hit.len,hit.a,nearA);
+            const size_t nearbyB=countOccurrences(b,nearStartB,nearEndB,a,hit.a,hit.len,hit.b,nearB);
             size_t pairCount=0,nearestPair=static_cast<size_t>(-1);
             for(size_t pa=v.a0;pa+hit.len<=v.a1;++pa){
                 if(!equalRun(a,pa,a,hit.a,hit.len))continue;
