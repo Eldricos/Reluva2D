@@ -6,6 +6,7 @@ int stafuSprDisplacementSegments(const char*,const char*,const char*);
 int stafuSprInteriorVerify(const char*,const char*,const char*);
 int stafuSprMaximalSpans(const char*,const char*,const char*);
 int stafuSprSpanReconcile(const char*,const char*,const char*);
+int stafuSprM260DisplacementTransitions(const char*,const char*,const char*);
 int stafuSprM259BoundaryCrossing(const char*,const char*,const char*);
 int stafuSprM258BoundarySignatures(const char*,const char*,const char*);
 int stafuSprM257RunFlanks(const char*,const char*,const char*);
@@ -217,6 +218,8 @@ int stafuToolMain(int argc, char** argv) {
         return stafuSprMaximalSpans(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-span-reconcile") == 0)
         return stafuSprSpanReconcile(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
+    if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-m260-displacement-transitions") == 0)
+        return stafuSprM260DisplacementTransitions(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-m259-boundary-crossing") == 0)
         return stafuSprM259BoundaryCrossing(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-m258-boundary-signatures") == 0)
