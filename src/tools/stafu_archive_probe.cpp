@@ -6,6 +6,7 @@ int stafuSprDisplacementSegments(const char*,const char*,const char*);
 int stafuSprInteriorVerify(const char*,const char*,const char*);
 int stafuSprMaximalSpans(const char*,const char*,const char*);
 int stafuSprSpanReconcile(const char*,const char*,const char*);
+int stafuSprM262LocalAlignment(const char*,const char*,const char*);
 int stafuSprM261TransitionIntervals(const char*,const char*,const char*);
 int stafuSprM260DisplacementTransitions(const char*,const char*,const char*);
 int stafuSprM259BoundaryCrossing(const char*,const char*,const char*);
@@ -219,6 +220,8 @@ int stafuToolMain(int argc, char** argv) {
         return stafuSprMaximalSpans(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-span-reconcile") == 0)
         return stafuSprSpanReconcile(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
+    if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-m262-local-alignment") == 0)
+        return stafuSprM262LocalAlignment(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-m261-transition-intervals") == 0)
         return stafuSprM261TransitionIntervals(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-m260-displacement-transitions") == 0)
