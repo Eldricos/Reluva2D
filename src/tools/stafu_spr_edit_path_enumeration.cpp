@@ -126,10 +126,7 @@ bool load(const char* installed,const char* cd,const std::string& name,
                     backward[at(i,j)]=best;
                     if(i<m&&backward[at(i+1,j)]+1==best)waysB[at(i,j)]+=waysB[at(i+1,j)];
                     if(j<n&&backward[at(i,j+1)]+1==best)waysB[at(i,j)]+=waysB[at(i,j+1)];
-                    if(i<m&&j<n&&backward[at(i+1,j+1)]+(bitsA[i]!=bitsB[j]))
-                        if(backward[at(i+1,j+1)]+(bitsA[i]!=bitsB[j])==best)
-                            waysB[at(i,j)]+=waysB[at(i+1,j+1)];
-                    if(i<m&&j<n&&bitsA[i]==bitsB[j]&&backward[at(i+1,j+1)]==best)
+                    if(i<m&&j<n&&backward[at(i+1,j+1)]+(bitsA[i]!=bitsB[j])==best)
                         waysB[at(i,j)]+=waysB[at(i+1,j+1)];
                 }
                 const int distance=forward[at(m,n)];
