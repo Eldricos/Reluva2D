@@ -171,6 +171,7 @@ add_executable(reluva-tool
     src/tools/stafu_spr_short_match_significance.cpp
     src/tools/stafu_spr_constrained_correspondence.cpp
     src/tools/stafu_spr_segment_bit_analysis.cpp
+    src/tools/stafu_spr_edit_path_enumeration.cpp
     src/tools/stafu_spr_span_reconcile.cpp
     src/tools/stafu_bridge_inventory.cpp
     src/tools/stafu_computer_browse.cpp
