@@ -1542,7 +1542,7 @@ int stafuSprUnmatchedGaps(const char* installed,const char* cd,const char* optio
                 };
                 const long long oldD=static_cast<long long>(prev.y)-static_cast<long long>(prev.x);
                 const long long newD=static_cast<long long>(next.y)-static_cast<long long>(next.x);
-                std::printf("SPR_GAP_BOUNDARY resource=%s record=%zu imageA=%zu imageB=%zu block=%zu leftMatch=%zu rightMatch=%zu gapA=%zu gapB=%zu displacementBefore=%lld displacementAfter=%lld displacementChange=%lld endA=%zu endB=%zu nextA=%zu nextB=%zu beforeA=%s beforeB=%s afterA=%s afterB=%s\\n",
+                std::printf("SPR_GAP_BOUNDARY resource=%s record=%zu imageA=%zu imageB=%zu block=%zu leftMatch=%zu rightMatch=%zu gapA=%zu gapB=%zu displacementBefore=%lld displacementAfter=%lld displacementChange=%lld endA=%zu endB=%zu nextA=%zu nextB=%zu beforeA=%s beforeB=%s afterA=%s afterB=%s\n",
                     name.c_str(),a.record,a.ordinal,b.ordinal,k,prev.n,next.n,
                     gapA,gapB,oldD,newD,newD-oldD,endA,endB,next.x,next.y,
                     hexWindow(a.offset,a.size,endA).c_str(),
@@ -1550,15 +1550,15 @@ int stafuSprUnmatchedGaps(const char* installed,const char* cd,const char* optio
                     hexWindow(a.offset,a.size,next.x).c_str(),
                     hexWindow(b.offset,b.size,next.y).c_str());
             }
-            std::printf("SPR_GAP_PAIR resource=%s record=%zu imageA=%zu imageB=%zu tag=%s marker=0x%08x dims=%u/%u sizeA=%zu sizeB=%zu chainBlocks=%zu matchedBytes=%zu internalGaps=%zu unequalGaps=%zu shortGaps=%zu largestGap=%zu truncated=%u\\n",
+            std::printf("SPR_GAP_PAIR resource=%s record=%zu imageA=%zu imageB=%zu tag=%s marker=0x%08x dims=%u/%u sizeA=%zu sizeB=%zu chainBlocks=%zu matchedBytes=%zu internalGaps=%zu unequalGaps=%zu shortGaps=%zu largestGap=%zu truncated=%u\n",
                 name.c_str(),a.record,a.ordinal,b.ordinal,a.tag.c_str(),a.marker,
                 a.a,a.b,a.size,b.size,chain.size(),matched,internal,unequal,
                 shortGaps,largest,truncated?1u:0u);
 
         }
-        std::printf("SPR_GAP_SUMMARY resource=%s direct=%zu neighborPairs=%zu pairsWithMatches=%zu truncatedPairs=%zu minMatchBytes=%zu\\n",
+        std::printf("SPR_GAP_SUMMARY resource=%s direct=%zu neighborPairs=%zu pairsWithMatches=%zu truncatedPairs=%zu minMatchBytes=%zu\n",
                     name.c_str(),samples.size(),pairs,pairsWithRuns,truncatedPairs,seed);
     }
-    std::puts("SPR_GAP_NOTE unmatched gaps and boundary bytes are descriptive; selected chain may not be unique; displacement differences are arithmetic, not codec commands."); ambiguity counts same-A-start same-length alternatives only; candidate cap and tie-breaking can affect results; no codec boundaries inferred.");
+    std::puts("SPR_GAP_NOTE unmatched gaps and boundary bytes are descriptive; selected chain may not be unique; displacement differences are arithmetic, not codec commands.");
     return failures?1:0;
 }
