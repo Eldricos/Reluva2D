@@ -217,7 +217,8 @@ int stafuSprGapContent(const char* installed,const char* cd,const char* optional
                 ++ordinal;
             }
         }
-        size_t pairs=0,anchors=0,spans=0,gaps=0,unequal=0,rejected=0,detail=0,ambiguous=0;\n        size_t equalBits=0,comparedBits=0,shortGaps=0,identicalGaps=0,shiftedBetter=0;
+        size_t pairs=0,anchors=0,spans=0,gaps=0,unequal=0,rejected=0,detail=0,ambiguous=0;
+        size_t equalBits=0,comparedBits=0,shortGaps=0,identicalGaps=0,shiftedBetter=0;
         std::vector<Anchored> prior;Sample prev{};bool havePrev=false;
         for(const auto& s:samples){
             const uint8_t* data=bytes.data()+s.offset;
