@@ -74,7 +74,7 @@ bool survey(const char* installed,const char* cd,const char* name) {
 }
 }
 int stafuSprM275PayloadStructuralSurvey(const char* installed,const char* cd,const char*) {
-    const char* names[]={"BRDGPICA.SPR","BRDGDATA.SPR","BRDGRIKE.SPR","BRDGTROI.SPR","BRDGWORF.SPR"};
+    const char* names[]={"BRDGPICA.SPR","BRDGDATA.SPR","BRDGRIKR.SPR","BRDGTROI.SPR","BRDGWORF.SPR"};
     for(const char* name:names)if(!survey(installed,cd,name))return 1;
     std::puts("SPR_M275_SUMMARY resources=5");
     std::puts("SPR_M275_NOTE Prefix counts compare consecutive image-like payloads in each record; reference-like means marker 0x00030000 and size 4. No decoding or codec inference.");
