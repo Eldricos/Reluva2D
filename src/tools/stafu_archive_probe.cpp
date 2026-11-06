@@ -6,7 +6,7 @@ int stafuSprDisplacementSegments(const char*,const char*,const char*);
 int stafuSprInteriorVerify(const char*,const char*,const char*);
 int stafuSprMaximalSpans(const char*,const char*,const char*);
 int stafuSprSpanReconcile(const char*,const char*,const char*);
-int stafuSprSubstitutionContext(const char*,const char*,const char*);
+int stafuSprM253ContextRecurrence(const char*,const char*,const char*);
 int stafuSprSparseBits(const char*,const char*,const char*);
 int stafuSprRunBoundaries(const char*,const char*,const char*);
 int stafuSprLocalDifferences(const char*,const char*,const char*);
@@ -14,7 +14,7 @@ int stafuSprGapContent(const char* installed,const char* cd,const char* optional
 int stafuSprSpanGaps(const char*,const char*,const char*);
 int stafuSprBitPeriod(const char*,const char*,const char*);
 int stafuSprRepeatedSpacing(const char*,const char*,const char*);
-int stafuSprSubstitutionContext(const char*,const char*,const char*);
+int stafuSprM253ContextRecurrence(const char*,const char*,const char*);
 int stafuSprSubstitutionBits(const char*,const char*,const char*);
 int stafuSprByteSubstitutions(const char*,const char*,const char*);
 int stafuSprUnmatchedGaps(const char*,const char*,const char*);
@@ -212,7 +212,7 @@ int stafuToolMain(int argc, char** argv) {
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-span-reconcile") == 0)
         return stafuSprSpanReconcile(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-substitution-context") == 0)
-        return stafuSprSubstitutionContext(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
+        return stafuSprM253ContextRecurrence(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-sparse-bits") == 0)
         return stafuSprSparseBits(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-run-boundaries") == 0)
@@ -228,7 +228,7 @@ int stafuToolMain(int argc, char** argv) {
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-repeated-spacing") == 0)
         return stafuSprRepeatedSpacing(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-substitution-context") == 0)
-        return stafuSprSubstitutionContext(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
+        return stafuSprM253ContextRecurrence(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-substitution-bits") == 0)
         return stafuSprSubstitutionBits(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-byte-substitutions") == 0)
