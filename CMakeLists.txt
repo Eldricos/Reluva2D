@@ -144,6 +144,7 @@ add_executable(reluva-tool
     src/tools/stafu_spr_resolved_inspect.cpp
     src/tools/stafu_spr_offset_targets.cpp
     src/tools/stafu_spr_repeated_spacing.cpp
+    src/tools/stafu_spr_bit_period.cpp
     src/tools/stafu_bridge_inventory.cpp
     src/tools/stafu_computer_browse.cpp
     src/tools/stafu_install_analyze.cpp
