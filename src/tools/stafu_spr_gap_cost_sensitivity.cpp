@@ -150,11 +150,12 @@ bool load(const char* installed,const char* cd,const std::string& name,
                 const int diagonal=i&&j?(bitAt(a,a0+i-1)==bitAt(b,b0+j-1)?0:substitution):0;
                 if(i&&j)best=std::min(best,dp[at(i-1,j-1)]+diagonal);
                 dp[at(i,j)]=best;
-                if(i&&dp[at(i-1,j)]+1==best)count[at(i,j)]+=count[at(i-1,j)];
-                if(j&&dp[at(i,j-1)]+1==best)count[at(i,j)]+=count[at(i,j-1)];
+                if(i&&dp[at(i-1,j)]+gapCost==best)count[at(i,j)]+=count[at(i-1,j)];
+                if(j&&dp[at(i,j-1)]+gapCost==best)count[at(i,j)]+=count[at(i,j-1)];
                 if(i&&j&&dp[at(i-1,j-1)]+diagonal==best)
                     count[at(i,j)]+=count[at(i-1,j-1)];
             }
+            if(count[at(m,n)].digits.empty())return {dp[at(m,n)],count[at(m,n)],false};
             return {dp[at(m,n)],count[at(m,n)],true};
         };
         for(int substitution=1;substitution<=2;++substitution)for(int gapCost=1;gapCost<=3;++gapCost){
@@ -168,6 +169,7 @@ bool load(const char* installed,const char* cd,const std::string& name,
                     const size_t nextB=h==hits.size()?v.b1:hits[h].b;
                     if(nextA<cursorA||nextB<cursorB){result.valid=false;break;}
                     const Score part=scoreSegment(cursorA,nextA,cursorB,nextB,substitution,gapCost);
+                    if(!part.valid){result.valid=false;break;}
                     result.cost+=part.cost;
                     result.paths=result.paths*part.paths;
                     if(h==hits.size())break;
@@ -180,6 +182,7 @@ bool load(const char* installed,const char* cd,const std::string& name,
                 scores[mask]=result;
             }
             const auto& baseline=scores[0];
+            if(!baseline.valid){std::fprintf(stderr,"SPR_M271_ERROR zero optimal paths for baseline\n");return false;}
             std::printf("SPR_M271_PROFILE resource=%s interval=%zu substitution=%d insertion=%d deletion=%d unconstrainedCost=%d unconstrainedPaths=%s\n",
                 name.c_str(),ix+1,substitution,gapCost,gapCost,baseline.cost,baseline.paths.str().c_str());
             for(size_t mask=1;mask<scenarios;++mask){
