@@ -1150,30 +1150,8 @@ int stafuSprDisplacementCoherence(const char* installed,const char* cd,const cha
                 for(size_t j=pos+1;j<tree.size();j+=j&-j)
                     if(better(value,tree[j]))tree[j]=value;
             };
-            // Pending updates are released only after their A end is <=
-            // the next match's A start, preventing A overlap.
-            struct Pending {size_t endA,endB;State state;};
-            std::vector<Pending> pending;
-            pending.reserve(candidates.size());
-            size_t released=0;
-            // Separate ordering of pending by endA is guaranteed by candidate sort.
-            for(size_t j=0;j<candidates.size();++j) {
-                const auto& m=candidates[j];
-                while(released<pending.size()&&pending[released].endA<=m.x) {
-                    update(pending[released].endB,pending[released].state);
-                    ++released;
-                }
-                State prev=query(m.y);
-                dp[j]={prev.score+m.n,prev.count+1,static_cast<int>(j)};
-                pending.push_back({m.x+m.n,m.y+m.n,dp[j]});
-                // Retain predecessor index separately for reconstruction.
-            }
-            // Reconstruct through predecessor states, stored by replaying
-            // the prefix-max query result for each candidate.
-            // The chain is calculated in a second bounded pass.
-            tree.assign(b.size+2,State{});
-            released=0;
             std::vector<int> predecessor(candidates.size(),-1);
+            size_t released=0;
             State best;
             for(size_t j=0;j<candidates.size();++j) {
                 const auto& m=candidates[j];
