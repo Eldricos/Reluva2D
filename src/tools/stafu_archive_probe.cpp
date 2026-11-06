@@ -6,6 +6,7 @@ int stafuSprDisplacementSegments(const char*,const char*,const char*);
 int stafuSprInteriorVerify(const char*,const char*,const char*);
 int stafuSprMaximalSpans(const char*,const char*,const char*);
 int stafuSprSpanReconcile(const char*,const char*,const char*);
+int stafuSprM275PayloadStructuralSurvey(const char*,const char*,const char*);
 int stafuSprM274AlternativeChainInspection(const char*,const char*,const char*);
 int stafuSprM273CrossIntervalContext(const char*,const char*,const char*);
 int stafuSprM272AnchorContext(const char*,const char*,const char*);
@@ -232,6 +233,8 @@ int stafuToolMain(int argc, char** argv) {
         return stafuSprMaximalSpans(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-span-reconcile") == 0)
         return stafuSprSpanReconcile(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
+    if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-m275-payload-structural-survey") == 0)
+        return stafuSprM275PayloadStructuralSurvey(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-m274-alternative-chain-inspection") == 0)
         return stafuSprM274AlternativeChainInspection(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-m273-cross-interval-context") == 0)
