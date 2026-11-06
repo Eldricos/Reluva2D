@@ -14,15 +14,6 @@ bool bitAt(const uint8_t* p,size_t bit){return ((p[bit/8]>>(7-(bit%8)))&1u)!=0;}
 struct Sample {size_t record,image,offset,size;};
 struct Run {size_t start,length;bool equal;};
 struct Alignment {int shift;size_t startA,startB,compared,equal;};
-Alignment score(const uint8_t* a,size_t na,const uint8_t* b,size_t nb,int shift){
-    const size_t aa=shift<0?static_cast<size_t>(-shift):0;
-    const size_t bb=shift>0?static_cast<size_t>(shift):0;
-    Alignment v{shift,aa,bb,0,0};
-    if(aa>=na||bb>=nb)return v;
-    v.compared=std::min(na-aa,nb-bb);
-    for(size_t i=0;i<v.compared;++i)v.equal+=bitAt(a,aa+i)==bitAt(b,bb+i);
-    return v;
-}
 bool better(const Alignment& x,const Alignment& y){
     if(!x.compared)return false;
     if(!y.compared)return true;
@@ -39,9 +30,6 @@ void map(const char* name,size_t record,size_t imageA,size_t imageB,
         std::printf("SPR_LOCAL_ERROR resource=%s reason=gap-out-of-range\n",name);return;
     }
     const size_t lenA=endA-startA,lenB=endB-startB;
-    const uint8_t* pa=a;const uint8_t* pb=b;
-    const Alignment direct=score(pa+startA/8,0,pb+startB/8,0,0);
-    (void)direct; // Bit positions may not be byte aligned; use absolute offsets below.
     auto evaluate=[&](int shift){
         const size_t aa=shift<0?static_cast<size_t>(-shift):0;
         const size_t bb=shift>0?static_cast<size_t>(shift):0;
