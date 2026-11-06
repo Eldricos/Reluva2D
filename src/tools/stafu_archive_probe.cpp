@@ -1,5 +1,6 @@
 int stafuSprCommonBlocks(const char*,const char*,const char*);
 int stafuSprDisplacementCoherence(const char*,const char*,const char*);
+int stafuSprPeriodCompare(const char*,const char*,const char*);
 int stafuSprBitPeriod(const char*,const char*,const char*);
 int stafuSprRepeatedSpacing(const char*,const char*,const char*);
 int stafuSprSubstitutionContext(const char*,const char*,const char*);
@@ -187,6 +188,8 @@ int stafuSprPayloadDiff(const char* installed, const char* cd, const char* name,
                         const char* record, const char* first, const char* second);
 
 int stafuToolMain(int argc, char** argv) {
+    if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-period-compare") == 0)
+        return stafuSprPeriodCompare(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-bit-period") == 0)
         return stafuSprBitPeriod(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-repeated-spacing") == 0)
