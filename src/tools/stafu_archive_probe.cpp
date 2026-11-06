@@ -6,6 +6,7 @@ int stafuSprDisplacementSegments(const char*,const char*,const char*);
 int stafuSprInteriorVerify(const char*,const char*,const char*);
 int stafuSprMaximalSpans(const char*,const char*,const char*);
 int stafuSprSpanReconcile(const char*,const char*,const char*);
+int stafuSprM278Record2SharedRegionMapping(const char*,const char*,const char*);
 int stafuSprM277Record2CommonPrefixStructure(const char*,const char*,const char*);
 int stafuSprM276DirectPayloadPrefixClassification(const char*,const char*,const char*);
 int stafuSprM275PayloadStructuralSurvey(const char*,const char*,const char*);
@@ -235,6 +236,8 @@ int stafuToolMain(int argc, char** argv) {
         return stafuSprMaximalSpans(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-span-reconcile") == 0)
         return stafuSprSpanReconcile(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
+    if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-m278-record2-shared-region-mapping") == 0)
+        return stafuSprM278Record2SharedRegionMapping(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-m277-record2-common-prefix-structure") == 0)
         return stafuSprM277Record2CommonPrefixStructure(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-m276-direct-payload-prefix-classification") == 0)
