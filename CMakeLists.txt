@@ -155,6 +155,7 @@ add_executable(reluva-tool
     src/tools/stafu_spr_local_differences.cpp
     src/tools/stafu_spr_run_boundaries.cpp
     src/tools/stafu_spr_sparse_bits.cpp
+    src/tools/stafu_spr_substitution_context.cpp
     src/tools/stafu_spr_span_reconcile.cpp
     src/tools/stafu_bridge_inventory.cpp
     src/tools/stafu_computer_browse.cpp
