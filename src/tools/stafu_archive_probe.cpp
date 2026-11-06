@@ -5,6 +5,7 @@ int stafuSprBoundaryCorrespondence(const char*,const char*,const char*);
 int stafuSprDisplacementSegments(const char*,const char*,const char*);
 int stafuSprInteriorVerify(const char*,const char*,const char*);
 int stafuSprMaximalSpans(const char*,const char*,const char*);
+int stafuSprSpanReconcile(const char*,const char*,const char*);
 int stafuSprGapContent(const char* installed,const char* cd,const char* optionalName);
 int stafuSprSpanGaps(const char*,const char*,const char*);
 int stafuSprBitPeriod(const char*,const char*,const char*);
@@ -204,6 +205,8 @@ int stafuToolMain(int argc, char** argv) {
         return stafuSprInteriorVerify(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-maximal-spans") == 0)
         return stafuSprMaximalSpans(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
+    if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-span-reconcile") == 0)
+        return stafuSprSpanReconcile(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-gap-content") == 0)
         return stafuSprGapContent(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-span-gaps") == 0)
