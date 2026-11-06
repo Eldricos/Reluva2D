@@ -6,6 +6,7 @@ int stafuSprDisplacementSegments(const char*,const char*,const char*);
 int stafuSprInteriorVerify(const char*,const char*,const char*);
 int stafuSprMaximalSpans(const char*,const char*,const char*);
 int stafuSprSpanReconcile(const char*,const char*,const char*);
+int stafuSprM257RunFlanks(const char*,const char*,const char*);
 int stafuSprM256CrossGap(const char*,const char*,const char*);
 int stafuSprM255BoundaryTransitions(const char*,const char*,const char*);
 int stafuSprM254GapClassification(const char*,const char*,const char*);
@@ -214,6 +215,8 @@ int stafuToolMain(int argc, char** argv) {
         return stafuSprMaximalSpans(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-span-reconcile") == 0)
         return stafuSprSpanReconcile(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
+    if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-m257-run-flanks") == 0)
+        return stafuSprM257RunFlanks(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-m256-cross-gap") == 0)
         return stafuSprM256CrossGap(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-m255-transitions") == 0)
