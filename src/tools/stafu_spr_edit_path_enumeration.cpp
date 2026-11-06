@@ -9,9 +9,63 @@
 #include <string>
 #include <vector>
 #include <utility>
-#include <boost/multiprecision/cpp_int.hpp>
+#include <sstream>
+#include <iomanip>
 
 namespace {
+struct BigCount {
+    static constexpr uint64_t base=1000000000ULL;
+    std::vector<uint32_t> digits;
+    BigCount(uint64_t value=0) {
+        while(value){digits.push_back(static_cast<uint32_t>(value%base));value/=base;}
+    }
+    BigCount& operator+=(const BigCount& other) {
+        const size_t count=std::max(digits.size(),other.digits.size());
+        digits.resize(count,0);
+        uint64_t carry=0;
+        for(size_t i=0;i<count;++i){
+            uint64_t sum=uint64_t(digits[i])+carry+
+                (i<other.digits.size()?other.digits[i]:0);
+            digits[i]=static_cast<uint32_t>(sum%base);
+            carry=sum/base;
+        }
+        if(carry)digits.push_back(static_cast<uint32_t>(carry));
+        return *this;
+    }
+    friend BigCount operator*(const BigCount& a,const BigCount& b) {
+        BigCount result;
+        if(a.digits.empty()||b.digits.empty())return result;
+        result.digits.assign(a.digits.size()+b.digits.size(),0);
+        for(size_t i=0;i<a.digits.size();++i){
+            uint64_t carry=0;
+            for(size_t j=0;j<b.digits.size();++j){
+                const uint64_t sum=uint64_t(result.digits[i+j])+
+                    uint64_t(a.digits[i])*b.digits[j]+carry;
+                result.digits[i+j]=static_cast<uint32_t>(sum%base);
+                carry=sum/base;
+            }
+            size_t pos=i+b.digits.size();
+            while(carry){
+                if(pos==result.digits.size())result.digits.push_back(0);
+                const uint64_t sum=uint64_t(result.digits[pos])+carry;
+                result.digits[pos]=static_cast<uint32_t>(sum%base);
+                carry=sum/base;
+                ++pos;
+            }
+        }
+        while(!result.digits.empty()&&result.digits.back()==0)result.digits.pop_back();
+        return result;
+    }
+    bool operator!=(const BigCount& other) const {return digits!=other.digits;}
+    std::string str() const {
+        if(digits.empty())return "0";
+        std::ostringstream out;
+        out<<digits.back();
+        for(size_t i=digits.size()-1;i>0;--i)
+            out<<std::setw(9)<<std::setfill('0')<<digits[i-1];
+        return out.str();
+    }
+};
 bool bitAt(const uint8_t* p,size_t bit){return ((p[bit/8]>>(7-(bit%8)))&1u)!=0;}
 struct Sample {size_t record,image,offset,size;};
 struct Run {size_t start,length;bool equal;};
@@ -97,11 +151,10 @@ bool load(const char* installed,const char* cd,const std::string& name,
                 for(size_t k=cursorB;k<nextB;++k)bitsB.push_back(bitAt(b,k)?'1':'0');
                 std::printf("SPR_M269_BITS resource=%s interval=%zu mask=%zu segment=%zu bitsA=%s bitsB=%s\n",
                     name.c_str(),ix+1,mask,segment,bitsA.empty()?"-":bitsA.c_str(),bitsB.empty()?"-":bitsB.c_str());
-                using boost::multiprecision::cpp_int;
                 const size_t m=bitsA.size(),n=bitsB.size(),width=n+1;
                 const auto at=[width](size_t i,size_t j){return i*width+j;};
                 std::vector<int> forward((m+1)*width,0),backward((m+1)*width,0);
-                std::vector<cpp_int> waysF((m+1)*width),waysB((m+1)*width);
+                std::vector<BigCount> waysF((m+1)*width),waysB((m+1)*width);
                 waysF[0]=1;
                 for(size_t i=0;i<=m;++i)for(size_t j=0;j<=n;++j){
                     if(!i&&!j)continue;
@@ -130,7 +183,7 @@ bool load(const char* installed,const char* cd,const std::string& name,
                         waysB[at(i,j)]+=waysB[at(i+1,j+1)];
                 }
                 const int distance=forward[at(m,n)];
-                const cpp_int total=waysF[at(m,n)];
+                const BigCount total=waysF[at(m,n)];
                 size_t forcedMatch=0,forcedSub=0,forcedInsert=0,forcedDelete=0;
                 size_t optimalEdges=0;
                 for(size_t i=0;i<=m;++i)for(size_t j=0;j<=n;++j){
@@ -150,7 +203,7 @@ bool load(const char* installed,const char* cd,const std::string& name,
                     if(j<n)check(i,j+1,1,"INSERT");
                 }
                 std::printf("SPR_M269_EDIT resource=%s interval=%zu mask=%zu segment=%zu distance=%d optimalPaths=%s optimalEdges=%zu forcedMatch=%zu forcedSub=%zu forcedInsert=%zu forcedDelete=%zu\n",
-                    name.c_str(),ix+1,mask,segment,distance,total.convert_to<std::string>().c_str(),
+                    name.c_str(),ix+1,mask,segment,distance,total.str().c_str(),
                     optimalEdges,forcedMatch,forcedSub,forcedInsert,forcedDelete);
                 if(h==hits.size())break;
                 const auto& hit=hits[h];
