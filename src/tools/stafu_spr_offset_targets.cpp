@@ -1898,6 +1898,6 @@ int stafuSprSubstitutionBits(const char* installed,const char* cd,const char* op
             std::printf("SPR_BITS_REPEAT resource=%s count=%zu bytesA=%s bytesB=%s\n",
                 name.c_str(),item.second,item.first.first.c_str(),item.first.second.c_str());
     }
-    std::puts("SPR_BITS_NOTE XOR bits use bit 0 as least significant within each byte; only 1..8-byte equal-length gaps with >=24-byte anchors are analyzed; no codec semantics inferred."); patterns are byte-exact, not codec commands; only anchored equal-length gaps of 1..8 bytes are counted.");
+    std::puts("SPR_BITS_NOTE XOR bits use bit 0 as least significant within each byte; only 1..8-byte equal-length gaps with >=24-byte anchors are analyzed; no codec semantics inferred.");
     return failures?1:0;
 }
