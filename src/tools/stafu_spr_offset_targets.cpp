@@ -1562,3 +1562,172 @@ int stafuSprUnmatchedGaps(const char* installed,const char* cd,const char* optio
     std::puts("SPR_GAP_NOTE unmatched gaps and boundary bytes are descriptive; selected chain may not be unique; displacement differences are arithmetic, not codec commands.");
     return failures?1:0;
 }
+
+
+// Milestone 237: read-only short equal-length byte substitution survey.
+int stafuSprByteSubstitutions(const char* installed,const char* cd,const char* optionalName) {
+    reluva::stafu::ResourceManager manager;
+    std::string error;
+    if(!manager.open(installed,cd,error)) {
+        std::fprintf(stderr,"spr-byte-substitutions: %s\n",error.c_str());return 1;
+    }
+    const std::vector<std::string> names=optionalName
+        ?std::vector<std::string>{optionalName}
+        :std::vector<std::string>{"BRDGDATA.SPR","BRDGPICA.SPR","BRDGRIKR.SPR",
+                                  "BRDGTROI.SPR","BRDGWORF.SPR"};
+    constexpr size_t seed=16,maxCandidates=100000,maxRunLines=16;
+    int failures=0;
+    for(const auto& name:names) {
+        std::vector<uint8_t> bytes;
+        if(!manager.read(name,bytes,error)) {
+            std::fprintf(stderr,"spr-byte-substitutions: %s: %s\n",name.c_str(),error.c_str());
+            ++failures;continue;
+        }
+        reluva::stafu::SprSequenceIndex index;
+        if(!index.build(bytes,error)) {
+            std::fprintf(stderr,"spr-byte-substitutions: %s: %s\n",name.c_str(),error.c_str());
+            ++failures;continue;
+        }
+        struct Sample {size_t record,ordinal,offset,size;uint32_t a,b,marker;std::string tag;};
+        std::vector<Sample> samples;
+        for(size_t ri=0;ri<index.records().size();++ri) {
+            size_t ordinal=0;
+            for(const auto& e:index.records()[ri].events) {
+                if(e.tag!="PMOC"&&e.tag!="MOCS")continue;
+                reluva::stafu::SprImagePayloadAccessor::View v;
+                if(reluva::stafu::SprImagePayloadAccessor::get(bytes,e,v)&&
+                   !(v.marker==0x00030000&&v.size==4))
+                    samples.push_back({ri,ordinal,v.offset,v.size,v.headerA,v.headerB,v.marker,e.tag});
+                ++ordinal;
+            }
+        }
+        size_t pairs=0,pairsWithRuns=0,truncatedPairs=0;
+        size_t totalEqual=0,totalShifted=0,totalShortEqual=0;
+        std::map<std::pair<std::string,std::string>,size_t> patterns;
+
+        for(size_t i=1;i<samples.size();++i) {
+            const auto& a=samples[i-1];const auto& b=samples[i];
+            if(a.record!=b.record||a.tag!=b.tag||a.marker!=b.marker||
+               a.a!=b.a||a.b!=b.b)continue;
+            ++pairs;
+            auto hash=[&](size_t offset) {
+                uint64_t h=14695981039346656037ull;
+                for(size_t k=0;k<seed;++k){h^=bytes[offset+k];h*=1099511628211ull;}
+                return h;
+            };
+            std::map<uint64_t,std::vector<size_t>> positions;
+            if(a.size>=seed)for(size_t p=0;p+seed<=a.size;++p)
+                positions[hash(a.offset+p)].push_back(p);
+            struct Block {size_t x,y,n;};
+            std::vector<Block> candidates;
+            bool truncated=false;
+            if(b.size>=seed)for(size_t q=0;q+seed<=b.size&&!truncated;++q) {
+                const auto it=positions.find(hash(b.offset+q));
+                if(it==positions.end())continue;
+                for(size_t p:it->second) {
+                    if(!std::equal(bytes.begin()+a.offset+p,
+                                   bytes.begin()+a.offset+p+seed,
+                                   bytes.begin()+b.offset+q))continue;
+                    if(p&&q&&bytes[a.offset+p-1]==bytes[b.offset+q-1])continue;
+                    size_t n=seed;
+                    while(p+n<a.size&&q+n<b.size&&
+                          bytes[a.offset+p+n]==bytes[b.offset+q+n])++n;
+                    candidates.push_back({p,q,n});
+                    if(candidates.size()>=maxCandidates){truncated=true;break;}
+                }
+            }
+            if(truncated)++truncatedPairs;
+            // Select an ordered, non-overlapping chain by weighted interval
+            // dynamic programming over the candidate match endpoints.
+            // O(N^2) is avoided: use a Fenwick prefix-max over B endpoints,
+            // processing matches in increasing A endpoint batches.
+            std::sort(candidates.begin(),candidates.end(),[](const Block& x,const Block& y){
+                if(x.x+x.n!=y.x+y.n)return x.x+x.n<y.x+y.n;
+                if(x.y+x.n!=y.y+y.n)return x.y+x.n<y.y+y.n;
+                return x.n>y.n;
+            });
+            struct State {size_t score=0,count=0;int last=-1;};
+            std::vector<State> tree(b.size+2),dp(candidates.size());
+            auto better=[](const State& x,const State& y) {
+                return x.score>y.score||(x.score==y.score&&x.count<y.count);
+            };
+            auto query=[&](size_t pos) {
+                State result;
+                for(size_t j=pos+1;j;j-=j&-j)
+                    if(better(tree[j],result))result=tree[j];
+                return result;
+            };
+            auto update=[&](size_t pos,const State& value) {
+                for(size_t j=pos+1;j<tree.size();j+=j&-j)
+                    if(better(value,tree[j]))tree[j]=value;
+            };
+            std::vector<int> predecessor(candidates.size(),-1);
+            size_t released=0;
+            State best;
+            for(size_t j=0;j<candidates.size();++j) {
+                const auto& m=candidates[j];
+                while(released<j&&candidates[released].x+candidates[released].n<=m.x) {
+                    update(candidates[released].y+candidates[released].n,dp[released]);
+                    ++released;
+                }
+                const State prev=query(m.y);
+                predecessor[j]=prev.last;
+                dp[j]={prev.score+m.n,prev.count+1,static_cast<int>(j)};
+                if(better(dp[j],best))best=dp[j];
+            }
+            std::vector<Block> chain;
+            for(int j=best.last;j>=0;j=predecessor[static_cast<size_t>(j)])
+                chain.push_back(candidates[static_cast<size_t>(j)]);
+            std::reverse(chain.begin(),chain.end());
+
+            if(!chain.empty())++pairsWithRuns;
+            size_t equalGaps=0,shiftedGaps=0,shortEqual=0,printed=0;
+            auto hex=[&](size_t offset,size_t n) {
+                static constexpr char digits[]="0123456789abcdef";
+                std::string out;out.reserve(n*2);
+                for(size_t t=0;t<n;++t) {
+                    const uint8_t v=bytes[offset+t];
+                    out.push_back(digits[v>>4]);out.push_back(digits[v&15]);
+                }
+                return out;
+            };
+            for(size_t k=1;k<chain.size();++k) {
+                const auto& left=chain[k-1];
+                const auto& right=chain[k];
+                const size_t startA=left.x+left.n,startB=left.y+left.n;
+                const size_t gapA=right.x-startA,gapB=right.y-startB;
+                if(gapA==gapB)++equalGaps;else ++shiftedGaps;
+                if(gapA!=gapB||gapA==0||gapA>8||left.n<24||right.n<24)continue;
+                ++shortEqual;
+                const std::string hA=hex(a.offset+startA,gapA);
+                const std::string hB=hex(b.offset+startB,gapB);
+                // Equal-length gaps in maximal exact-match chains should
+                // differ; retain raw bytes rather than assigning semantics.
+                ++patterns[std::make_pair(hA,hB)];
+                if(printed++>=24)continue;
+                const long long delta=static_cast<long long>(startB)-static_cast<long long>(startA);
+                std::printf("SPR_SUBSTITUTION resource=%s record=%zu imageA=%zu imageB=%zu block=%zu gapBytes=%zu offsetA=%zu offsetB=%zu displacement=%lld leftMatch=%zu rightMatch=%zu bytesA=%s bytesB=%s\n",
+                    name.c_str(),a.record,a.ordinal,b.ordinal,k,gapA,startA,startB,
+                    delta,left.n,right.n,hA.c_str(),hB.c_str());
+            }
+            totalEqual+=equalGaps;totalShifted+=shiftedGaps;totalShortEqual+=shortEqual;
+            std::printf("SPR_SUBSTITUTION_PAIR resource=%s record=%zu imageA=%zu imageB=%zu chainBlocks=%zu equalGaps=%zu shiftedGaps=%zu shortEqualAnchored=%zu truncated=%u\n",
+                name.c_str(),a.record,a.ordinal,b.ordinal,chain.size(),equalGaps,
+                shiftedGaps,shortEqual,truncated?1u:0u);
+
+        }
+        std::vector<std::pair<std::pair<std::string,std::string>,size_t>> ranked(patterns.begin(),patterns.end());
+        std::sort(ranked.begin(),ranked.end(),[](const auto& a,const auto& b) {
+            return a.second!=b.second?a.second>b.second:a.first<b.first;
+        });
+        for(size_t j=0;j<std::min(size_t(20),ranked.size());++j)
+            std::printf("SPR_SUBSTITUTION_PATTERN resource=%s rank=%zu count=%zu bytesA=%s bytesB=%s\n",
+                name.c_str(),j+1,ranked[j].second,
+                ranked[j].first.first.c_str(),ranked[j].first.second.c_str());
+        std::printf("SPR_SUBSTITUTION_SUMMARY resource=%s direct=%zu neighborPairs=%zu pairsWithMatches=%zu equalGaps=%zu shiftedGaps=%zu shortEqualAnchored=%zu uniquePatterns=%zu truncatedPairs=%zu\n",
+            name.c_str(),samples.size(),pairs,pairsWithRuns,totalEqual,totalShifted,
+            totalShortEqual,patterns.size(),truncatedPairs);
+    }
+    std::puts("SPR_SUBSTITUTION_NOTE selected alignment is heuristic; patterns are byte-exact, not codec commands; only anchored equal-length gaps of 1..8 bytes are counted."); selected chain may not be unique; displacement differences are arithmetic, not codec commands.");
+    return failures?1:0;
+}
