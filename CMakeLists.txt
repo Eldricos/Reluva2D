@@ -177,6 +177,7 @@ add_executable(reluva-tool
     src/tools/stafu_spr_anchor_context.cpp
     src/tools/stafu_spr_cross_interval_context.cpp
     src/tools/stafu_spr_alternative_chain_inspection.cpp
+    src/tools/stafu_spr_payload_structural_survey.cpp
     src/tools/stafu_spr_span_reconcile.cpp
     src/tools/stafu_bridge_inventory.cpp
     src/tools/stafu_computer_browse.cpp
