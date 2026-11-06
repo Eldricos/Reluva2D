@@ -2087,6 +2087,6 @@ int stafuSprSubstitutionContext(const char* installed,const char* cd,const char*
             name.c_str(),samples.size(),pairs,pairsWithRuns,observations,
             repeatedTypes,repeatedOccurrences,truncatedPairs);
     }
-    std::puts("SPR_CONTEXT_NOTE before/after are identical anchors, up to 32 bytes each; repeats compare byte context, not inferred codec units."); only 1..8-byte equal-length gaps with >=24-byte anchors are analyzed; no codec semantics inferred.");
+    std::puts("SPR_CONTEXT_NOTE before/after are identical anchors, up to 32 bytes each; repeats compare byte context, not inferred codec units.");
     return failures?1:0;
 }
