@@ -81,7 +81,7 @@ void inspect(const std::vector<uint8_t>& bytes,const Sample& a,const Sample& b,
     std::printf("SPR_CONTEXT_SUMMARY checked=%zu expected=3\n",checked);
 }
 }
-int stafuSprSubstitutionContext(const char* installed,const char* cd,const char* optionalName){
+int stafuSprM253ContextRecurrence(const char* installed,const char* cd,const char* optionalName){
     const std::string name=optionalName?optionalName:"BRDGPICA.SPR";
     if(name!="BRDGPICA.SPR"){
         std::fprintf(stderr,"spr-substitution-context: M252 target is BRDGPICA.SPR\n");return 2;
