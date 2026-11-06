@@ -122,8 +122,9 @@ void compare(const Boundary& x,const Boundary& y,size_t xi,size_t yi){
     for(int shift=-8;shift<=8;++shift){
         const int xleft=int(xmid)-16;
         const int yleft=int(ymid)-16+shift;
-        if(xleft<0||yleft<0||
-           xleft+32>int(x.a.size())-1||yleft+32>int(y.a.size())-1)continue;
+        const int xright=int(x.a.size())-int(xmid)-1;
+        const int yright=int(y.a.size())-int(ymid)-1;
+        if(xleft<0||yleft<0||xright<16||yright<16+shift)continue;
         auto bit=[&](const std::string& str,size_t middle,int relative){
             return str[size_t(int(middle)+relative+(relative>=0?1:0))];
         };
@@ -144,7 +145,6 @@ void compare(const Boundary& x,const Boundary& y,size_t xi,size_t yi){
     }
 }
 
-}
 }
 int stafuSprM259BoundaryCrossing(const char* installed,const char* cd,const char*){
     std::vector<Boundary> all;
