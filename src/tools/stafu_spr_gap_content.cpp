@@ -183,13 +183,13 @@ void emitGaps(const std::string& name,size_t record,size_t imageA,size_t imageB,
         if(result.bestCompared&&result.bestShift!=0&&
            result.bestEqual* n>result.equal*result.bestCompared)++shiftedBetter;
         if(detail++>=120)continue;
-        std::printf("SPR_GAP_CONTENT resource=%s record=%zu imageA=%zu imageB=%zu leftA=%zu leftB=%zu bitsA=%zu bitsB=%zu compared=%zu equal=%zu mismatch=%zu longestEqual=%zu prefixEqual=%zu suffixEqual=%zu bestShift=%d bestCompared=%zu bestEqual=%zu windowLimit=4096\\n",
+        std::printf("SPR_GAP_CONTENT resource=%s record=%zu imageA=%zu imageB=%zu leftA=%zu leftB=%zu bitsA=%zu bitsB=%zu compared=%zu equal=%zu mismatch=%zu longestEqual=%zu prefixEqual=%zu suffixEqual=%zu bestShift=%d bestCompared=%zu bestEqual=%zu windowLimit=4096\n",
             name.c_str(),record,imageA,imageB,sa,sb,na,nb,n,result.equal,
             n-result.equal,result.longest,result.prefix,result.suffix,
             result.bestShift,result.bestCompared,result.bestEqual);
     }
     if(detail++<120)
-        std::printf("SPR_GAP_CONTENT_PAIR resource=%s record=%zu imageA=%zu imageB=%zu anchors=%zu spans=%zu chain=%zu gaps=%zu equal=%zu compared=%zu\\n",
+        std::printf("SPR_GAP_CONTENT_PAIR resource=%s record=%zu imageA=%zu imageB=%zu anchors=%zu spans=%zu chain=%zu gaps=%zu equal=%zu compared=%zu\n",
             name.c_str(),record,imageA,imageB,matches.size(),found.size(),
             chain.size(),pairGaps,pairEqual,pairCompared);
 }
@@ -264,7 +264,7 @@ int stafuSprGapContent(const char* installed,const char* cd,const char* optional
             }
             prior=std::move(current);prev=s;havePrev=true;
         }
-        std::printf("SPR_GAP_CONTENT_SUMMARY resource=%s direct=%zu neighboringPairs=%zu anchors=%zu spans=%zu gaps=%zu unequal=%zu shortGaps=%zu identical=%zu equalBits=%zu comparedBits=%zu shiftedBetter=%zu rejected=%zu ambiguous=%zu detailLimit=120\\n",
+        std::printf("SPR_GAP_CONTENT_SUMMARY resource=%s direct=%zu neighboringPairs=%zu anchors=%zu spans=%zu gaps=%zu unequal=%zu shortGaps=%zu identical=%zu equalBits=%zu comparedBits=%zu shiftedBetter=%zu rejected=%zu ambiguous=%zu detailLimit=120\n",
             name.c_str(),samples.size(),pairs,anchors,spans,gaps,unequal,shortGaps,identicalGaps,equalBits,comparedBits,shiftedBetter,rejected,ambiguous);
     }
     std::puts("SPR_GAP_CONTENT_NOTE Direct comparison aligns gap starts; suffix aligns ends. Best shift is a bounded 4096-bit prefix search over +/-32 bits and may favor short overlaps. Counts and similarities are descriptive, not evidence of codec syntax or decoded pixel equality.");
