@@ -6,6 +6,7 @@ int stafuSprDisplacementSegments(const char*,const char*,const char*);
 int stafuSprInteriorVerify(const char*,const char*,const char*);
 int stafuSprMaximalSpans(const char*,const char*,const char*);
 int stafuSprSpanReconcile(const char*,const char*,const char*);
+int stafuSprM272AnchorContext(const char*,const char*,const char*);
 int stafuSprM271GapCostSensitivity(const char*,const char*,const char*);
 int stafuSprM270AnchorSensitivity(const char*,const char*,const char*);
 int stafuSprM269EditPathEnumeration(const char*,const char*,const char*);
@@ -229,6 +230,8 @@ int stafuToolMain(int argc, char** argv) {
         return stafuSprMaximalSpans(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-span-reconcile") == 0)
         return stafuSprSpanReconcile(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
+    if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-m272-anchor-context") == 0)
+        return stafuSprM272AnchorContext(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-m271-gap-cost-sensitivity") == 0)
         return stafuSprM271GapCostSensitivity(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-m270-anchor-sensitivity") == 0)
