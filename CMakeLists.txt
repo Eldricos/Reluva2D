@@ -166,6 +166,7 @@ add_executable(reluva-tool
     src/tools/stafu_spr_transition_intervals.cpp
     src/tools/stafu_spr_local_alignment.cpp
     src/tools/stafu_spr_alignment_stability.cpp
+    src/tools/stafu_spr_stable_anchors.cpp
     src/tools/stafu_spr_span_reconcile.cpp
     src/tools/stafu_bridge_inventory.cpp
     src/tools/stafu_computer_browse.cpp
