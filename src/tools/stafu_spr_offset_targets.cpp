@@ -923,3 +923,132 @@ int stafuSprDivergenceSurvey(const char* installed,const char* cd,const char* op
     std::puts("SPR_DIV_NOTE exact prefixes/suffixes and fixed-position windows are descriptive; byte-aligned suffixes are not evidence of token boundaries or a codec.");
     return failures?1:0;
 }
+
+
+// Milestone 233: read-only matching-block survey. Matches are byte-exact,
+// greedily selected, non-overlapping within each payload, and >= 16 bytes.
+int stafuSprCommonBlocks(const char* installed,const char* cd,const char* optionalName) {
+    reluva::stafu::ResourceManager manager;
+    std::string error;
+    if(!manager.open(installed,cd,error)) {
+        std::fprintf(stderr,"spr-common-blocks: %s\n",error.c_str());return 1;
+    }
+    const std::vector<std::string> names=optionalName
+        ?std::vector<std::string>{optionalName}
+        :std::vector<std::string>{"BRDGDATA.SPR","BRDGPICA.SPR","BRDGRIKR.SPR",
+                                  "BRDGTROI.SPR","BRDGWORF.SPR"};
+    constexpr size_t seedSize=16;
+    constexpr size_t maxReported=12;
+    int failures=0;
+    for(const auto& name:names) {
+        std::vector<uint8_t> bytes;
+        if(!manager.read(name,bytes,error)) {
+            std::fprintf(stderr,"spr-common-blocks: %s: %s\n",name.c_str(),error.c_str());
+            ++failures;continue;
+        }
+        reluva::stafu::SprSequenceIndex index;
+        if(!index.build(bytes,error)) {
+            std::fprintf(stderr,"spr-common-blocks: %s: %s\n",name.c_str(),error.c_str());
+            ++failures;continue;
+        }
+        struct Sample {
+            size_t record,ordinal,offset,size;
+            uint32_t a,b,marker;
+            std::string tag;
+        };
+        std::vector<Sample> samples;
+        for(size_t ri=0;ri<index.records().size();++ri) {
+            size_t ordinal=0;
+            for(const auto& e:index.records()[ri].events) {
+                if(e.tag!="PMOC"&&e.tag!="MOCS")continue;
+                reluva::stafu::SprImagePayloadAccessor::View v;
+                if(reluva::stafu::SprImagePayloadAccessor::get(bytes,e,v)&&
+                   !(v.marker==0x00030000&&v.size==4))
+                    samples.push_back({ri,ordinal,v.offset,v.size,v.headerA,v.headerB,v.marker,e.tag});
+                ++ordinal;
+            }
+        }
+        size_t pairs=0,pairsWithBlocks=0,pairsWithShiftedBlocks=0;
+        for(size_t i=1;i<samples.size();++i) {
+            const auto& a=samples[i-1];
+            const auto& b=samples[i];
+            if(a.record!=b.record||a.tag!=b.tag||a.marker!=b.marker||
+               a.a!=b.a||a.b!=b.b)continue;
+            ++pairs;
+            // FNV-1a on fixed 16-byte seeds. Verify every candidate by
+            // comparing actual bytes; hash equality alone is never a match.
+            auto hashSeed=[&](size_t offset)->uint64_t {
+                uint64_t h=14695981039346656037ull;
+                for(size_t k=0;k<seedSize;++k) {
+                    h^=bytes[offset+k];
+                    h*=1099511628211ull;
+                }
+                return h;
+            };
+            std::map<uint64_t,std::vector<size_t>> positions;
+            if(a.size>=seedSize)
+                for(size_t p=0;p+seedSize<=a.size;++p)
+                    positions[hashSeed(a.offset+p)].push_back(p);
+            struct Block {size_t posA,posB,length;};
+            std::vector<Block> candidates;
+            if(b.size>=seedSize)for(size_t q=0;q+seedSize<=b.size;++q) {
+                const auto it=positions.find(hashSeed(b.offset+q));
+                if(it==positions.end())continue;
+                for(size_t p:it->second) {
+                    if(!std::equal(bytes.begin()+a.offset+p,
+                                   bytes.begin()+a.offset+p+seedSize,
+                                   bytes.begin()+b.offset+q))continue;
+                    // Keep only the leftmost seed of each maximal exact
+                    // match; this avoids duplicate overlapping candidates.
+                    if(p&&q&&bytes[a.offset+p-1]==bytes[b.offset+q-1])continue;
+                    size_t len=seedSize;
+                    while(p+len<a.size&&q+len<b.size&&
+                          bytes[a.offset+p+len]==bytes[b.offset+q+len])++len;
+                    candidates.push_back({p,q,len});
+                }
+            }
+            std::sort(candidates.begin(),candidates.end(),
+                      [](const Block& x,const Block& y) {
+                          if(x.length!=y.length)return x.length>y.length;
+                          if(x.posA!=y.posA)return x.posA<y.posA;
+                          return x.posB<y.posB;
+                      });
+            std::vector<Block> chosen;
+            size_t matchedBytes=0;
+            for(const auto& candidate:candidates) {
+                bool overlap=false;
+                for(const auto& previous:chosen) {
+                    if(candidate.posA<previous.posA+previous.length&&
+                       previous.posA<candidate.posA+candidate.length)overlap=true;
+                    if(candidate.posB<previous.posB+previous.length&&
+                       previous.posB<candidate.posB+candidate.length)overlap=true;
+                    if(overlap)break;
+                }
+                if(overlap)continue;
+                chosen.push_back(candidate);
+                matchedBytes+=candidate.length;
+                if(chosen.size()==maxReported)break;
+            }
+            if(!chosen.empty())++pairsWithBlocks;
+            bool shifted=false;
+            for(size_t j=0;j<chosen.size();++j) {
+                const auto& block=chosen[j];
+                if(block.posA!=block.posB)shifted=true;
+                const long long displacement=static_cast<long long>(block.posB)-
+                                             static_cast<long long>(block.posA);
+                std::printf("SPR_BLOCK_MATCH resource=%s record=%zu imageA=%zu imageB=%zu rank=%zu posA=%zu posB=%zu displacement=%lld length=%zu\n",
+                            name.c_str(),a.record,a.ordinal,b.ordinal,j+1,
+                            block.posA,block.posB,displacement,block.length);
+            }
+            if(shifted)++pairsWithShiftedBlocks;
+            std::printf("SPR_BLOCK_PAIR resource=%s record=%zu imageA=%zu imageB=%zu tag=%s marker=0x%08x dims=%u/%u sizeA=%zu sizeB=%zu blocks=%zu matchedBytes=%zu shifted=%u\n",
+                        name.c_str(),a.record,a.ordinal,b.ordinal,a.tag.c_str(),a.marker,
+                        a.a,a.b,a.size,b.size,chosen.size(),matchedBytes,shifted?1u:0u);
+        }
+        std::printf("SPR_BLOCK_SUMMARY resource=%s direct=%zu neighborPairs=%zu pairsWithBlocks=%zu pairsWithShiftedBlocks=%zu minBlockBytes=%zu maxBlocksPerPair=%zu\n",
+                    name.c_str(),samples.size(),pairs,pairsWithBlocks,
+                    pairsWithShiftedBlocks,seedSize,maxReported);
+    }
+    std::puts("SPR_BLOCK_NOTE exact byte matches only; greedy longest-first selection is not an optimal alignment, and shared blocks do not establish codec semantics.");
+    return failures?1:0;
+}
