@@ -1728,6 +1728,6 @@ int stafuSprByteSubstitutions(const char* installed,const char* cd,const char* o
             name.c_str(),samples.size(),pairs,pairsWithRuns,totalEqual,totalShifted,
             totalShortEqual,patterns.size(),truncatedPairs);
     }
-    std::puts("SPR_SUBSTITUTION_NOTE selected alignment is heuristic; patterns are byte-exact, not codec commands; only anchored equal-length gaps of 1..8 bytes are counted."); selected chain may not be unique; displacement differences are arithmetic, not codec commands.");
+    std::puts("SPR_SUBSTITUTION_NOTE selected alignment is heuristic; patterns are byte-exact, not codec commands; only anchored equal-length gaps of 1..8 bytes are counted.");
     return failures?1:0;
 }
