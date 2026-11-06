@@ -161,6 +161,7 @@ add_executable(reluva-tool
     src/tools/stafu_spr_cross_gap.cpp
     src/tools/stafu_spr_run_flanks.cpp
     src/tools/stafu_spr_boundary_signatures.cpp
+    src/tools/stafu_spr_boundary_crossing.cpp
     src/tools/stafu_spr_span_reconcile.cpp
     src/tools/stafu_bridge_inventory.cpp
     src/tools/stafu_computer_browse.cpp
