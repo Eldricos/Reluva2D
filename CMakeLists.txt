@@ -149,6 +149,7 @@ add_executable(reluva-tool
     src/tools/stafu_spr_boundary_correspondence.cpp
     src/tools/stafu_spr_displacement_segments.cpp
     src/tools/stafu_spr_interior_verify.cpp
+    src/tools/stafu_spr_maximal_spans.cpp
     src/tools/stafu_bridge_inventory.cpp
     src/tools/stafu_computer_browse.cpp
     src/tools/stafu_install_analyze.cpp
