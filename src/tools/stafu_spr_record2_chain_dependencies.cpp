@@ -661,7 +661,7 @@ void m302Report(const char* name,size_t oa,size_t ob,size_t gap,
     for(size_t minimum:{size_t(16),size_t(32),size_t(48)}){
         const auto observed=m302Best(a,ba,x,b,bb,y,minimum,nullptr);
         if(!observed.eligible){
-            std::printf("SPR_M302_NULL resource=%s ordinalA=%zu ordinalB=%zu gap=%zu path=%s side=%s sample=%s minOverlap=%zu eligible=0 status=insufficient_overlap\\n",
+            std::printf("SPR_M302_NULL resource=%s ordinalA=%zu ordinalB=%zu gap=%zu path=%s side=%s sample=%s minOverlap=%zu eligible=0 status=insufficient_overlap\n",
                         name,oa,ob,gap,path,side,sample,minimum);
             continue;
         }
@@ -684,7 +684,7 @@ void m302Report(const char* name,size_t oa,size_t ob,size_t gap,
                observed.score.matches*nullBest.score.compared)++atLeast;
             if(nullBest.score.shift==-32||nullBest.score.shift==32)++boundary;
         }
-        std::printf("SPR_M302_NULL resource=%s ordinalA=%zu ordinalB=%zu gap=%zu path=%s side=%s sample=%s minOverlap=%zu eligible=%zu observedShift=%d observedMatches=%zu observedCompared=%zu observedBoundary=%d nullTrials=%zu nullAtLeast=%zu empiricalTailNumerator=%zu empiricalTailDenominator=%zu nullBoundary=%zu nullMethod=deterministic_bit_permutation interpretation=exploratory_not_calibrated\\n",
+        std::printf("SPR_M302_NULL resource=%s ordinalA=%zu ordinalB=%zu gap=%zu path=%s side=%s sample=%s minOverlap=%zu eligible=%zu observedShift=%d observedMatches=%zu observedCompared=%zu observedBoundary=%d nullTrials=%zu nullAtLeast=%zu empiricalTailNumerator=%zu empiricalTailDenominator=%zu nullBoundary=%zu nullMethod=deterministic_bit_permutation interpretation=exploratory_not_calibrated\n",
                     name,oa,ob,gap,path,side,sample,minimum,observed.eligible,
                     observed.score.shift,observed.score.matches,observed.score.compared,
                     (observed.score.shift==-32||observed.score.shift==32)?1:0,
@@ -719,11 +719,11 @@ void m302Compare(const char* name,size_t oa,size_t ob,size_t gap,
             if(la&&lb&&left.a>=la&&left.b>=lb)
                 m302Report(name,oa,ob,gap,path,sideName,"control_before_left",
                            a,ba,{left.a-la,la},b,bb,{left.b-lb,lb});
-            else std::printf("SPR_M302_CONTROL_SKIP path=%s side=%s reason=insufficient_pre_anchor_bits\\n",path,sideName);
+            else std::printf("SPR_M302_CONTROL_SKIP path=%s side=%s reason=insufficient_pre_anchor_bits\n",path,sideName);
             if(la&&lb&&right.a+right.len+la<=na&&right.b+right.len+lb<=nb)
                 m302Report(name,oa,ob,gap,path,sideName,"control_after_right",
                            a,ba,{right.a+right.len,la},b,bb,{right.b+right.len,lb});
-            else std::printf("SPR_M302_CONTROL_SKIP path=%s side=%s reason=insufficient_post_anchor_bits\\n",path,sideName);
+            else std::printf("SPR_M302_CONTROL_SKIP path=%s side=%s reason=insufficient_post_anchor_bits\n",path,sideName);
         }
     }
 }
@@ -741,7 +741,7 @@ void m301Report(const char* name,size_t oa,size_t ob,size_t gap,
     for(size_t minimum:{size_t(16),size_t(32),size_t(48)}){
         auto scores=m301Offsets(a,ba,x,b,bb,y,minimum);
         if(scores.empty()){
-            std::printf("SPR_M301_OFFSET resource=%s ordinalA=%zu ordinalB=%zu gap=%zu path=%s side=%s sample=%s minOverlap=%zu eligible=0 status=insufficient_overlap\\n",
+            std::printf("SPR_M301_OFFSET resource=%s ordinalA=%zu ordinalB=%zu gap=%zu path=%s side=%s sample=%s minOverlap=%zu eligible=0 status=insufficient_overlap\n",
                         name,oa,ob,gap,path,side,sample,minimum);
             continue;
         }
@@ -756,7 +756,7 @@ void m301Report(const char* name,size_t oa,size_t ob,size_t gap,
         size_t betterOrEqual=0;
         for(const auto& score:scores)
             if(score.matches*best.compared>=best.matches*score.compared)++betterOrEqual;
-        std::printf("SPR_M301_OFFSET resource=%s ordinalA=%zu ordinalB=%zu gap=%zu path=%s side=%s sample=%s minOverlap=%zu eligible=%zu bestShift=%d bestMatches=%zu bestCompared=%zu tiedOrBetter=%zu adjacentCount=%zu adjacentMatches=%zu adjacentCompared=%zu aBits=%zu bBits=%zu interpretation=descriptive\\n",
+        std::printf("SPR_M301_OFFSET resource=%s ordinalA=%zu ordinalB=%zu gap=%zu path=%s side=%s sample=%s minOverlap=%zu eligible=%zu bestShift=%d bestMatches=%zu bestCompared=%zu tiedOrBetter=%zu adjacentCount=%zu adjacentMatches=%zu adjacentCompared=%zu aBits=%zu bBits=%zu interpretation=descriptive\n",
                     name,oa,ob,gap,path,side,sample,minimum,scores.size(),best.shift,
                     best.matches,best.compared,betterOrEqual,nearCount,nearMatches,nearCompared,x.len,y.len);
     }
