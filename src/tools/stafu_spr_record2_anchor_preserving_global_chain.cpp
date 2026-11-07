@@ -350,8 +350,26 @@ bool survey(reluva::stafu::ResourceManager& manager,const char* name,Totals& tot
         name,local.pairs,local.withMatches,local.matches,local.chainSegments,local.transitions,local.consistentTransitions);
     return true;
 }
+
+bool selfTest(){
+    const std::vector<BitMatch> baseline={{0,0,40,0},{50,50,40,0}};
+    const std::vector<BitMatch> candidates={{0,0,40,0},{45,45,55,0},{50,50,40,0}};
+    const auto u=bitChain(candidates);
+    const auto p=preserveAnchors(candidates,baseline,baseline);
+    if(coverage(u)!=95||coverage(p.runs)!=80||p.retained284!=2||p.retained282!=2)return false;
+    if(p.runs.size()!=2||p.runs[0].a!=0||p.runs[1].a!=50)return false;
+    if(preserveAnchors(candidates,baseline,baseline).runs.size()!=p.runs.size())return false;
+    const BitMatch conflict={20,60,40,40};
+    if(compatible(baseline[0],conflict))return false;
+    for(size_t i=1;i<p.runs.size();++i)
+        if(p.runs[i-1].a+p.runs[i-1].len>p.runs[i].a||
+           p.runs[i-1].b+p.runs[i-1].len>p.runs[i].b)return false;
+    std::puts("SPR_M286_SELFTEST PASS");
+    return true;
+}
 }
 int stafuSprM286Record2AnchorPreservingGlobalChain(const char* installed,const char* cd,const char*){
+    if(std::string(installed)=="__selftest__")return selfTest()?0:1;
     reluva::stafu::ResourceManager manager;std::string error;
     if(!manager.open(installed,cd,error)){
         std::fprintf(stderr,"SPR_M286_ERROR %s\n",error.c_str());return 1;
