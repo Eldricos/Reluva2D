@@ -279,6 +279,7 @@ bool m295Mode=false;
 bool m296Mode=false;
 bool m297Mode=false;
 bool m298Mode=false;
+bool m299Mode=false;
 size_t matchingFlank(const std::vector<uint8_t>& a,const std::vector<uint8_t>& b,
                      size_t baseA,size_t baseB,size_t nA,size_t nB,
                      size_t atA,size_t atB,bool left,size_t cap){
@@ -532,6 +533,74 @@ void m298Compare(const char* name,size_t oa,size_t ob,size_t gap,size_t paramete
     std::printf("SPR_M298_STABILITY resource=%s ordinalA=%zu ordinalB=%zu gap=%zu parameter=%zu comparableWindows=%zu preferenceTransitions=%zu firstComparable=%s lastComparable=%s\n",
         name,oa,ob,gap,parameter,comparable,changes,
         comparable?"see_window_rows":"none",previous?previous:"none");
+}
+
+
+struct M299Geometry {
+    size_t beforeA=0,beforeB=0,afterA=0,afterB=0;
+    long long enterShift=0,exitShift=0;
+    size_t unmatchedTotal=0;
+    size_t maxImbalance=0;
+    size_t transitions=0;
+    long long shiftTravel=0;
+};
+M299Geometry m299Geometry(const BitMatch& left,const BitMatch& middle,const BitMatch& right){
+    M299Geometry g;
+    g.beforeA=middle.a-(left.a+left.len);
+    g.beforeB=middle.b-(left.b+left.len);
+    g.afterA=right.a-(middle.a+middle.len);
+    g.afterB=right.b-(middle.b+middle.len);
+    g.enterShift=static_cast<long long>(middle.shift)-left.shift;
+    g.exitShift=static_cast<long long>(right.shift)-middle.shift;
+    g.unmatchedTotal=g.beforeA+g.beforeB+g.afterA+g.afterB;
+    const auto absDiff=[](long long x){return static_cast<size_t>(x<0?-x:x);};
+    g.maxImbalance=std::max(absDiff(static_cast<long long>(g.beforeB)-g.beforeA),
+                            absDiff(static_cast<long long>(g.afterB)-g.afterA));
+    g.transitions=(left.shift!=middle.shift?1:0)+(middle.shift!=right.shift?1:0);
+    g.shiftTravel=static_cast<long long>(absDiff(g.enterShift)+absDiff(g.exitShift));
+    return g;
+}
+void m299Compare(const char* name,size_t oa,size_t ob,size_t gap,
+                 const std::vector<BitMatch>& baseline,const std::vector<BitMatch>& alternative,
+                 size_t na,size_t nb){
+    // Segment nine is only meaningful if the competing paths retain its exact neighbors.
+    if(baseline.size()<10)return;
+    const auto& target=baseline[8];
+    size_t leftIndex=0,rightIndex=0;
+    bool foundLeft=false,foundRight=false;
+    for(size_t i=0;i<alternative.size();++i){
+        if(sameBitMatch(alternative[i],baseline[7])){leftIndex=i;foundLeft=true;}
+        if(sameBitMatch(alternative[i],baseline[9])){rightIndex=i;foundRight=true;}
+    }
+    if(!foundLeft||!foundRight||rightIndex!=leftIndex+2||
+       !sameBitMatch(baseline[7],alternative[leftIndex])||
+       !sameBitMatch(baseline[9],alternative[rightIndex])){
+        std::printf("SPR_M299_SKIP resource=%s ordinalA=%zu ordinalB=%zu gap=%zu reason=neighbor_anchors_not_isolated\\n",name,oa,ob,gap);
+        return;
+    }
+    const auto& candidate=alternative[leftIndex+1];
+    if(sameBitMatch(target,candidate)||!validateChain(baseline,na,nb)||
+       !validateChain(alternative,na,nb))return;
+    const auto& left=baseline[7];
+    const auto& right=baseline[9];
+    const auto x=m299Geometry(left,target,right);
+    const auto y=m299Geometry(left,candidate,right);
+    const auto emit=[&](const char* label,const BitMatch& m,const M299Geometry& g){
+        std::printf("SPR_M299_PATH resource=%s ordinalA=%zu ordinalB=%zu gap=%zu path=%s leftA=%zu leftB=%zu leftLength=%zu leftShift=%d matchA=%zu matchB=%zu matchLength=%zu matchShift=%d rightA=%zu rightB=%zu rightLength=%zu rightShift=%d beforeA=%zu beforeB=%zu beforeDelta=%lld afterA=%zu afterB=%zu afterDelta=%lld enterShiftDelta=%lld exitShiftDelta=%lld unmatchedTotal=%zu maxImbalance=%zu shiftTransitions=%zu shiftTravel=%lld\\n",
+            name,oa,ob,gap,label,left.a,left.b,left.len,left.shift,
+            m.a,m.b,m.len,m.shift,right.a,right.b,right.len,right.shift,
+            g.beforeA,g.beforeB,static_cast<long long>(g.beforeB)-g.beforeA,
+            g.afterA,g.afterB,static_cast<long long>(g.afterB)-g.afterA,
+            g.enterShift,g.exitShift,g.unmatchedTotal,g.maxImbalance,g.transitions,g.shiftTravel);
+    };
+    emit("baseline",target,x);
+    emit("alternative",candidate,y);
+    std::printf("SPR_M299_COMPARE resource=%s ordinalA=%zu ordinalB=%zu gap=%zu baselineBits=%zu alternativeBits=%zu coverageDelta=%lld unmatchedDelta=%lld maxImbalanceDelta=%lld shiftTravelDelta=%lld baselineRejoins=%d alternativeRejoins=%d sharedAnchors=2 interpretation=geometry_only\\n",
+        name,oa,ob,gap,target.len,candidate.len,
+        static_cast<long long>(candidate.len)-target.len,
+        static_cast<long long>(y.unmatchedTotal)-x.unmatchedTotal,
+        static_cast<long long>(y.maxImbalance)-x.maxImbalance,
+        y.shiftTravel-x.shiftTravel,1,1);
 }
 
 bool sameBitMatch(const BitMatch& x,const BitMatch& y){
@@ -861,6 +930,9 @@ void bitGap(const char* name,size_t oa,size_t ob,size_t gap,
         if((m295Mode||m296Mode)&&std::string(mode)=="leave_one_out"&&
            (parameter==3||parameter==4||parameter==5||parameter==6||parameter==9))
             boundaryEvidence(name,oa,ob,gap,mode,parameter,baseline,alternative.runs,a,b,ba,bb,na,nb);
+        if(m299Mode&&std::string(mode)=="leave_one_out"&&parameter==9&&
+           std::string(name)=="BRDGRIKR.SPR"&&oa==5&&ob==6&&gap==0)
+            m299Compare(name,oa,ob,gap,baseline,alternative.runs,na,nb);
         if(m298Mode&&std::string(mode)=="leave_one_out"&&
            (parameter==3||parameter==4||parameter==5||parameter==6||parameter==9))
             m298Compare(name,oa,ob,gap,parameter,baseline,alternative.runs,a,b,ba,bb,na,nb);
@@ -1157,6 +1229,12 @@ bool selfTest(){
     if(!validateChain(changed,110,110)||!validateChain(reference,110,110))return false;
     // M294 must accept both a shared downstream rejoin and a changed internal path.
     if(m294Mode)transitionAnalysis("SELFTEST",1,2,0,"leave_one_out",3,reference,changed,110,110);
+    // M299: equal endpoints, ordered nonoverlapping paths, and shift conservation.
+    const BitMatch l={0,5,20,5},mid={30,40,20,10},right={70,75,20,5};
+    const auto geo=m299Geometry(l,mid,right);
+    if(geo.beforeA!=10||geo.beforeB!=15||geo.afterA!=20||geo.afterB!=15||
+       geo.enterShift!=5||geo.exitShift!=-5||geo.unmatchedTotal!=60||
+       geo.maxImbalance!=5||geo.transitions!=2||geo.shiftTravel!=10)return false;
     std::puts("SPR_M293_SELFTEST PASS");
     return true;
 }
@@ -1214,5 +1292,13 @@ int stafuSprM298Record2BoundarySensitivity(const char* installed,const char* cd,
     const int result=stafuSprM293Record2ChainDependencies(installed,cd,optional);
     m298Mode=false;
     if(result==0)std::puts("SPR_M298_NOTE Boundary windows 8/16/24/32 are nested and correlated; rates are descriptive. Equal sample counts are explicitly marked. Preference changes are measured only between comparable nonempty windows. Exact matches and uniqueness are separate observations, not decoder validation.");
+    return result;
+}
+
+int stafuSprM299Record2Segment9Discrimination(const char* installed,const char* cd,const char* optional){
+    m299Mode=true;
+    const int result=stafuSprM293Record2ChainDependencies(installed,cd,optional);
+    m299Mode=false;
+    if(result==0)std::puts("SPR_M299_NOTE Segment-nine comparisons hold neighboring exact-match anchors fixed. Unmatched spans and shift travel are geometric descriptions of competing bit correspondences, not decoder-state or codec validation.");
     return result;
 }
