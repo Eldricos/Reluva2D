@@ -195,6 +195,7 @@ add_executable(reluva-tool
     src/tools/stafu_spr_record2_weighted_global_chain.cpp
     src/tools/stafu_spr_record2_chain_sensitivity.cpp
     src/tools/stafu_spr_record2_pool_robustness.cpp
+    src/tools/stafu_spr_record2_chain_dependencies.cpp
     src/tools/stafu_spr_span_reconcile.cpp
     src/tools/stafu_bridge_inventory.cpp
     src/tools/stafu_computer_browse.cpp
@@ -479,6 +480,7 @@ if(RELUVA_BUILD_TESTS)
     add_test(NAME stafu_spr_m290_weighted_global COMMAND reluva-tool -stafu spr-m290-record2-weighted-global-chain __selftest__ unused)
     add_test(NAME stafu_spr_m291_chain_sensitivity COMMAND reluva-tool -stafu spr-m291-record2-chain-sensitivity __selftest__ unused)
     add_test(NAME stafu_spr_m292_pool_robustness COMMAND reluva-tool -stafu spr-m292-record2-pool-robustness __selftest__ unused)
+    add_test(NAME stafu_spr_m293_chain_dependencies COMMAND reluva-tool -stafu spr-m293-record2-chain-dependencies __selftest__ unused)
 
     add_executable(reluva_stafu_spr_gif_structure_tests tests/test_stafu_spr_gif_structure.cpp)
     target_link_libraries(reluva_stafu_spr_gif_structure_tests PRIVATE reluva_engines reluva_warnings)
