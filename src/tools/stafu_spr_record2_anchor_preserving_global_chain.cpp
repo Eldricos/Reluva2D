@@ -1,0 +1,366 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// M286: compare M282, M284, and global maximum-coverage bit chains.
+#include "engines/stafu/resource_manager.h"
+#include "engines/stafu/spr_sequence_index.h"
+#include "engines/stafu/spr_image_payload.h"
+#include <algorithm>
+#include <cstdint>
+#include <cstdio>
+#include <string>
+#include <vector>
+
+namespace {
+using View=reluva::stafu::SprImagePayloadAccessor::View;
+struct Image { size_t ordinal=0; std::vector<uint8_t> data; };
+struct Match { size_t a=0,b=0,len=0; int shift=0; };
+struct Totals { size_t pairs=0,withMatches=0,matches=0,chainSegments=0,transitions=0,consistentTransitions=0; };
+constexpr int kMaxShift=64;
+constexpr size_t kMinRun=16;
+bool isRef(const View& v){return v.marker==0x00030000&&v.size==4;}
+size_t prefix(const std::vector<uint8_t>& a,const std::vector<uint8_t>& b){
+    size_t i=0;while(i<std::min(a.size(),b.size())&&a[i]==b[i])++i;return i;
+}
+std::vector<Match> candidates(const std::vector<uint8_t>& a,const std::vector<uint8_t>& b,size_t pre){
+    std::vector<Match> found;
+    for(int shift=-kMaxShift;shift<=kMaxShift;++shift){
+        if(shift==0)continue;
+        for(size_t i=pre;i<a.size();++i){
+            const long long jSigned=static_cast<long long>(i)+shift;
+            if(jSigned<static_cast<long long>(pre)||jSigned>=static_cast<long long>(b.size()))continue;
+            const size_t j=static_cast<size_t>(jSigned);
+            if(a[i]!=b[j])continue;
+            if(i>pre&&j>pre&&a[i-1]==b[j-1])continue;
+            size_t len=0;
+            while(i+len<a.size()&&j+len<b.size()&&a[i+len]==b[j+len])++len;
+            if(len>=kMinRun)found.push_back({i,j,len,shift});
+        }
+    }
+    std::sort(found.begin(),found.end(),[](const Match& x,const Match& y){
+        if(x.len!=y.len)return x.len>y.len;
+        if(x.a!=y.a)return x.a<y.a;
+        return x.b<y.b;
+    });
+    return found;
+}
+std::vector<Match> chain(const std::vector<Match>& input){
+    std::vector<Match> v=input;
+    std::sort(v.begin(),v.end(),[](const Match& x,const Match& y){
+        if(x.a!=y.a)return x.a<y.a;
+        if(x.b!=y.b)return x.b<y.b;
+        return x.len>y.len;
+    });
+    std::vector<size_t> score(v.size());
+    std::vector<int> parent(v.size(),-1);
+    int best=-1;
+    for(size_t i=0;i<v.size();++i){
+        score[i]=v[i].len;
+        for(size_t j=0;j<i;++j){
+            if(v[j].a+v[j].len>v[i].a||v[j].b+v[j].len>v[i].b)continue;
+            if(score[j]+v[i].len>score[i]){
+                score[i]=score[j]+v[i].len;parent[i]=static_cast<int>(j);
+            }
+        }
+        if(best<0||score[i]>score[static_cast<size_t>(best)])best=static_cast<int>(i);
+    }
+    std::vector<Match> out;
+    while(best>=0){out.push_back(v[static_cast<size_t>(best)]);best=parent[static_cast<size_t>(best)];}
+    std::reverse(out.begin(),out.end());return out;
+}
+
+bool bitAt(const std::vector<uint8_t>& data,size_t bit){
+    return ((data[bit/8]>>(7-(bit%8)))&1u)!=0;
+}
+
+struct BitMatch { size_t a=0,b=0,len=0; int shift=0; };
+std::vector<BitMatch> bitCandidates(const std::vector<uint8_t>& a,const std::vector<uint8_t>& b,
+                                   size_t baseA,size_t baseB,size_t nA,size_t nB,size_t threshold){
+    std::vector<BitMatch> out;
+    for(int shift=-32;shift<=32;++shift){
+        if(shift==0)continue;
+        for(size_t i=0;i<nA;++i){
+            const long long js=static_cast<long long>(i)+shift;
+            if(js<0||js>=static_cast<long long>(nB))continue;
+            const size_t j=static_cast<size_t>(js);
+            if(bitAt(a,baseA+i)!=bitAt(b,baseB+j))continue;
+            if(i>0&&j>0&&bitAt(a,baseA+i-1)==bitAt(b,baseB+j-1))continue;
+            size_t len=0;
+            while(i+len<nA&&j+len<nB&&bitAt(a,baseA+i+len)==bitAt(b,baseB+j+len))++len;
+            if(len>=threshold)out.push_back({i,j,len,shift});
+        }
+    }
+    std::sort(out.begin(),out.end(),[](const BitMatch& x,const BitMatch& y){
+        if(x.a!=y.a)return x.a<y.a;
+        if(x.b!=y.b)return x.b<y.b;
+        return x.len>y.len;
+    });
+    return out;
+}
+
+std::vector<BitMatch> globalCandidates(const std::vector<uint8_t>& a,const std::vector<uint8_t>& b,
+                                      size_t baseA,size_t baseB,size_t nA,size_t nB,
+                                      size_t threshold,int radius){
+    std::vector<BitMatch> out;
+    for(int shift=-radius;shift<=radius;++shift){
+        for(size_t i=0;i<nA;++i){
+            const long long js=static_cast<long long>(i)+shift;
+            if(js<0||js>=static_cast<long long>(nB))continue;
+            const size_t j=static_cast<size_t>(js);
+            if(bitAt(a,baseA+i)!=bitAt(b,baseB+j))continue;
+            if(i>0&&j>0&&bitAt(a,baseA+i-1)==bitAt(b,baseB+j-1))continue;
+            size_t len=0;
+            while(i+len<nA&&j+len<nB&&bitAt(a,baseA+i+len)==bitAt(b,baseB+j+len))++len;
+            if(len>=threshold)out.push_back({i,j,len,shift});
+        }
+    }
+    std::sort(out.begin(),out.end(),[](const BitMatch& x,const BitMatch& y){
+        if(x.a!=y.a)return x.a<y.a;
+        if(x.b!=y.b)return x.b<y.b;
+        return x.len>y.len;
+    });
+    return out;
+}
+std::vector<BitMatch> bitChain(const std::vector<BitMatch>& v){
+    std::vector<size_t> score(v.size(),0);
+    std::vector<int> parent(v.size(),-1);
+    int best=-1;
+    for(size_t i=0;i<v.size();++i){
+        score[i]=v[i].len;
+        for(size_t j=0;j<i;++j){
+            if(v[j].a+v[j].len>v[i].a||v[j].b+v[j].len>v[i].b)continue;
+            if(score[j]+v[i].len>score[i]){
+                score[i]=score[j]+v[i].len;parent[i]=static_cast<int>(j);
+            }
+        }
+        if(best<0||score[i]>score[static_cast<size_t>(best)])best=static_cast<int>(i);
+    }
+    std::vector<BitMatch> out;
+    while(best>=0){out.push_back(v[static_cast<size_t>(best)]);best=parent[static_cast<size_t>(best)];}
+    std::reverse(out.begin(),out.end());return out;
+}
+
+std::string bits(const std::vector<uint8_t>& d,size_t start,size_t count){
+    std::string out;out.reserve(count);
+    for(size_t i=0;i<count;++i)out.push_back(bitAt(d,start+i)?'1':'0');
+    return out;
+}
+
+
+size_t coverage(const std::vector<BitMatch>& v){
+    size_t n=0;for(const auto& m:v)n+=m.len;return n;
+}
+bool containsAnchor(const std::vector<BitMatch>& chain,const BitMatch& anchor){
+    for(const auto& m:chain)
+        if(m.a<=anchor.a&&m.b<=anchor.b&&m.a+m.len>=anchor.a+anchor.len&&m.b+m.len>=anchor.b+anchor.len
+           &&static_cast<long long>(m.b)-static_cast<long long>(m.a)==static_cast<long long>(anchor.b)-static_cast<long long>(anchor.a))
+            return true;
+    return false;
+}
+
+size_t transitionsOf(const std::vector<BitMatch>& v){
+    size_t n=0;for(size_t i=1;i<v.size();++i)if(v[i].shift!=v[i-1].shift)++n;return n;
+}
+bool compatible(const BitMatch& x,const BitMatch& y){
+    if(x.a==y.a&&x.b==y.b&&x.len==y.len)return true;
+    if(x.a<=y.a&&x.b<=y.b&&x.a+x.len>=y.a+y.len&&x.b+x.len>=y.b+y.len&&x.shift==y.shift)return true;
+    if(y.a<=x.a&&y.b<=x.b&&y.a+y.len>=x.a+x.len&&y.b+y.len>=x.b+x.len&&x.shift==y.shift)return true;
+    return (x.a+x.len<=y.a&&x.b+x.len<=y.b)||
+           (y.a+y.len<=x.a&&y.b+y.len<=x.b);
+}
+struct Optimized {
+    std::vector<BitMatch> runs;
+    size_t retained282=0,retained284=0;
+};
+Optimized preserveAnchors(std::vector<BitMatch> v,
+                          const std::vector<BitMatch>& primary,
+                          const std::vector<BitMatch>& refined){
+    // Baseline anchors remain eligible even when below the current global threshold.
+    v.insert(v.end(),refined.begin(),refined.end());
+    v.insert(v.end(),primary.begin(),primary.end());
+    std::sort(v.begin(),v.end(),[](const BitMatch& x,const BitMatch& y){
+        if(x.a!=y.a)return x.a<y.a;
+        if(x.b!=y.b)return x.b<y.b;
+        if(x.len!=y.len)return x.len>y.len;
+        return x.shift<y.shift;
+    });
+    v.erase(std::unique(v.begin(),v.end(),[](const BitMatch& x,const BitMatch& y){
+        return x.a==y.a&&x.b==y.b&&x.len==y.len&&x.shift==y.shift;
+    }),v.end());
+    struct Score {size_t m284=0,m282=0,bits=0;};
+    auto better=[](const Score& a,const Score& b){
+        if(a.m284!=b.m284)return a.m284>b.m284;
+        if(a.m282!=b.m282)return a.m282>b.m282;
+        return a.bits>b.bits;
+    };
+    std::vector<Score> dp(v.size());
+    std::vector<int> parent(v.size(),-1);
+    int best=-1;
+    for(size_t i=0;i<v.size();++i){
+        Score own;
+        own.bits=v[i].len;
+        for(const auto& a:refined)if(containsAnchor({v[i]},a))++own.m284;
+        for(const auto& a:primary)if(containsAnchor({v[i]},a))++own.m282;
+        dp[i]=own;
+        for(size_t j=0;j<i;++j){
+            if(v[j].a+v[j].len>v[i].a||v[j].b+v[j].len>v[i].b)continue;
+            Score candidate={dp[j].m284+own.m284,dp[j].m282+own.m282,dp[j].bits+own.bits};
+            if(better(candidate,dp[i])){dp[i]=candidate;parent[i]=static_cast<int>(j);}
+        }
+        if(best<0||better(dp[i],dp[static_cast<size_t>(best)]))best=static_cast<int>(i);
+    }
+    Optimized result;
+    while(best>=0){result.runs.push_back(v[static_cast<size_t>(best)]);best=parent[static_cast<size_t>(best)];}
+    std::reverse(result.runs.begin(),result.runs.end());
+    for(const auto& a:primary)if(containsAnchor(result.runs,a))++result.retained282;
+    for(const auto& a:refined)if(containsAnchor(result.runs,a))++result.retained284;
+    return result;
+}
+void bitGap(const char* name,size_t oa,size_t ob,size_t gap,
+            const std::vector<uint8_t>& a,const std::vector<uint8_t>& b,
+            size_t fromA,size_t toA,size_t fromB,size_t toB){
+    const size_t nA=(toA-fromA)*8,nB=(toB-fromB)*8;
+    const size_t baseA=fromA*8,baseB=fromB*8;
+    if(!nA||!nB)return;
+    const auto primary=bitChain(bitCandidates(a,b,baseA,baseB,nA,nB,32));
+    std::vector<BitMatch> refined=primary;
+    size_t prevA=0,prevB=0;
+    for(size_t i=0;i<=primary.size();++i){
+        const bool terminal=i==primary.size();
+        const size_t nextA=terminal?nA:primary[i].a;
+        const size_t nextB=terminal?nB:primary[i].b;
+        const auto local=bitChain(bitCandidates(a,b,baseA+prevA,baseB+prevB,nextA-prevA,nextB-prevB,32));
+        for(const auto& m:local)refined.push_back({prevA+m.a,prevB+m.b,m.len,
+            static_cast<int>(static_cast<long long>(prevB+m.b)-static_cast<long long>(prevA+m.a))});
+        if(!terminal){prevA=primary[i].a+primary[i].len;prevB=primary[i].b+primary[i].len;}
+    }
+    std::sort(refined.begin(),refined.end(),[](const BitMatch& x,const BitMatch& y){return x.a<y.a;});
+    std::printf("SPR_M286_BASELINE resource=%s ordinalA=%zu ordinalB=%zu gap=%zu bitsA=%zu bitsB=%zu m282Runs=%zu m282Bits=%zu m284Runs=%zu m284Bits=%zu\n",
+        name,oa,ob,gap,nA,nB,primary.size(),coverage(primary),refined.size(),coverage(refined));
+    for(size_t i=0;i<refined.size();++i){
+        size_t conflicts=0;
+        for(size_t j=0;j<refined.size();++j)if(i!=j&&!compatible(refined[i],refined[j]))++conflicts;
+        const auto& m=refined[i];
+        std::printf("SPR_M286_ANCHOR resource=%s ordinalA=%zu ordinalB=%zu gap=%zu anchor=%zu bitA=%zu bitB=%zu length=%zu shift=%d conflicts=%zu\n",
+            name,oa,ob,gap,i+1,m.a,m.b,m.len,m.shift,conflicts);
+        for(size_t j=i+1;j<refined.size();++j)if(!compatible(m,refined[j]))
+            std::printf("SPR_M286_CONFLICT resource=%s ordinalA=%zu ordinalB=%zu gap=%zu anchorA=%zu anchorB=%zu\n",
+                name,oa,ob,gap,i+1,j+1);
+    }
+    for(const int radius:{32,64,128})for(const size_t threshold:{size_t(32),size_t(64),size_t(96)}){
+        const auto found=globalCandidates(a,b,baseA,baseB,nA,nB,threshold,radius);
+        const auto unconstrained=bitChain(found);
+        const auto preserved=preserveAnchors(found,primary,refined);
+        size_t un282=0,un284=0;
+        for(const auto& m:primary)if(containsAnchor(unconstrained,m))++un282;
+        for(const auto& m:refined)if(containsAnchor(unconstrained,m))++un284;
+        const long long delta=static_cast<long long>(coverage(preserved.runs))-static_cast<long long>(coverage(unconstrained));
+        std::printf("SPR_M286_UNCONSTRAINED resource=%s ordinalA=%zu ordinalB=%zu gap=%zu radius=%d threshold=%zu candidates=%zu runs=%zu coveredBits=%zu retainedM282=%zu retainedM284=%zu shiftTransitions=%zu\n",
+            name,oa,ob,gap,radius,threshold,found.size(),unconstrained.size(),coverage(unconstrained),un282,un284,transitionsOf(unconstrained));
+        std::printf("SPR_M286_PRESERVED resource=%s ordinalA=%zu ordinalB=%zu gap=%zu radius=%d threshold=%zu runs=%zu coveredBits=%zu retainedM282=%zu ofM282=%zu retainedM284=%zu ofM284=%zu rejectedM284=%zu shiftTransitions=%zu\n",
+            name,oa,ob,gap,radius,threshold,preserved.runs.size(),coverage(preserved.runs),preserved.retained282,primary.size(),preserved.retained284,refined.size(),refined.size()-preserved.retained284,transitionsOf(preserved.runs));
+        std::printf("SPR_M286_COMPARISON resource=%s ordinalA=%zu ordinalB=%zu gap=%zu radius=%d threshold=%zu deltaCoveredBits=%lld deltaRetainedM284=%lld\n",
+            name,oa,ob,gap,radius,threshold,delta,static_cast<long long>(preserved.retained284)-static_cast<long long>(un284));
+        for(size_t i=0;i<preserved.runs.size();++i){
+            const auto& m=preserved.runs[i];
+            std::printf("SPR_M286_CHAIN resource=%s ordinalA=%zu ordinalB=%zu gap=%zu radius=%d threshold=%zu segment=%zu bitA=%zu bitB=%zu length=%zu shift=%d\n",
+                name,oa,ob,gap,radius,threshold,i+1,m.a,m.b,m.len,m.shift);
+        }
+    }
+}
+bool survey(reluva::stafu::ResourceManager& manager,const char* name,Totals& total){
+    std::vector<uint8_t> bytes;std::string error;
+    if(!manager.read(name,bytes,error)){
+        std::fprintf(stderr,"SPR_M286_ERROR resource=%s %s\n",name,error.c_str());return false;
+    }
+    reluva::stafu::SprSequenceIndex index;
+    if(!index.build(bytes,error)||index.records().size()<=2){
+        std::fprintf(stderr,"SPR_M286_ERROR resource=%s %s\n",name,error.c_str());return false;
+    }
+    std::vector<Image> direct;size_t ordinal=0;
+    for(const auto& event:index.records()[2].events){
+        if(event.tag!="PMOC"&&event.tag!="MOCS")continue;
+        View v;
+        if(!reluva::stafu::SprImagePayloadAccessor::get(bytes,event,v)){
+            std::fprintf(stderr,"SPR_M286_ERROR resource=%s ordinal=%zu invalid payload\n",name,ordinal);return false;
+        }
+        if(!isRef(v)){
+            Image im;im.ordinal=ordinal;im.data.assign(v.data,v.data+v.size);
+            direct.push_back(std::move(im));
+        }
+        ++ordinal;
+    }
+    Totals local;
+    for(size_t k=1;k<direct.size();++k){
+        const auto& a=direct[k-1];const auto& b=direct[k];
+        if(b.ordinal!=a.ordinal+1)continue;
+        ++local.pairs;
+        const size_t pre=prefix(a.data,b.data);
+        const auto found=candidates(a.data,b.data,pre);
+        const auto selected=chain(found);
+        local.matches+=found.size();local.chainSegments+=selected.size();
+        if(!found.empty())++local.withMatches;
+        std::printf("SPR_M286_PAIR resource=%s ordinalA=%zu ordinalB=%zu prefix=%zu candidates=%zu chainSegments=%zu\n",
+            name,a.ordinal,b.ordinal,pre,found.size(),selected.size());
+        for(size_t i=0;i<found.size();++i){
+            const auto& m=found[i];
+            const bool leftA=m.a>0,leftB=m.b>0;
+            const bool rightA=m.a+m.len<a.data.size(),rightB=m.b+m.len<b.data.size();
+            const bool leftEqual=leftA&&leftB&&a.data[m.a-1]==b.data[m.b-1];
+            const bool rightEqual=rightA&&rightB&&a.data[m.a+m.len]==b.data[m.b+m.len];
+            std::printf("SPR_M286_BOUNDARY resource=%s ordinalA=%zu ordinalB=%zu candidate=%zu a=%zu b=%zu length=%zu shift=%d leftA=%s leftB=%s leftEqual=%d rightA=%s rightB=%s rightEqual=%d maximal=%d\n",
+                name,a.ordinal,b.ordinal,i+1,m.a,m.b,m.len,m.shift,
+                leftA?"byte":"start",leftB?"byte":"start",leftEqual?1:0,
+                rightA?"byte":"end",rightB?"byte":"end",rightEqual?1:0,
+                (!leftEqual&&!rightEqual)?1:0);
+            if(leftA&&leftB)std::printf("SPR_M286_EDGE resource=%s ordinalA=%zu ordinalB=%zu candidate=%zu side=left byteA=0x%02X byteB=0x%02X\n",
+                name,a.ordinal,b.ordinal,i+1,static_cast<unsigned>(a.data[m.a-1]),static_cast<unsigned>(b.data[m.b-1]));
+            if(rightA&&rightB)std::printf("SPR_M286_EDGE resource=%s ordinalA=%zu ordinalB=%zu candidate=%zu side=right byteA=0x%02X byteB=0x%02X\n",
+                name,a.ordinal,b.ordinal,i+1,static_cast<unsigned>(a.data[m.a+m.len]),static_cast<unsigned>(b.data[m.b+m.len]));
+        }
+        // Compare the intervening raw spans, including prefix-to-first and last-to-end.
+        size_t endA=pre,endB=pre;int previousShift=0;
+        for(size_t i=0;i<=selected.size();++i){
+            const bool final=i==selected.size();
+            const size_t nextA=final?a.data.size():selected[i].a;
+            const size_t nextB=final?b.data.size():selected[i].b;
+            const size_t gapA=nextA-endA,gapB=nextB-endB;
+            const long long gapDelta=static_cast<long long>(gapB)-static_cast<long long>(gapA);
+            const int nextShift=final?static_cast<int>(b.data.size())-static_cast<int>(a.data.size()):selected[i].shift;
+            const int shiftDelta=nextShift-previousShift;
+            const bool consistent=gapDelta==shiftDelta;
+            ++local.transitions;if(consistent)++local.consistentTransitions;
+            std::printf("SPR_M286_GAP resource=%s ordinalA=%zu ordinalB=%zu gap=%zu fromA=%zu toA=%zu fromB=%zu toB=%zu bytesA=%zu bytesB=%zu deltaBytes=%lld shiftBefore=%d shiftAfter=%d deltaShift=%d consistent=%d terminal=%d\n",
+                name,a.ordinal,b.ordinal,i,endA,nextA,endB,nextB,gapA,gapB,gapDelta,
+                previousShift,nextShift,shiftDelta,consistent?1:0,final?1:0);
+            if((std::string(name)=="BRDGPICA.SPR"&&a.ordinal==6&&b.ordinal==7)||
+               (std::string(name)=="BRDGRIKR.SPR"&&
+                ((a.ordinal==2&&b.ordinal==3)||(a.ordinal==5&&b.ordinal==6)))){
+                bitGap(name,a.ordinal,b.ordinal,i,a.data,b.data,endA,nextA,endB,nextB);
+            }
+            if(!final){
+                endA=selected[i].a+selected[i].len;
+                endB=selected[i].b+selected[i].len;
+                previousShift=selected[i].shift;
+            }
+        }
+    }
+    total.pairs+=local.pairs;total.withMatches+=local.withMatches;total.matches+=local.matches;
+    total.chainSegments+=local.chainSegments;total.transitions+=local.transitions;
+    total.consistentTransitions+=local.consistentTransitions;
+    std::printf("SPR_M286_RESOURCE resource=%s pairs=%zu withMatches=%zu candidates=%zu chainSegments=%zu gaps=%zu consistentGaps=%zu\n",
+        name,local.pairs,local.withMatches,local.matches,local.chainSegments,local.transitions,local.consistentTransitions);
+    return true;
+}
+}
+int stafuSprM286Record2AnchorPreservingGlobalChain(const char* installed,const char* cd,const char*){
+    reluva::stafu::ResourceManager manager;std::string error;
+    if(!manager.open(installed,cd,error)){
+        std::fprintf(stderr,"SPR_M286_ERROR %s\n",error.c_str());return 1;
+    }
+    const char* names[]={"BRDGPICA.SPR","BRDGDATA.SPR","BRDGRIKR.SPR","BRDGTROI.SPR","BRDGWORF.SPR"};
+    Totals total;
+    for(const char* name:names)if(!survey(manager,name,total))return 1;
+    std::printf("SPR_M286_SUMMARY resources=5 pairs=%zu withMatches=%zu candidates=%zu chainSegments=%zu gaps=%zu consistentGaps=%zu\n",
+        total.pairs,total.withMatches,total.matches,total.chainSegments,total.transitions,total.consistentTransitions);
+    std::puts("SPR_M286_NOTE Anchor preservation prioritizes M284 count, M282 count, then exact coverage. Global search includes zero displacement and scans +/-32/64/128 bit shifts. M282 and M284 baselines use nonzero +/-32 shifts. Chains maximize sum of nonoverlapping exact runs; ties deterministic. Retention means exact anchor contained within selected run at identical displacement. No codec inferred.");
+    return 0;
+}
