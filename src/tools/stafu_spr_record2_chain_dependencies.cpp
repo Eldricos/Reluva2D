@@ -1077,7 +1077,7 @@ bool selfTest(){
     size_t m297N=0;
     if(flankMismatches(pattern,pattern,0,0,16,16,0,0,true,16,m297N)!=0||m297N!=0)return false;
     if(flankMismatches(pattern,pattern,0,0,16,16,8,8,true,16,m297N)!=0||m297N!=8)return false;
-    if(localOccurrences(pattern,0,16,0,8)!=2)return false;
+    if(localOccurrences(pattern,0,16,0,8)!=5)return false; // Overlapping AA-pattern occurrences at offsets 0,2,4,6,8.
     if(localOccurrences(pattern,0,16,0,16)!=1)return false;
     if(m297Lengths[0]!=16||m297Lengths[4]!=64)return false;
     if(!validateChain(baseline,100,100))return false;
