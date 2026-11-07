@@ -342,18 +342,9 @@ void bitGap(const char* name,size_t oa,size_t ob,size_t gap,
         }
     }
 
-    // Test each M285-only run against the actual M286 segments, without assuming
-    // that uniqueness or a high exact-match score proves structural equivalence.
-    for(size_t i=0;i<unconstrained.size();++i){
-        const auto& m=unconstrained[i];
-        if(containsAnchor(preserved.runs,m))continue;
-        const size_t leftA=m.a,rightA=m.a+m.len,leftB=m.b,rightB=m.b+m.len;
-        size_t overlapCount=0,overlapBitsA=0,overlapBitsB=0,nearest=static_cast<size_t>(-1);
-        long long closestShiftDelta=0;
-    
     // M290: global weighted interval scheduling over all discovered exact matches.
     // Evidence is an intentionally heuristic secondary term, not a probability.
-    std::vector<BitMatch> pool=candidates;
+    std::vector<BitMatch> pool=found;
     for(const auto& p:preserved.runs){
         bool found=false;
         for(const auto& m:pool)if(m.a==p.a&&m.b==p.b&&m.len==p.len){found=true;break;}
@@ -419,6 +410,15 @@ void bitGap(const char* name,size_t oa,size_t ob,size_t gap,
             std::printf("SPR_M290_DROPPED resource=%s ordinalA=%zu ordinalB=%zu gap=%zu anchor=%zu bitA=%zu bitB=%zu length=%zu evidence=%d\n",
                 name,oa,ob,gap,j+1,p.a,p.b,p.len,weightedEvidence(p));
         }
+    // Test each M285-only run against the actual M286 segments, without assuming
+    // that uniqueness or a high exact-match score proves structural equivalence.
+    for(size_t i=0;i<unconstrained.size();++i){
+        const auto& m=unconstrained[i];
+        if(containsAnchor(preserved.runs,m))continue;
+        const size_t leftA=m.a,rightA=m.a+m.len,leftB=m.b,rightB=m.b+m.len;
+        size_t overlapCount=0,overlapBitsA=0,overlapBitsB=0,nearest=static_cast<size_t>(-1);
+        long long closestShiftDelta=0;
+    
     for(size_t j=0;j<preserved.runs.size();++j){
             const auto& p=preserved.runs[j];
             const size_t commonA=std::min(rightA,p.a+p.len)>std::max(leftA,p.a)?
