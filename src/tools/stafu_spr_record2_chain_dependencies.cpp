@@ -450,18 +450,18 @@ M297Stats m297Path(const std::vector<BitMatch>& chain,const std::vector<BitMatch
             const bool unique=occA==1&&occB==1;
             ++out.sampled[j];
             if(unique)++out.unique[j];else ++out.repeat[j];
-            std::printf("SPR_M297_SAMPLE resource=%s ordinalA=%zu ordinalB=%zu gap=%zu parameter=%zu path=%s segment=%zu bitA=%zu bitB=%zu matchBits=%zu sampleBits=%zu occurrencesA=%zu occurrencesB=%zu unique=%d\\n",
+            std::printf("SPR_M297_SAMPLE resource=%s ordinalA=%zu ordinalB=%zu gap=%zu parameter=%zu path=%s segment=%zu bitA=%zu bitB=%zu matchBits=%zu sampleBits=%zu occurrencesA=%zu occurrencesB=%zu unique=%d\n",
                 name,oa,ob,gap,parameter,path,i+1,m.a,m.b,m.len,sample,occA,occB,unique?1:0);
         }
     }
-    std::printf("SPR_M297_PATH resource=%s ordinalA=%zu ordinalB=%zu gap=%zu parameter=%zu path=%s changedRuns=%zu changedBits=%zu beforeBad=%zu beforeCompared=%zu beforeRate=%.6f afterBad=%zu afterCompared=%zu afterRate=%.6f combinedBad=%zu combinedCompared=%zu combinedRate=%.6f\\n",
+    std::printf("SPR_M297_PATH resource=%s ordinalA=%zu ordinalB=%zu gap=%zu parameter=%zu path=%s changedRuns=%zu changedBits=%zu beforeBad=%zu beforeCompared=%zu beforeRate=%.6f afterBad=%zu afterCompared=%zu afterRate=%.6f combinedBad=%zu combinedCompared=%zu combinedRate=%.6f\n",
         name,oa,ob,gap,parameter,path,out.runs,out.bits,
         out.beforeBad,out.beforeN,out.beforeN?double(out.beforeBad)/out.beforeN:0.0,
         out.afterBad,out.afterN,out.afterN?double(out.afterBad)/out.afterN:0.0,
         out.beforeBad+out.afterBad,out.beforeN+out.afterN,
         out.beforeN+out.afterN?double(out.beforeBad+out.afterBad)/double(out.beforeN+out.afterN):0.0);
     for(size_t j=0;j<5;++j)
-        std::printf("SPR_M297_UNIQUENESS resource=%s ordinalA=%zu ordinalB=%zu gap=%zu parameter=%zu path=%s sampleBits=%zu eligible=%zu unique=%zu repeated=%zu censored=%zu\\n",
+        std::printf("SPR_M297_UNIQUENESS resource=%s ordinalA=%zu ordinalB=%zu gap=%zu parameter=%zu path=%s sampleBits=%zu eligible=%zu unique=%zu repeated=%zu censored=%zu\n",
             name,oa,ob,gap,parameter,path,m297Lengths[j],out.sampled[j],out.unique[j],out.repeat[j],out.runs-out.sampled[j]);
     return out;
 }
@@ -476,7 +476,7 @@ void m297Compare(const char* name,size_t oa,size_t ob,size_t gap,size_t paramete
     const double xr=xn?double(xb)/xn:0.0,yr=yn?double(yb)/yn:0.0;
     const char* rate=xn==0||yn==0?"insufficient_samples":
         xr<yr?"baseline_lower":yr<xr?"alternative_lower":"equal";
-    std::printf("SPR_M297_COMPARE resource=%s ordinalA=%zu ordinalB=%zu gap=%zu parameter=%zu baselineBits=%zu alternativeBits=%zu baselineBoundaryCount=%zu alternativeBoundaryCount=%zu baselineRate=%.6f alternativeRate=%.6f lowerObservedRate=%s boundaryCountsEqual=%d\\n",
+    std::printf("SPR_M297_COMPARE resource=%s ordinalA=%zu ordinalB=%zu gap=%zu parameter=%zu baselineBits=%zu alternativeBits=%zu baselineBoundaryCount=%zu alternativeBoundaryCount=%zu baselineRate=%.6f alternativeRate=%.6f lowerObservedRate=%s boundaryCountsEqual=%d\n",
         name,oa,ob,gap,parameter,x.bits,y.bits,xn,yn,xr,yr,rate,x.runs==y.runs?1:0);
 }
 
