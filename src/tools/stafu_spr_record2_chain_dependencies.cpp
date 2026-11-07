@@ -278,6 +278,7 @@ bool sameBitMatch(const BitMatch& x,const BitMatch& y);
 bool m295Mode=false;
 bool m296Mode=false;
 bool m297Mode=false;
+bool m298Mode=false;
 size_t matchingFlank(const std::vector<uint8_t>& a,const std::vector<uint8_t>& b,
                      size_t baseA,size_t baseB,size_t nA,size_t nB,
                      size_t atA,size_t atB,bool left,size_t cap){
@@ -478,6 +479,59 @@ void m297Compare(const char* name,size_t oa,size_t ob,size_t gap,size_t paramete
         xr<yr?"baseline_lower":yr<xr?"alternative_lower":"equal";
     std::printf("SPR_M297_COMPARE resource=%s ordinalA=%zu ordinalB=%zu gap=%zu parameter=%zu baselineBits=%zu alternativeBits=%zu baselineBoundaryCount=%zu alternativeBoundaryCount=%zu baselineRate=%.6f alternativeRate=%.6f lowerObservedRate=%s boundaryCountsEqual=%d\n",
         name,oa,ob,gap,parameter,x.bits,y.bits,xn,yn,xr,yr,rate,x.runs==y.runs?1:0);
+}
+
+
+struct M298Flank {
+    size_t leftBad=0,leftN=0,rightBad=0,rightN=0,runs=0,bits=0;
+};
+M298Flank m298Measure(const std::vector<BitMatch>& path,const std::vector<BitMatch>& other,
+                     const std::vector<uint8_t>& a,const std::vector<uint8_t>& b,
+                     size_t ba,size_t bb,size_t na,size_t nb,size_t window){
+    M298Flank out;
+    for(const auto& m:path){
+        bool shared=false;
+        for(const auto& x:other)if(sameBitMatch(m,x)){shared=true;break;}
+        if(shared)continue;
+        ++out.runs;out.bits+=m.len;
+        size_t n=0;
+        out.leftBad+=flankMismatches(a,b,ba,bb,na,nb,m.a,m.b,true,window,n);out.leftN+=n;
+        out.rightBad+=flankMismatches(a,b,ba,bb,na,nb,m.a+m.len,m.b+m.len,false,window,n);out.rightN+=n;
+    }
+    return out;
+}
+const char* m298Winner(size_t badA,size_t nA,size_t badB,size_t nB){
+    if(!nA||!nB)return "insufficient_samples";
+    const auto lhs=badA*nB,rhs=badB*nA; // bounded: <= 32 * changed-run count
+    return lhs<rhs?"baseline_lower":lhs>rhs?"alternative_lower":"equal";
+}
+void m298Compare(const char* name,size_t oa,size_t ob,size_t gap,size_t parameter,
+                 const std::vector<BitMatch>& baseline,const std::vector<BitMatch>& alternative,
+                 const std::vector<uint8_t>& a,const std::vector<uint8_t>& b,
+                 size_t ba,size_t bb,size_t na,size_t nb){
+    const size_t windows[]={8,16,24,32};
+    const char* previous=nullptr;
+    size_t changes=0,comparable=0;
+    for(const size_t window:windows){
+        const auto x=m298Measure(baseline,alternative,a,b,ba,bb,na,nb,window);
+        const auto y=m298Measure(alternative,baseline,a,b,ba,bb,na,nb,window);
+        const size_t xb=x.leftBad+x.rightBad,xn=x.leftN+x.rightN;
+        const size_t yb=y.leftBad+y.rightBad,yn=y.leftN+y.rightN;
+        const char* winner=m298Winner(xb,xn,yb,yn);
+        const bool valid=xn&&yn;
+        if(valid){
+            if(previous&&std::strcmp(previous,winner)!=0)++changes;
+            previous=winner;++comparable;
+        }
+        std::printf("SPR_M298_WINDOW resource=%s ordinalA=%zu ordinalB=%zu gap=%zu parameter=%zu window=%zu baselineRuns=%zu alternativeRuns=%zu baselineBits=%zu alternativeBits=%zu baselineLeft=%zu/%zu alternativeLeft=%zu/%zu leftLower=%s baselineRight=%zu/%zu alternativeRight=%zu/%zu rightLower=%s baselineCombined=%zu/%zu alternativeCombined=%zu/%zu combinedLower=%s equalLeftSamples=%d equalRightSamples=%d equalCombinedSamples=%d\n",
+            name,oa,ob,gap,parameter,window,x.runs,y.runs,x.bits,y.bits,
+            x.leftBad,x.leftN,y.leftBad,y.leftN,m298Winner(x.leftBad,x.leftN,y.leftBad,y.leftN),
+            x.rightBad,x.rightN,y.rightBad,y.rightN,m298Winner(x.rightBad,x.rightN,y.rightBad,y.rightN),
+            xb,xn,yb,yn,winner,x.leftN==y.leftN?1:0,x.rightN==y.rightN?1:0,xn==yn?1:0);
+    }
+    std::printf("SPR_M298_STABILITY resource=%s ordinalA=%zu ordinalB=%zu gap=%zu parameter=%zu comparableWindows=%zu preferenceTransitions=%zu firstComparable=%s lastComparable=%s\n",
+        name,oa,ob,gap,parameter,comparable,changes,
+        comparable?"see_window_rows":"none",previous?previous:"none");
 }
 
 bool sameBitMatch(const BitMatch& x,const BitMatch& y){
@@ -807,6 +861,9 @@ void bitGap(const char* name,size_t oa,size_t ob,size_t gap,
         if((m295Mode||m296Mode)&&std::string(mode)=="leave_one_out"&&
            (parameter==3||parameter==4||parameter==5||parameter==6||parameter==9))
             boundaryEvidence(name,oa,ob,gap,mode,parameter,baseline,alternative.runs,a,b,ba,bb,na,nb);
+        if(m298Mode&&std::string(mode)=="leave_one_out"&&
+           (parameter==3||parameter==4||parameter==5||parameter==6||parameter==9))
+            m298Compare(name,oa,ob,gap,parameter,baseline,alternative.runs,a,b,ba,bb,na,nb);
         if(m297Mode&&std::string(mode)=="leave_one_out"&&
            (parameter==3||parameter==4||parameter==5||parameter==6||parameter==9))
             m297Compare(name,oa,ob,gap,parameter,baseline,alternative.runs,a,b,ba,bb,na,nb);
@@ -1149,5 +1206,13 @@ int stafuSprM297Record2BoundaryNormalized(const char* installed,const char* cd,c
     const int result=stafuSprM293Record2ChainDependencies(installed,cd,optional);
     m297Mode=false;
     if(result==0)std::puts("SPR_M297_NOTE Boundary rates use up to 16 flanking bits per side per changed match. Different run counts imply different sampled boundaries; rates are descriptive, not calibrated likelihoods. Exact-match interiors are guaranteed by candidate construction. Uniqueness sample lengths are nested and correlated, not independent evidence. Censored short runs are excluded from each sample-length denominator. No decoder-state or codec validation.");
+    return result;
+}
+
+int stafuSprM298Record2BoundarySensitivity(const char* installed,const char* cd,const char* optional){
+    m298Mode=true;
+    const int result=stafuSprM293Record2ChainDependencies(installed,cd,optional);
+    m298Mode=false;
+    if(result==0)std::puts("SPR_M298_NOTE Boundary windows 8/16/24/32 are nested and correlated; rates are descriptive. Equal sample counts are explicitly marked. Preference changes are measured only between comparable nonempty windows. Exact matches and uniqueness are separate observations, not decoder validation.");
     return result;
 }
