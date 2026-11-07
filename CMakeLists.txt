@@ -466,6 +466,8 @@ if(RELUVA_BUILD_TESTS)
     target_link_libraries(reluva_stafu_spr_gif_lzw_tests PRIVATE reluva_engines reluva_warnings)
     add_test(NAME stafu_spr_gif_lzw COMMAND reluva_stafu_spr_gif_lzw_tests)
 
+    add_test(NAME stafu_spr_m286_anchor_preservation COMMAND reluva-tool -stafu spr-m286-record2-anchor-preserving-global-chain __selftest__ unused)
+
     add_executable(reluva_stafu_spr_gif_structure_tests tests/test_stafu_spr_gif_structure.cpp)
     target_link_libraries(reluva_stafu_spr_gif_structure_tests PRIVATE reluva_engines reluva_warnings)
     add_test(NAME stafu_spr_gif_structure COMMAND reluva_stafu_spr_gif_structure_tests)
