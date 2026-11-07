@@ -6,6 +6,7 @@ int stafuSprDisplacementSegments(const char*,const char*,const char*);
 int stafuSprInteriorVerify(const char*,const char*,const char*);
 int stafuSprMaximalSpans(const char*,const char*,const char*);
 int stafuSprSpanReconcile(const char*,const char*,const char*);
+int stafuSprM288Record2CompetingAlignmentValidation(const char*,const char*,const char*);
 int stafuSprM287Record2AnchorConflictIntervalAnalysis(const char*,const char*,const char*);
 int stafuSprM286Record2AnchorPreservingGlobalChain(const char*,const char*,const char*);
 int stafuSprM285Record2GlobalBitChainOptimization(const char*,const char*,const char*);
@@ -245,6 +246,8 @@ int stafuToolMain(int argc, char** argv) {
         return stafuSprMaximalSpans(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-span-reconcile") == 0)
         return stafuSprSpanReconcile(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
+    if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-m288-record2-competing-alignment-validation") == 0)
+        return stafuSprM288Record2CompetingAlignmentValidation(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-m287-record2-anchor-conflict-interval-analysis") == 0)
         return stafuSprM287Record2AnchorConflictIntervalAnalysis(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-m286-record2-anchor-preserving-global-chain") == 0)
