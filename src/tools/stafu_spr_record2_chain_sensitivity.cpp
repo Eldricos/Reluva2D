@@ -357,14 +357,14 @@ void bitGap(const char* name,size_t oa,size_t ob,size_t gap,
         if(x.b!=y.b)return x.b<y.b;
         return x.len>y.len;
     });
-    std::vector<int> evidence;
+    std::vector<int> evidenceScores;
     for(const auto& m:pool){
         const size_t ua=occurrences(a,a,ba,ba+m.a,na,m.len);
         const size_t ub=occurrences(b,a,bb,ba+m.a,nb,m.len);
         size_t ln=0,rn=0;
         const size_t la=contextAgreement(a,b,ba,bb,na,nb,m,32,true,ln);
         const size_t ra=contextAgreement(a,b,ba,bb,na,nb,m,32,false,rn);
-        evidence.push_back(static_cast<int>(std::min(m.len,size_t(128)))+
+        evidenceScores.push_back(static_cast<int>(std::min(m.len,size_t(128)))+
             ((ua==1&&ub==1)?32:0)+
             ((ln+rn)?static_cast<int>(25*(la+ra)/(ln+rn)):0));
     }
@@ -384,7 +384,7 @@ void bitGap(const char* name,size_t oa,size_t ob,size_t gap,
         unsigned optimalWays=1; // empty solution, superseded by positive runs
         for(size_t i=0;i<pool.size();++i){
             const long long score=static_cast<long long>(pool[i].len)*4+
-                static_cast<long long>(weight)*evidence[i];
+                static_cast<long long>(weight)*evidenceScores[i];
             dp[i]=score;
             for(size_t j=0;j<i;++j){
                 if(pool[j].a+pool[j].len>pool[i].a||
