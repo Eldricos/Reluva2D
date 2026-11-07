@@ -280,6 +280,7 @@ bool m296Mode=false;
 bool m297Mode=false;
 bool m298Mode=false;
 bool m299Mode=false;
+bool m300Mode=false;
 size_t matchingFlank(const std::vector<uint8_t>& a,const std::vector<uint8_t>& b,
                      size_t baseA,size_t baseB,size_t nA,size_t nB,
                      size_t atA,size_t atB,bool left,size_t cap){
@@ -560,6 +561,86 @@ M299Geometry m299Geometry(const BitMatch& left,const BitMatch& middle,const BitM
     g.shiftTravel=static_cast<long long>(absDiff(g.enterShift)+absDiff(g.exitShift));
     return g;
 }
+
+struct M300Span {size_t start=0,len=0;};
+size_t m300Common(const std::vector<uint8_t>& a,size_t ba,M300Span x,
+                  const std::vector<uint8_t>& b,size_t bb,M300Span y,bool suffix){
+    size_t n=0,cap=std::min(x.len,y.len);
+    while(n<cap){
+        size_t ix=suffix?x.start+x.len-1-n:x.start+n;
+        size_t iy=suffix?y.start+y.len-1-n:y.start+n;
+        if(bitAt(a,ba+ix)!=bitAt(b,bb+iy))break;
+        ++n;
+    }
+    return n;
+}
+size_t m300PatternCount(const std::vector<uint8_t>& d,size_t base,M300Span span,size_t bits){
+    if(bits==0||bits>span.len)return 0;
+    size_t count=0;
+    for(size_t i=0;i+bits<=span.len;++i){
+        bool repeat=true;
+        for(size_t j=0;j<bits;++j)
+            if(bitAt(d,base+span.start+i+j)!=bitAt(d,base+span.start+j)){repeat=false;break;}
+        if(repeat)++count;
+    }
+    return count;
+}
+struct M300Offset {size_t bits=0;int shift=0;size_t matches=0;size_t compared=0;};
+M300Offset m300BestOffset(const std::vector<uint8_t>& a,size_t ba,M300Span x,
+                          const std::vector<uint8_t>& b,size_t bb,M300Span y,int radius){
+    M300Offset best;
+    for(int shift=-radius;shift<=radius;++shift){
+        size_t matched=0,compared=0;
+        for(size_t i=0;i<x.len;++i){
+            long long j=static_cast<long long>(i)+shift;
+            if(j<0||j>=static_cast<long long>(y.len))continue;
+            ++compared;
+            matched+=bitAt(a,ba+x.start+i)==bitAt(b,bb+y.start+static_cast<size_t>(j));
+        }
+        if(!compared)continue;
+        // Compare mismatch rate without rewarding a tiny overlapping interval.
+        if(!best.compared||matched*best.compared>best.matches*compared||
+           (matched*best.compared==best.matches*compared&&compared>best.compared)){
+            best={std::min(x.len,y.len),shift,matched,compared};
+        }
+    }
+    return best;
+}
+void m300Compare(const char* name,size_t oa,size_t ob,size_t gap,
+                 const std::vector<BitMatch>& baseline,const std::vector<BitMatch>& alternative,
+                 const std::vector<uint8_t>& a,const std::vector<uint8_t>& b,
+                 size_t ba,size_t bb,size_t na,size_t nb){
+    if(baseline.size()<10)return;
+    size_t li=0,ri=0;bool leftFound=false,rightFound=false;
+    for(size_t i=0;i<alternative.size();++i){
+        if(sameBitMatch(alternative[i],baseline[7])){li=i;leftFound=true;}
+        if(sameBitMatch(alternative[i],baseline[9])){ri=i;rightFound=true;}
+    }
+    if(!leftFound||!rightFound||ri!=li+2)return;
+    const auto& left=baseline[7];const auto& right=baseline[9];
+    const BitMatch mids[]={baseline[8],alternative[li+1]};
+    for(int p=0;p<2;++p){
+        const auto& m=mids[p];
+        if(left.a+left.len>m.a||left.b+left.len>m.b||
+           m.a+m.len>right.a||m.b+m.len>right.b||
+           right.a+right.len>na||right.b+right.len>nb)return;
+        const M300Span aa[]={{left.a+left.len,m.a-left.a-left.len},{m.a+m.len,right.a-m.a-m.len}};
+        const M300Span bb[]={{left.b+left.len,m.b-left.b-left.len},{m.b+m.len,right.b-m.b-m.len}};
+        for(int side=0;side<2;++side){
+            const auto x=aa[side],y=bb[side];
+            size_t prefix=m300Common(a,ba,x,b,bb,y,false);
+            size_t suffix=m300Common(a,ba,x,b,bb,y,true);
+            auto best=m300BestOffset(a,ba,x,b,bb,y,32);
+            std::printf("SPR_M300_SPAN resource=%s ordinalA=%zu ordinalB=%zu gap=%zu path=%s side=%s aStart=%zu aBits=%zu bStart=%zu bBits=%zu commonPrefix=%zu commonSuffix=%zu offset=%d offsetMatches=%zu offsetCompared=%zu aPattern8=%zu bPattern8=%zu aPattern16=%zu bPattern16=%zu\\n",
+                name,oa,ob,gap,p?"alternative":"baseline",side?"after":"before",
+                x.start,x.len,y.start,y.len,prefix,suffix,best.shift,best.matches,best.compared,
+                m300PatternCount(a,ba,x,8),m300PatternCount(b,bb,y,8),
+                m300PatternCount(a,ba,x,16),m300PatternCount(b,bb,y,16));
+        }
+    }
+    std::printf("SPR_M300_NOTE resource=%s ordinalA=%zu ordinalB=%zu gap=%zu interpretation=unmatched_bit_pattern_observations_not_codec_validation\\n",name,oa,ob,gap);
+}
+
 void m299Compare(const char* name,size_t oa,size_t ob,size_t gap,
                  const std::vector<BitMatch>& baseline,const std::vector<BitMatch>& alternative,
                  size_t na,size_t nb){
@@ -930,6 +1011,9 @@ void bitGap(const char* name,size_t oa,size_t ob,size_t gap,
         if((m295Mode||m296Mode)&&std::string(mode)=="leave_one_out"&&
            (parameter==3||parameter==4||parameter==5||parameter==6||parameter==9))
             boundaryEvidence(name,oa,ob,gap,mode,parameter,baseline,alternative.runs,a,b,ba,bb,na,nb);
+        if(m300Mode&&std::string(mode)=="leave_one_out"&&parameter==9&&
+           std::string(name)=="BRDGRIKR.SPR"&&oa==5&&ob==6&&gap==0)
+            m300Compare(name,oa,ob,gap,baseline,alternative.runs,a,b,ba,bb,na,nb);
         if(m299Mode&&std::string(mode)=="leave_one_out"&&parameter==9&&
            std::string(name)=="BRDGRIKR.SPR"&&oa==5&&ob==6&&gap==0)
             m299Compare(name,oa,ob,gap,baseline,alternative.runs,na,nb);
@@ -1300,5 +1384,13 @@ int stafuSprM299Record2Segment9Discrimination(const char* installed,const char* 
     const int result=stafuSprM293Record2ChainDependencies(installed,cd,optional);
     m299Mode=false;
     if(result==0)std::puts("SPR_M299_NOTE Segment-nine comparisons hold neighboring exact-match anchors fixed. Unmatched spans and shift travel are geometric descriptions of competing bit correspondences, not decoder-state or codec validation.");
+    return result;
+}
+
+int stafuSprM300Record2UnmatchedPatterns(const char* installed,const char* cd,const char* optional){
+    m300Mode=true;
+    const int result=stafuSprM293Record2ChainDependencies(installed,cd,optional);
+    m300Mode=false;
+    if(result==0)std::puts("SPR_M300_NOTE Prefix/suffix and local offsets are descriptive bit-pattern comparisons. Repeated pattern counts include the initial occurrence. No codec inference is asserted.");
     return result;
 }
