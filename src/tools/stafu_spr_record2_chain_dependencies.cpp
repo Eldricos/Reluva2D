@@ -283,6 +283,7 @@ bool m299Mode=false;
 bool m300Mode=false;
 bool m301Mode=false;
 bool m302Mode=false;
+bool m302Mode=false;
 size_t matchingFlank(const std::vector<uint8_t>& a,const std::vector<uint8_t>& b,
                      size_t baseA,size_t baseB,size_t nA,size_t nB,
                      size_t atA,size_t atB,bool left,size_t cap){
@@ -760,6 +761,83 @@ void m301Report(const char* name,size_t oa,size_t ob,size_t gap,
                     best.matches,best.compared,betterOrEqual,nearCount,nearMatches,nearCompared,x.len,y.len);
     }
 }
+
+uint32_t m302Rand(uint32_t& x){x^=x<<13;x^=x>>17;x^=x<<5;return x;}
+void m302Report(const char* name,size_t oa,size_t ob,size_t gap,const char* path,
+                const char* side,const char* sample,const std::vector<uint8_t>& a,size_t ba,
+                M300Span x,const std::vector<uint8_t>& b,size_t bb,M300Span y){
+    for(size_t minimum:{size_t(16),size_t(32),size_t(48)}){
+        const auto observed=m301Offsets(a,ba,x,b,bb,y,minimum);
+        if(observed.empty()){
+            std::printf("SPR_M302_NULL resource=%s ordinalA=%zu ordinalB=%zu gap=%zu path=%s side=%s sample=%s minOverlap=%zu eligible=0 status=insufficient_overlap\n",
+                        name,oa,ob,gap,path,side,sample,minimum);
+            continue;
+        }
+        const auto best=*std::max_element(observed.begin(),observed.end(),
+            [](const M301Score& l,const M301Score& r){return m301Better(r,l);});
+        uint32_t seed=0x9e3779b9u^static_cast<uint32_t>(x.start*131u+y.start*17u+x.len*65537u+y.len*257u+minimum*7u+
+                       (path[0]=='a'?123u:0u)+(side[0]=='a'?456u:0u)+(sample[0]=='c'?789u:0u));
+        if(!seed)seed=1;
+        constexpr size_t trials=256;
+        size_t exceed=0,boundary=0;
+        std::vector<size_t> perm(y.len);
+        for(size_t t=0;t<trials;++t){
+            for(size_t j=0;j<y.len;++j)perm[j]=j;
+            for(size_t j=y.len;j>1;--j)std::swap(perm[j-1],perm[m302Rand(seed)%j]);
+            M301Score nullBest{};bool found=false;
+            for(int shift=-32;shift<=32;++shift){
+                M301Score v{shift,0,0};
+                for(size_t i=0;i<x.len;++i){
+                    const long long j=static_cast<long long>(i)+shift;
+                    if(j<0||j>=static_cast<long long>(y.len))continue;
+                    ++v.compared;
+                    v.matches+=bitAt(a,ba+x.start+i)==bitAt(b,bb+y.start+perm[static_cast<size_t>(j)]);
+                }
+                if(v.compared<minimum)continue;
+                if(!found||m301Better(v,nullBest)){nullBest=v;found=true;}
+            }
+            if(!found)continue;
+            if(nullBest.matches*best.compared>=best.matches*nullBest.compared)++exceed;
+            if(nullBest.shift==-32||nullBest.shift==32)++boundary;
+        }
+        std::printf("SPR_M302_NULL resource=%s ordinalA=%zu ordinalB=%zu gap=%zu path=%s side=%s sample=%s minOverlap=%zu eligible=%zu bestShift=%d matches=%zu compared=%zu boundary=%d trials=%zu nullAtLeast=%zu tailNumerator=%zu tailDenominator=%zu nullBoundary=%zu nullMethod=bit_permutation exploratory=1\n",
+                    name,oa,ob,gap,path,side,sample,minimum,observed.size(),best.shift,best.matches,best.compared,
+                    (best.shift==-32||best.shift==32)?1:0,trials,exceed,exceed+1,trials+1,boundary);
+    }
+}
+void m302Compare(const char* name,size_t oa,size_t ob,size_t gap,
+                 const std::vector<BitMatch>& baseline,const std::vector<BitMatch>& alternative,
+                 const std::vector<uint8_t>& a,const std::vector<uint8_t>& b,
+                 size_t ba,size_t bb,size_t na,size_t nb){
+    if(baseline.size()<10)return;
+    size_t li=0,ri=0;bool lf=false,rf=false;
+    for(size_t i=0;i<alternative.size();++i){
+        if(sameBitMatch(alternative[i],baseline[7])){li=i;lf=true;}
+        if(sameBitMatch(alternative[i],baseline[9])){ri=i;rf=true;}
+    }
+    if(!lf||!rf||ri!=li+2)return;
+    const auto& left=baseline[7];const auto& right=baseline[9];
+    const BitMatch mids[]={baseline[8],alternative[li+1]};
+    for(int p=0;p<2;++p){
+        const auto& m=mids[p];
+        if(left.a+left.len>m.a||left.b+left.len>m.b||
+           m.a+m.len>right.a||m.b+m.len>right.b||
+           right.a+right.len>na||right.b+right.len>nb)return;
+        const M300Span ax[]={{left.a+left.len,m.a-left.a-left.len},{m.a+m.len,right.a-m.a-m.len}};
+        const M300Span by[]={{left.b+left.len,m.b-left.b-left.len},{m.b+m.len,right.b-m.b-m.len}};
+        for(int side=0;side<2;++side){
+            const char* path=p?"alternative":"baseline";
+            const char* sn=side?"after":"before";
+            m302Report(name,oa,ob,gap,path,sn,"target",a,ba,ax[side],b,bb,by[side]);
+            const size_t la=ax[side].len,lb=by[side].len;
+            if(la&&lb&&left.a>=la&&left.b>=lb)
+                m302Report(name,oa,ob,gap,path,sn,"control_before_left",a,ba,{left.a-la,la},b,bb,{left.b-lb,lb});
+            if(la&&lb&&right.a+right.len+la<=na&&right.b+right.len+lb<=nb)
+                m302Report(name,oa,ob,gap,path,sn,"control_after_right",a,ba,{right.a+right.len,la},b,bb,{right.b+right.len,lb});
+        }
+    }
+}
+
 void m301Compare(const char* name,size_t oa,size_t ob,size_t gap,
                  const std::vector<BitMatch>& baseline,const std::vector<BitMatch>& alternative,
                  const std::vector<uint8_t>& a,const std::vector<uint8_t>& b,
@@ -1209,6 +1287,9 @@ void bitGap(const char* name,size_t oa,size_t ob,size_t gap,
         if(m302Mode&&std::string(mode)=="leave_one_out"&&parameter==9&&
            std::string(name)=="BRDGRIKR.SPR"&&oa==5&&ob==6&&gap==0)
             m302Compare(name,oa,ob,gap,baseline,alternative.runs,a,b,ba,bb,na,nb);
+        if(m302Mode&&std::string(mode)=="leave_one_out"&&parameter==9&&
+           std::string(name)=="BRDGRIKR.SPR"&&oa==5&&ob==6&&gap==0)
+            m302Compare(name,oa,ob,gap,baseline,alternative.runs,a,b,ba,bb,na,nb);
         if(m301Mode&&std::string(mode)=="leave_one_out"&&parameter==9&&
            std::string(name)=="BRDGRIKR.SPR"&&oa==5&&ob==6&&gap==0)
             m301Compare(name,oa,ob,gap,baseline,alternative.runs,a,b,ba,bb,na,nb);
@@ -1609,5 +1690,13 @@ int stafuSprM302Record2OffsetSignificance(const char* installed,const char* cd,c
     const int result=stafuSprM293Record2ChainDependencies(installed,cd,optional);
     m302Mode=false;
     if(result==0)std::puts("SPR_M302_NOTE 256 deterministic bit permutations per sample and overlap threshold; each null trial searches all eligible +/-32 offsets. Empirical tail is descriptive, not a calibrated p-value: permutation destroys local dependence, tests share data, and paths were selected post hoc.");
+    return result;
+}
+
+int stafuSprM302Record2OffsetSignificance(const char* installed,const char* cd,const char* optional){
+    m302Mode=true;
+    const int result=stafuSprM293Record2ChainDependencies(installed,cd,optional);
+    m302Mode=false;
+    if(result==0)std::puts("SPR_M302_NOTE 256 deterministic bit permutations; each trial reoptimizes 65 offsets. Empirical tails are exploratory, not calibrated p-values; bit shuffling removes serial dependence and paths were selected post hoc.");
     return result;
 }
