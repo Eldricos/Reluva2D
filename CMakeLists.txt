@@ -183,6 +183,7 @@ add_executable(reluva-tool
     src/tools/stafu_spr_record2_shared_region_mapping.cpp
     src/tools/stafu_spr_record2_shifted_region_correspondence.cpp
     src/tools/stafu_spr_record2_shifted_match_boundary_analysis.cpp
+    src/tools/stafu_spr_record2_unmatched_interval_bit_analysis.cpp
     src/tools/stafu_spr_span_reconcile.cpp
     src/tools/stafu_bridge_inventory.cpp
     src/tools/stafu_computer_browse.cpp
