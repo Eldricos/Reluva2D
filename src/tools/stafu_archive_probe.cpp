@@ -6,6 +6,7 @@ int stafuSprDisplacementSegments(const char*,const char*,const char*);
 int stafuSprInteriorVerify(const char*,const char*,const char*);
 int stafuSprMaximalSpans(const char*,const char*,const char*);
 int stafuSprSpanReconcile(const char*,const char*,const char*);
+int stafuSprM298Record2BoundarySensitivity(const char*,const char*,const char*);
 int stafuSprM297Record2BoundaryNormalized(const char*,const char*,const char*);
 int stafuSprM296Record2EvidenceRanking(const char*,const char*,const char*);
 int stafuSprM295Record2BoundaryEvidence(const char*,const char*,const char*);
@@ -255,6 +256,8 @@ int stafuToolMain(int argc, char** argv) {
         return stafuSprMaximalSpans(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-span-reconcile") == 0)
         return stafuSprSpanReconcile(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
+    if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-m298-record2-boundary-sensitivity") == 0)
+        return stafuSprM298Record2BoundarySensitivity(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-m297-record2-boundary-normalized") == 0)
         return stafuSprM297Record2BoundaryNormalized(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-m296-record2-evidence-ranking") == 0)
