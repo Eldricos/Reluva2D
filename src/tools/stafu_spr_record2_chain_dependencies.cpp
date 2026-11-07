@@ -277,6 +277,7 @@ bool m294Mode=false;
 bool sameBitMatch(const BitMatch& x,const BitMatch& y);
 bool m295Mode=false;
 bool m296Mode=false;
+bool m297Mode=false;
 size_t matchingFlank(const std::vector<uint8_t>& a,const std::vector<uint8_t>& b,
                      size_t baseA,size_t baseB,size_t nA,size_t nB,
                      size_t atA,size_t atB,bool left,size_t cap){
@@ -417,6 +418,66 @@ void m296Compare(const char* name,size_t oa,size_t ob,size_t gap,size_t paramete
         static_cast<long long>(y.uniqueBits)-static_cast<long long>(x.uniqueBits),
         static_cast<long long>(y.beforeBad)-static_cast<long long>(x.beforeBad),
         static_cast<long long>(y.afterBad)-static_cast<long long>(x.afterBad),comparable?1:0);
+}
+
+
+struct M297Stats {
+    size_t runs=0,bits=0,beforeBad=0,beforeN=0,afterBad=0,afterN=0;
+    size_t sampled[5]={},unique[5]={},repeat[5]={};
+};
+constexpr size_t m297Lengths[5]={16,24,32,48,64};
+M297Stats m297Path(const std::vector<BitMatch>& chain,const std::vector<BitMatch>& other,
+                    const std::vector<uint8_t>& a,const std::vector<uint8_t>& b,
+                    size_t ba,size_t bb,size_t na,size_t nb,
+                    const char* name,size_t oa,size_t ob,size_t gap,size_t parameter,const char* path){
+    M297Stats out;
+    for(size_t i=0;i<chain.size();++i){
+        const auto& m=chain[i];
+        bool shared=false;
+        for(const auto& x:other)if(sameBitMatch(m,x)){shared=true;break;}
+        if(shared)continue;
+        ++out.runs;out.bits+=m.len;
+        size_t beforeN=0,afterN=0;
+        const size_t beforeBad=flankMismatches(a,b,ba,bb,na,nb,m.a,m.b,true,16,beforeN);
+        const size_t afterBad=flankMismatches(a,b,ba,bb,na,nb,m.a+m.len,m.b+m.len,false,16,afterN);
+        out.beforeBad+=beforeBad;out.beforeN+=beforeN;
+        out.afterBad+=afterBad;out.afterN+=afterN;
+        for(size_t j=0;j<5;++j){
+            const size_t sample=m297Lengths[j];
+            if(m.len<sample)continue; // Censored lengths are not called repeated.
+            const size_t occA=localOccurrences(a,ba,na,m.a,sample);
+            const size_t occB=localOccurrences(b,bb,nb,m.b,sample);
+            const bool unique=occA==1&&occB==1;
+            ++out.sampled[j];
+            if(unique)++out.unique[j];else ++out.repeat[j];
+            std::printf("SPR_M297_SAMPLE resource=%s ordinalA=%zu ordinalB=%zu gap=%zu parameter=%zu path=%s segment=%zu bitA=%zu bitB=%zu matchBits=%zu sampleBits=%zu occurrencesA=%zu occurrencesB=%zu unique=%d\\n",
+                name,oa,ob,gap,parameter,path,i+1,m.a,m.b,m.len,sample,occA,occB,unique?1:0);
+        }
+    }
+    std::printf("SPR_M297_PATH resource=%s ordinalA=%zu ordinalB=%zu gap=%zu parameter=%zu path=%s changedRuns=%zu changedBits=%zu beforeBad=%zu beforeCompared=%zu beforeRate=%.6f afterBad=%zu afterCompared=%zu afterRate=%.6f combinedBad=%zu combinedCompared=%zu combinedRate=%.6f\\n",
+        name,oa,ob,gap,parameter,path,out.runs,out.bits,
+        out.beforeBad,out.beforeN,out.beforeN?double(out.beforeBad)/out.beforeN:0.0,
+        out.afterBad,out.afterN,out.afterN?double(out.afterBad)/out.afterN:0.0,
+        out.beforeBad+out.afterBad,out.beforeN+out.afterN,
+        out.beforeN+out.afterN?double(out.beforeBad+out.afterBad)/double(out.beforeN+out.afterN):0.0);
+    for(size_t j=0;j<5;++j)
+        std::printf("SPR_M297_UNIQUENESS resource=%s ordinalA=%zu ordinalB=%zu gap=%zu parameter=%zu path=%s sampleBits=%zu eligible=%zu unique=%zu repeated=%zu censored=%zu\\n",
+            name,oa,ob,gap,parameter,path,m297Lengths[j],out.sampled[j],out.unique[j],out.repeat[j],out.runs-out.sampled[j]);
+    return out;
+}
+void m297Compare(const char* name,size_t oa,size_t ob,size_t gap,size_t parameter,
+                 const std::vector<BitMatch>& baseline,const std::vector<BitMatch>& alternative,
+                 const std::vector<uint8_t>& a,const std::vector<uint8_t>& b,
+                 size_t ba,size_t bb,size_t na,size_t nb){
+    const auto x=m297Path(baseline,alternative,a,b,ba,bb,na,nb,name,oa,ob,gap,parameter,"baseline");
+    const auto y=m297Path(alternative,baseline,a,b,ba,bb,na,nb,name,oa,ob,gap,parameter,"alternative");
+    const size_t xn=x.beforeN+x.afterN,yn=y.beforeN+y.afterN;
+    const size_t xb=x.beforeBad+x.afterBad,yb=y.beforeBad+y.afterBad;
+    const double xr=xn?double(xb)/xn:0.0,yr=yn?double(yb)/yn:0.0;
+    const char* rate=xn==0||yn==0?"insufficient_samples":
+        xr<yr?"baseline_lower":yr<xr?"alternative_lower":"equal";
+    std::printf("SPR_M297_COMPARE resource=%s ordinalA=%zu ordinalB=%zu gap=%zu parameter=%zu baselineBits=%zu alternativeBits=%zu baselineBoundaryCount=%zu alternativeBoundaryCount=%zu baselineRate=%.6f alternativeRate=%.6f lowerObservedRate=%s boundaryCountsEqual=%d\\n",
+        name,oa,ob,gap,parameter,x.bits,y.bits,xn,yn,xr,yr,rate,x.runs==y.runs?1:0);
 }
 
 bool sameBitMatch(const BitMatch& x,const BitMatch& y){
@@ -746,6 +807,9 @@ void bitGap(const char* name,size_t oa,size_t ob,size_t gap,
         if((m295Mode||m296Mode)&&std::string(mode)=="leave_one_out"&&
            (parameter==3||parameter==4||parameter==5||parameter==6||parameter==9))
             boundaryEvidence(name,oa,ob,gap,mode,parameter,baseline,alternative.runs,a,b,ba,bb,na,nb);
+        if(m297Mode&&std::string(mode)=="leave_one_out"&&
+           (parameter==3||parameter==4||parameter==5||parameter==6||parameter==9))
+            m297Compare(name,oa,ob,gap,parameter,baseline,alternative.runs,a,b,ba,bb,na,nb);
         if(m296Mode&&std::string(mode)=="leave_one_out"&&
            (parameter==3||parameter==4||parameter==5||parameter==6||parameter==9))
             m296Compare(name,oa,ob,gap,parameter,baseline,alternative.runs,a,b,ba,bb,na,nb);
@@ -1070,5 +1134,13 @@ int stafuSprM296Record2EvidenceRanking(const char* installed,const char* cd,cons
     const int result=stafuSprM293Record2ChainDependencies(installed,cd,optional);
     m296Mode=false;
     if(result==0)std::puts("SPR_M296_NOTE Changed-path evidence only; no scalar confidence, codec inference, or decoder-state claim. Dominance requires equal boundary sample counts.");
+    return result;
+}
+
+int stafuSprM297Record2BoundaryNormalized(const char* installed,const char* cd,const char* optional){
+    m297Mode=true;
+    const int result=stafuSprM293Record2ChainDependencies(installed,cd,optional);
+    m297Mode=false;
+    if(result==0)std::puts("SPR_M297_NOTE Boundary rates use up to 16 flanking bits per side per changed match. Different run counts imply different sampled boundaries; rates are descriptive, not calibrated likelihoods. Exact-match interiors are guaranteed by candidate construction. Uniqueness sample lengths are nested and correlated, not independent evidence. Censored short runs are excluded from each sample-length denominator. No decoder-state or codec validation.");
     return result;
 }
