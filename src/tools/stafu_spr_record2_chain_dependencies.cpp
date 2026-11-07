@@ -281,6 +281,7 @@ bool m297Mode=false;
 bool m298Mode=false;
 bool m299Mode=false;
 bool m300Mode=false;
+bool m301Mode=false;
 size_t matchingFlank(const std::vector<uint8_t>& a,const std::vector<uint8_t>& b,
                      size_t baseA,size_t baseB,size_t nA,size_t nB,
                      size_t atA,size_t atB,bool left,size_t cap){
@@ -606,6 +607,98 @@ M300Offset m300BestOffset(const std::vector<uint8_t>& a,size_t ba,M300Span x,
     }
     return best;
 }
+
+struct M301Score {int shift=0;size_t matches=0,compared=0;};
+std::vector<M301Score> m301Offsets(const std::vector<uint8_t>& a,size_t ba,M300Span x,
+                                  const std::vector<uint8_t>& b,size_t bb,M300Span y,
+                                  size_t minimum){
+    std::vector<M301Score> result;
+    for(int shift=-32;shift<=32;++shift){
+        size_t matches=0,compared=0;
+        for(size_t i=0;i<x.len;++i){
+            const long long j=static_cast<long long>(i)+shift;
+            if(j<0||j>=static_cast<long long>(y.len))continue;
+            ++compared;
+            matches+=bitAt(a,ba+x.start+i)==bitAt(b,bb+y.start+static_cast<size_t>(j));
+        }
+        if(compared>=minimum)result.push_back({shift,matches,compared});
+    }
+    return result;
+}
+bool m301Better(const M301Score& x,const M301Score& y){
+    const auto lhs=x.matches*y.compared,rhs=y.matches*x.compared;
+    if(lhs!=rhs)return lhs>rhs;
+    if(x.compared!=y.compared)return x.compared>y.compared;
+    return std::abs(x.shift)<std::abs(y.shift);
+}
+void m301Report(const char* name,size_t oa,size_t ob,size_t gap,
+                const char* path,const char* side,const char* sample,
+                const std::vector<uint8_t>& a,size_t ba,M300Span x,
+                const std::vector<uint8_t>& b,size_t bb,M300Span y){
+    for(size_t minimum:{size_t(16),size_t(32),size_t(48)}){
+        auto scores=m301Offsets(a,ba,x,b,bb,y,minimum);
+        if(scores.empty()){
+            std::printf("SPR_M301_OFFSET resource=%s ordinalA=%zu ordinalB=%zu gap=%zu path=%s side=%s sample=%s minOverlap=%zu eligible=0 status=insufficient_overlap\\n",
+                        name,oa,ob,gap,path,side,sample,minimum);
+            continue;
+        }
+        auto best=*std::max_element(scores.begin(),scores.end(),m301Better);
+        // The nearest eligible offsets measure how sharply the selected maximum peaks.
+        size_t nearMatches=0,nearCompared=0,nearCount=0;
+        for(const auto& score:scores){
+            if(score.shift==best.shift-1||score.shift==best.shift+1){
+                nearMatches+=score.matches;nearCompared+=score.compared;++nearCount;
+            }
+        }
+        size_t betterOrEqual=0;
+        for(const auto& score:scores)
+            if(score.matches*best.compared>=best.matches*score.compared)++betterOrEqual;
+        std::printf("SPR_M301_OFFSET resource=%s ordinalA=%zu ordinalB=%zu gap=%zu path=%s side=%s sample=%s minOverlap=%zu eligible=%zu bestShift=%d bestMatches=%zu bestCompared=%zu tiedOrBetter=%zu adjacentCount=%zu adjacentMatches=%zu adjacentCompared=%zu aBits=%zu bBits=%zu interpretation=descriptive\\n",
+                    name,oa,ob,gap,path,side,sample,minimum,scores.size(),best.shift,
+                    best.matches,best.compared,betterOrEqual,nearCount,nearMatches,nearCompared,x.len,y.len);
+    }
+}
+void m301Compare(const char* name,size_t oa,size_t ob,size_t gap,
+                 const std::vector<BitMatch>& baseline,const std::vector<BitMatch>& alternative,
+                 const std::vector<uint8_t>& a,const std::vector<uint8_t>& b,
+                 size_t ba,size_t bb,size_t na,size_t nb){
+    if(baseline.size()<10)return;
+    size_t li=0,ri=0;bool lf=false,rf=false;
+    for(size_t i=0;i<alternative.size();++i){
+        if(sameBitMatch(alternative[i],baseline[7])){li=i;lf=true;}
+        if(sameBitMatch(alternative[i],baseline[9])){ri=i;rf=true;}
+    }
+    if(!lf||!rf||ri!=li+2)return;
+    const auto& left=baseline[7];const auto& right=baseline[9];
+    const BitMatch mids[]={baseline[8],alternative[li+1]};
+    for(int p=0;p<2;++p){
+        const auto& m=mids[p];
+        if(left.a+left.len>m.a||left.b+left.len>m.b||
+           m.a+m.len>right.a||m.b+m.len>right.b||
+           right.a+right.len>na||right.b+right.len>nb)return;
+        const M300Span ax[]={{left.a+left.len,m.a-left.a-left.len},{m.a+m.len,right.a-m.a-m.len}};
+        const M300Span by[]={{left.b+left.len,m.b-left.b-left.len},{m.b+m.len,right.b-m.b-m.len}};
+        for(int side=0;side<2;++side){
+            const char* path=p?"alternative":"baseline";
+            const char* sideName=side?"after":"before";
+            m301Report(name,oa,ob,gap,path,sideName,"target",a,ba,ax[side],b,bb,by[side]);
+            // Fixed-location controls, sampled from outside the two exact-match anchors.
+            // These are descriptive within-record controls, not independent null draws.
+            const size_t lengthA=ax[side].len,lengthB=by[side].len;
+            if(lengthA&&lengthB&&left.a>=lengthA&&left.b>=lengthB)
+                m301Report(name,oa,ob,gap,path,sideName,"control_before_left",
+                           a,ba,{left.a-lengthA,lengthA},b,bb,{left.b-lengthB,lengthB});
+            else
+                std::printf("SPR_M301_CONTROL_SKIP path=%s side=%s reason=insufficient_pre_anchor_bits\\n",path,sideName);
+            if(lengthA&&lengthB&&right.a+right.len+lengthA<=na&&right.b+right.len+lengthB<=nb)
+                m301Report(name,oa,ob,gap,path,sideName,"control_after_right",
+                           a,ba,{right.a+right.len,lengthA},b,bb,{right.b+right.len,lengthB});
+            else
+                std::printf("SPR_M301_CONTROL_SKIP path=%s side=%s reason=insufficient_post_anchor_bits\\n",path,sideName);
+        }
+    }
+}
+
 void m300Compare(const char* name,size_t oa,size_t ob,size_t gap,
                  const std::vector<BitMatch>& baseline,const std::vector<BitMatch>& alternative,
                  const std::vector<uint8_t>& a,const std::vector<uint8_t>& b,
@@ -1011,6 +1104,9 @@ void bitGap(const char* name,size_t oa,size_t ob,size_t gap,
         if((m295Mode||m296Mode)&&std::string(mode)=="leave_one_out"&&
            (parameter==3||parameter==4||parameter==5||parameter==6||parameter==9))
             boundaryEvidence(name,oa,ob,gap,mode,parameter,baseline,alternative.runs,a,b,ba,bb,na,nb);
+        if(m301Mode&&std::string(mode)=="leave_one_out"&&parameter==9&&
+           std::string(name)=="BRDGRIKR.SPR"&&oa==5&&ob==6&&gap==0)
+            m301Compare(name,oa,ob,gap,baseline,alternative.runs,a,b,ba,bb,na,nb);
         if(m300Mode&&std::string(mode)=="leave_one_out"&&parameter==9&&
            std::string(name)=="BRDGRIKR.SPR"&&oa==5&&ob==6&&gap==0)
             m300Compare(name,oa,ob,gap,baseline,alternative.runs,a,b,ba,bb,na,nb);
@@ -1392,5 +1488,13 @@ int stafuSprM300Record2UnmatchedPatterns(const char* installed,const char* cd,co
     const int result=stafuSprM293Record2ChainDependencies(installed,cd,optional);
     m300Mode=false;
     if(result==0)std::puts("SPR_M300_NOTE Prefix/suffix and local offsets are descriptive bit-pattern comparisons. Repeated pattern counts include the initial occurrence. No codec inference is asserted.");
+    return result;
+}
+
+int stafuSprM301Record2OffsetRobustness(const char* installed,const char* cd,const char* optional){
+    m301Mode=true;
+    const int result=stafuSprM293Record2ChainDependencies(installed,cd,optional);
+    m301Mode=false;
+    if(result==0)std::puts("SPR_M301_NOTE Fixed +/-32 offsets, minimum overlaps 16/32/48; controls use flanking record regions. Observational only, not codec validation.");
     return result;
 }
