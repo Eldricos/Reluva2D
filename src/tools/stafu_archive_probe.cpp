@@ -6,6 +6,7 @@ int stafuSprDisplacementSegments(const char*,const char*,const char*);
 int stafuSprInteriorVerify(const char*,const char*,const char*);
 int stafuSprMaximalSpans(const char*,const char*,const char*);
 int stafuSprSpanReconcile(const char*,const char*,const char*);
+int stafuSprM280Record2ShiftedMatchBoundaryAnalysis(const char*,const char*,const char*);
 int stafuSprM279Record2ShiftedRegionCorrespondence(const char*,const char*,const char*);
 int stafuSprM278Record2SharedRegionMapping(const char*,const char*,const char*);
 int stafuSprM277Record2CommonPrefixStructure(const char*,const char*,const char*);
@@ -237,6 +238,8 @@ int stafuToolMain(int argc, char** argv) {
         return stafuSprMaximalSpans(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-span-reconcile") == 0)
         return stafuSprSpanReconcile(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
+    if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-m280-record2-shifted-match-boundary-analysis") == 0)
+        return stafuSprM280Record2ShiftedMatchBoundaryAnalysis(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-m279-record2-shifted-region-correspondence") == 0)
         return stafuSprM279Record2ShiftedRegionCorrespondence(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-m278-record2-shared-region-mapping") == 0)
