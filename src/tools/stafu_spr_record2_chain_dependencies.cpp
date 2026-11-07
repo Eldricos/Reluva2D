@@ -629,7 +629,7 @@ bool m301Better(const M301Score& x,const M301Score& y){
     const auto lhs=x.matches*y.compared,rhs=y.matches*x.compared;
     if(lhs!=rhs)return lhs>rhs;
     if(x.compared!=y.compared)return x.compared>y.compared;
-    return std::abs(x.shift)<std::abs(y.shift);
+    return (x.shift<0?-x.shift:x.shift)<(y.shift<0?-y.shift:y.shift);
 }
 void m301Report(const char* name,size_t oa,size_t ob,size_t gap,
                 const char* path,const char* side,const char* sample,
@@ -642,7 +642,7 @@ void m301Report(const char* name,size_t oa,size_t ob,size_t gap,
                         name,oa,ob,gap,path,side,sample,minimum);
             continue;
         }
-        auto best=*std::max_element(scores.begin(),scores.end(),m301Better);
+        auto best=*std::max_element(scores.begin(),scores.end(),[](const M301Score& x,const M301Score& y){return m301Better(y,x);});
         // The nearest eligible offsets measure how sharply the selected maximum peaks.
         size_t nearMatches=0,nearCompared=0,nearCount=0;
         for(const auto& score:scores){
