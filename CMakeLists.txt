@@ -188,6 +188,7 @@ add_executable(reluva-tool
     src/tools/stafu_spr_record2_bit_chain_transition_analysis.cpp
     src/tools/stafu_spr_record2_bit_chain_local_realignment.cpp
     src/tools/stafu_spr_record2_global_bit_chain_optimization.cpp
+    src/tools/stafu_spr_record2_anchor_preserving_global_chain.cpp
     src/tools/stafu_spr_span_reconcile.cpp
     src/tools/stafu_bridge_inventory.cpp
     src/tools/stafu_computer_browse.cpp
