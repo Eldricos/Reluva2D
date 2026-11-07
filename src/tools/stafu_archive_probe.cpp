@@ -6,6 +6,7 @@ int stafuSprDisplacementSegments(const char*,const char*,const char*);
 int stafuSprInteriorVerify(const char*,const char*,const char*);
 int stafuSprMaximalSpans(const char*,const char*,const char*);
 int stafuSprSpanReconcile(const char*,const char*,const char*);
+int stafuSprM292Record2PoolRobustness(const char*,const char*,const char*);
 int stafuSprM291Record2ChainSensitivity(const char*,const char*,const char*);
 int stafuSprM290Record2WeightedGlobalChain(const char*,const char*,const char*);
 int stafuSprM289Record2AnchorReliabilityScoring(const char*,const char*,const char*);
@@ -249,6 +250,8 @@ int stafuToolMain(int argc, char** argv) {
         return stafuSprMaximalSpans(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-span-reconcile") == 0)
         return stafuSprSpanReconcile(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
+    if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-m292-record2-pool-robustness") == 0)
+        return stafuSprM292Record2PoolRobustness(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-m291-record2-chain-sensitivity") == 0)
         return stafuSprM291Record2ChainSensitivity(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-m290-record2-weighted-global-chain") == 0)
