@@ -302,7 +302,7 @@ void transitionAnalysis(const char* name,size_t oa,size_t ob,size_t gap,
             size_t oldBits=0,newBits=0;
             for(size_t i=oldBegin;i<oldEnd;++i)oldBits+=baseline[i].len;
             for(size_t i=newBegin;i<newEnd;++i)newBits+=alternative[i].len;
-            std::printf("SPR_M294_REGION resource=%s ordinalA=%zu ordinalB=%zu gap=%zu mode=%s parameter=%zu region=%zu leftAnchor=%d rightAnchor=%d fromA=%zu toA=%zu fromB=%zu toB=%zu oldRuns=%zu newRuns=%zu oldBits=%zu newBits=%zu coverageDelta=%lld leftShift=%lld rightShift=%lld rejoined=%d\\n",
+            std::printf("SPR_M294_REGION resource=%s ordinalA=%zu ordinalB=%zu gap=%zu mode=%s parameter=%zu region=%zu leftAnchor=%d rightAnchor=%d fromA=%zu toA=%zu fromB=%zu toB=%zu oldRuns=%zu newRuns=%zu oldBits=%zu newBits=%zu coverageDelta=%lld leftShift=%lld rightShift=%lld rejoined=%d\n",
                 name,oa,ob,gap,mode,parameter,boundary+1,oldBegin>0?1:0,terminal?0:1,
                 prevA,nextA,prevB,nextB,oldEnd-oldBegin,newEnd-newBegin,oldBits,newBits,
                 static_cast<long long>(newBits)-static_cast<long long>(oldBits),
@@ -319,7 +319,7 @@ void transitionAnalysis(const char* name,size_t oa,size_t ob,size_t gap,
                     const size_t b=last?nextB:runs[i].b;
                     const long long shiftAfter=static_cast<long long>(b)-static_cast<long long>(a);
                     const size_t gapA=a-cursorA,gapB=b-cursorB;
-                    std::printf("SPR_M294_TRANSITION resource=%s ordinalA=%zu ordinalB=%zu gap=%zu mode=%s parameter=%zu region=%zu path=%s step=%zu fromA=%zu toA=%zu fromB=%zu toB=%zu unmatchedA=%zu unmatchedB=%zu unmatchedDelta=%lld shiftBefore=%lld shiftAfter=%lld shiftDelta=%lld terminal=%d\\n",
+                    std::printf("SPR_M294_TRANSITION resource=%s ordinalA=%zu ordinalB=%zu gap=%zu mode=%s parameter=%zu region=%zu path=%s step=%zu fromA=%zu toA=%zu fromB=%zu toB=%zu unmatchedA=%zu unmatchedB=%zu unmatchedDelta=%lld shiftBefore=%lld shiftAfter=%lld shiftDelta=%lld terminal=%d\n",
                         name,oa,ob,gap,mode,parameter,boundary+1,path==0?"baseline":"alternative",
                         i-begin+1,cursorA,a,cursorB,b,gapA,gapB,
                         static_cast<long long>(gapB)-static_cast<long long>(gapA),
@@ -876,7 +876,7 @@ bool selfTest(){
     const std::vector<BitMatch> reference={{0,0,40,0},{50,50,30,0},{90,90,10,0}};
     if(!validateChain(changed,110,110)||!validateChain(reference,110,110))return false;
     // M294 must accept both a shared downstream rejoin and a changed internal path.
-    transitionAnalysis("SELFTEST",1,2,0,"leave_one_out",3,reference,changed,110,110);
+    if(m294Mode)transitionAnalysis("SELFTEST",1,2,0,"leave_one_out",3,reference,changed,110,110);
     std::puts("SPR_M293_SELFTEST PASS");
     return true;
 }
