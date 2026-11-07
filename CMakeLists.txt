@@ -490,6 +490,7 @@ if(RELUVA_BUILD_TESTS)
     add_test(NAME stafu_spr_m300_unmatched_patterns COMMAND reluva-tool -stafu spr-m300-record2-unmatched-patterns __selftest__ unused)
     add_test(NAME stafu_spr_m301_offset_robustness COMMAND reluva-tool -stafu spr-m301-record2-offset-robustness __selftest__ unused)
     add_test(NAME stafu_spr_m302_offset_significance COMMAND reluva-tool -stafu spr-m302-record2-offset-significance __selftest__ unused)
+    add_test(NAME stafu_spr_m303_structure_controls COMMAND reluva-tool -stafu spr-m303-record2-structure-controls __selftest__ unused)
 
     add_executable(reluva_stafu_spr_gif_structure_tests tests/test_stafu_spr_gif_structure.cpp)
     target_link_libraries(reluva_stafu_spr_gif_structure_tests PRIVATE reluva_engines reluva_warnings)
