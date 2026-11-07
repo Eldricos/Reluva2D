@@ -274,6 +274,7 @@ size_t diagnosticGaps=0,diagnosticConflicts=0,diagnosticCompeting=0,diagnosticIn
 
 bool m294Mode=false;
 
+bool sameBitMatch(const BitMatch& x,const BitMatch& y);
 bool m295Mode=false;
 size_t matchingFlank(const std::vector<uint8_t>& a,const std::vector<uint8_t>& b,
                      size_t baseA,size_t baseB,size_t nA,size_t nB,
