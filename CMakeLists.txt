@@ -482,6 +482,7 @@ if(RELUVA_BUILD_TESTS)
     add_test(NAME stafu_spr_m292_pool_robustness COMMAND reluva-tool -stafu spr-m292-record2-pool-robustness __selftest__ unused)
     add_test(NAME stafu_spr_m293_chain_dependencies COMMAND reluva-tool -stafu spr-m293-record2-chain-dependencies __selftest__ unused)
     add_test(NAME stafu_spr_m294_alternative_transitions COMMAND reluva-tool -stafu spr-m294-record2-alternative-transitions __selftest__ unused)
+    add_test(NAME stafu_spr_m295_boundary_evidence COMMAND reluva-tool -stafu spr-m295-record2-boundary-evidence __selftest__ unused)
 
     add_executable(reluva_stafu_spr_gif_structure_tests tests/test_stafu_spr_gif_structure.cpp)
     target_link_libraries(reluva_stafu_spr_gif_structure_tests PRIVATE reluva_engines reluva_warnings)
