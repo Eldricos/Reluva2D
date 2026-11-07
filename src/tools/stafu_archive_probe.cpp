@@ -6,6 +6,7 @@ int stafuSprDisplacementSegments(const char*,const char*,const char*);
 int stafuSprInteriorVerify(const char*,const char*,const char*);
 int stafuSprMaximalSpans(const char*,const char*,const char*);
 int stafuSprSpanReconcile(const char*,const char*,const char*);
+int stafuSprM296Record2EvidenceRanking(const char*,const char*,const char*);
 int stafuSprM295Record2BoundaryEvidence(const char*,const char*,const char*);
 int stafuSprM294Record2AlternativeTransitions(const char*,const char*,const char*);
 int stafuSprM293Record2ChainDependencies(const char*,const char*,const char*);
@@ -253,6 +254,8 @@ int stafuToolMain(int argc, char** argv) {
         return stafuSprMaximalSpans(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-span-reconcile") == 0)
         return stafuSprSpanReconcile(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
+    if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-m296-record2-evidence-ranking") == 0)
+        return stafuSprM296Record2EvidenceRanking(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-m295-record2-boundary-evidence") == 0)
         return stafuSprM295Record2BoundaryEvidence(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-m294-record2-alternative-transitions") == 0)
