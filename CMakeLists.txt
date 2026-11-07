@@ -484,6 +484,7 @@ if(RELUVA_BUILD_TESTS)
     add_test(NAME stafu_spr_m294_alternative_transitions COMMAND reluva-tool -stafu spr-m294-record2-alternative-transitions __selftest__ unused)
     add_test(NAME stafu_spr_m295_boundary_evidence COMMAND reluva-tool -stafu spr-m295-record2-boundary-evidence __selftest__ unused)
     add_test(NAME stafu_spr_m296_evidence_ranking COMMAND reluva-tool -stafu spr-m296-record2-evidence-ranking __selftest__ unused)
+    add_test(NAME stafu_spr_m297_boundary_normalized COMMAND reluva-tool -stafu spr-m297-record2-boundary-normalized __selftest__ unused)
 
     add_executable(reluva_stafu_spr_gif_structure_tests tests/test_stafu_spr_gif_structure.cpp)
     target_link_libraries(reluva_stafu_spr_gif_structure_tests PRIVATE reluva_engines reluva_warnings)
