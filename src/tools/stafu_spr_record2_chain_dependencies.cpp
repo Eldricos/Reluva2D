@@ -283,6 +283,7 @@ bool m299Mode=false;
 bool m300Mode=false;
 bool m301Mode=false;
 bool m302Mode=false;
+bool m303Mode=false;
 size_t matchingFlank(const std::vector<uint8_t>& a,const std::vector<uint8_t>& b,
                      size_t baseA,size_t baseB,size_t nA,size_t nB,
                      size_t atA,size_t atB,bool left,size_t cap){
@@ -723,6 +724,107 @@ void m302Compare(const char* name,size_t oa,size_t ob,size_t gap,
                 m302Report(name,oa,ob,gap,path,sideName,"control_after_right",
                            a,ba,{right.a+right.len,la},b,bb,{right.b+right.len,lb});
             else std::printf("SPR_M302_CONTROL_SKIP path=%s side=%s reason=insufficient_post_anchor_bits\n",path,sideName);
+        }
+    }
+}
+
+// M303: structure-preserving descriptive controls. Reoptimize all eligible offsets
+// under each surrogate, and compare at the observed winner's exact overlap.
+void m303Report(const char* name,size_t oa,size_t ob,size_t gap,const char* path,
+                const char* side,const char* sample,const std::vector<uint8_t>& a,size_t ba,
+                M300Span x,const std::vector<uint8_t>& b,size_t bb,M300Span y){
+    if(!x.len||!y.len)return;
+    const size_t trials=256;
+    for(size_t minimum:{size_t(16),size_t(32),size_t(48)}){
+        const auto observed=m302Best(a,ba,x,b,bb,y,minimum,nullptr);
+        if(!observed.eligible){
+            std::printf("SPR_M303_CONTROL path=%s side=%s sample=%s minOverlap=%zu status=insufficient_overlap\n",
+                        path,side,sample,minimum);
+            continue;
+        }
+        const auto winner=observed.score;
+        const bool edge=winner.shift==-32||winner.shift==32;
+        // Match the observed overlap exactly, not merely the minimum overlap.
+        const size_t overlap=winner.compared;
+        const size_t startA=winner.shift<0?static_cast<size_t>(-winner.shift):0;
+        const size_t startB=winner.shift>0?static_cast<size_t>(winner.shift):0;
+        const size_t fixedA=startA,fixedB=startB;
+        const size_t maxBlock=16;
+        for(size_t block:{size_t(0),size_t(4),size_t(8),maxBlock}){
+            uint32_t seed=0x85ebca6bu^static_cast<uint32_t>(x.start*131u+y.start*17u+x.len*65537u+
+                         y.len*257u+minimum*7u+block*19u+(path[0]=='a'?123u:0u)+
+                         (side[0]=='a'?456u:0u)+(sample[0]=='c'?789u:0u));
+            if(!seed)seed=1;
+            size_t nullAtLeast=0,fixedAtLeast=0,nullEdge=0,valid=0;
+            std::vector<size_t> perm(y.len);
+            for(size_t t=0;t<trials;++t){
+                if(block==0){
+                    // Circular rotation retains the entire cyclic bit ordering.
+                    const size_t rotation=y.len>1?1+m302Random(seed)%(y.len-1):0;
+                    for(size_t j=0;j<y.len;++j)perm[j]=(j+rotation)%y.len;
+                }else{
+                    // Shuffle intact blocks, including a possible short tail block.
+                    const size_t count=(y.len+block-1)/block;
+                    std::vector<size_t> order(count);
+                    for(size_t j=0;j<count;++j)order[j]=j;
+                    for(size_t j=count;j>1;--j)std::swap(order[j-1],order[m302Random(seed)%j]);
+                    // Variable-length final blocks must remain valid: concatenate blocks.
+                    size_t k=0;
+                    for(size_t id:order)
+                        for(size_t j=id*block;j<std::min(y.len,(id+1)*block);++j)perm[k++]=j;
+                }
+                const auto best=m302Best(a,ba,x,b,bb,y,minimum,&perm);
+                if(!best.eligible)continue;
+                ++valid;
+                if(best.score.matches*winner.compared>=winner.matches*best.score.compared)++nullAtLeast;
+                if(best.score.shift==-32||best.score.shift==32)++nullEdge;
+                size_t matched=0;
+                for(size_t i=0;i<overlap;++i)
+                    matched+=bitAt(a,ba+x.start+fixedA+i)==
+                             bitAt(b,bb+y.start+perm[fixedB+i]);
+                if(matched>=winner.matches)++fixedAtLeast;
+            }
+            std::printf("SPR_M303_CONTROL resource=%s ordinalA=%zu ordinalB=%zu gap=%zu path=%s side=%s sample=%s minOverlap=%zu eligible=%zu observedShift=%d observedMatches=%zu observedCompared=%zu observedBoundary=%d method=%s blockBits=%zu trials=%zu valid=%zu searchedAtLeast=%zu fixedOverlapAtLeast=%zu nullBoundary=%zu interpretation=exploratory_structure_preserving\n",
+                name,oa,ob,gap,path,side,sample,minimum,observed.eligible,
+                winner.shift,winner.matches,winner.compared,edge?1:0,
+                block==0?"circular_shift":"block_permutation",block,trials,valid,nullAtLeast,fixedAtLeast,nullEdge);
+        }
+    }
+}
+
+void m303Compare(const char* name,size_t oa,size_t ob,size_t gap,
+                 const std::vector<BitMatch>& baseline,const std::vector<BitMatch>& alternative,
+                 const std::vector<uint8_t>& a,const std::vector<uint8_t>& b,
+                 size_t ba,size_t bb,size_t na,size_t nb){
+    if(baseline.size()<10)return;
+    size_t li=0,ri=0;bool lf=false,rf=false;
+    for(size_t i=0;i<alternative.size();++i){
+        if(sameBitMatch(alternative[i],baseline[7])){li=i;lf=true;}
+        if(sameBitMatch(alternative[i],baseline[9])){ri=i;rf=true;}
+    }
+    if(!lf||!rf||ri!=li+2)return;
+    const auto& left=baseline[7];const auto& right=baseline[9];
+    const BitMatch mids[]={baseline[8],alternative[li+1]};
+    for(int p=0;p<2;++p){
+        const auto& m=mids[p];
+        if(left.a+left.len>m.a||left.b+left.len>m.b||
+           m.a+m.len>right.a||m.b+m.len>right.b||
+           right.a+right.len>na||right.b+right.len>nb)return;
+        const M300Span ax[]={{left.a+left.len,m.a-left.a-left.len},{m.a+m.len,right.a-m.a-m.len}};
+        const M300Span by[]={{left.b+left.len,m.b-left.b-left.len},{m.b+m.len,right.b-m.b-m.len}};
+        for(int side=0;side<2;++side){
+            const char* path=p?"alternative":"baseline";
+            const char* sideName=side?"after":"before";
+            m303Report(name,oa,ob,gap,path,sideName,"target",a,ba,ax[side],b,bb,by[side]);
+            const size_t la=ax[side].len,lb=by[side].len;
+            if(la&&lb&&left.a>=la&&left.b>=lb)
+                m303Report(name,oa,ob,gap,path,sideName,"control_before_left",
+                           a,ba,{left.a-la,la},b,bb,{left.b-lb,lb});
+            else std::printf("SPR_M303_CONTROL_SKIP path=%s side=%s reason=insufficient_pre_anchor_bits\n",path,sideName);
+            if(la&&lb&&right.a+right.len+la<=na&&right.b+right.len+lb<=nb)
+                m303Report(name,oa,ob,gap,path,sideName,"control_after_right",
+                           a,ba,{right.a+right.len,la},b,bb,{right.b+right.len,lb});
+            else std::printf("SPR_M303_CONTROL_SKIP path=%s side=%s reason=insufficient_post_anchor_bits\n",path,sideName);
         }
     }
 }
@@ -1207,6 +1309,9 @@ void bitGap(const char* name,size_t oa,size_t ob,size_t gap,
         if((m295Mode||m296Mode)&&std::string(mode)=="leave_one_out"&&
            (parameter==3||parameter==4||parameter==5||parameter==6||parameter==9))
             boundaryEvidence(name,oa,ob,gap,mode,parameter,baseline,alternative.runs,a,b,ba,bb,na,nb);
+        if(m303Mode&&std::string(mode)=="leave_one_out"&&parameter==9&&
+           std::string(name)=="BRDGRIKR.SPR"&&oa==5&&ob==6&&gap==0)
+            m303Compare(name,oa,ob,gap,baseline,alternative.runs,a,b,ba,bb,na,nb);
         if(m302Mode&&std::string(mode)=="leave_one_out"&&parameter==9&&
            std::string(name)=="BRDGRIKR.SPR"&&oa==5&&ob==6&&gap==0)
             m302Compare(name,oa,ob,gap,baseline,alternative.runs,a,b,ba,bb,na,nb);
@@ -1613,3 +1718,11 @@ int stafuSprM302Record2OffsetSignificance(const char* installed,const char* cd,c
     return result;
 }
 
+
+int stafuSprM303Record2StructureControls(const char* installed,const char* cd,const char* optional){
+    m303Mode=true;
+    const int result=stafuSprM293Record2ChainDependencies(installed,cd,optional);
+    m303Mode=false;
+    if(result==0)std::puts("SPR_M303_NOTE 256 circular shifts and 4/8/16-bit block shuffles per sample/threshold; searched and fixed-overlap counts are descriptive, not independent calibrated p-values. Boundary means offset +/-32.");
+    return result;
+}
