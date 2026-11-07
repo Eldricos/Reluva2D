@@ -186,6 +186,7 @@ add_executable(reluva-tool
     src/tools/stafu_spr_record2_unmatched_interval_bit_analysis.cpp
     src/tools/stafu_spr_record2_bit_match_uniqueness_alignment.cpp
     src/tools/stafu_spr_record2_bit_chain_transition_analysis.cpp
+    src/tools/stafu_spr_record2_bit_chain_local_realignment.cpp
     src/tools/stafu_spr_span_reconcile.cpp
     src/tools/stafu_bridge_inventory.cpp
     src/tools/stafu_computer_browse.cpp
