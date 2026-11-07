@@ -631,14 +631,14 @@ void m300Compare(const char* name,size_t oa,size_t ob,size_t gap,
             size_t prefix=m300Common(a,ba,x,b,bb,y,false);
             size_t suffix=m300Common(a,ba,x,b,bb,y,true);
             auto best=m300BestOffset(a,ba,x,b,bb,y,32);
-            std::printf("SPR_M300_SPAN resource=%s ordinalA=%zu ordinalB=%zu gap=%zu path=%s side=%s aStart=%zu aBits=%zu bStart=%zu bBits=%zu commonPrefix=%zu commonSuffix=%zu offset=%d offsetMatches=%zu offsetCompared=%zu aPattern8=%zu bPattern8=%zu aPattern16=%zu bPattern16=%zu\\n",
+            std::printf("SPR_M300_SPAN resource=%s ordinalA=%zu ordinalB=%zu gap=%zu path=%s side=%s aStart=%zu aBits=%zu bStart=%zu bBits=%zu commonPrefix=%zu commonSuffix=%zu offset=%d offsetMatches=%zu offsetCompared=%zu aPattern8=%zu bPattern8=%zu aPattern16=%zu bPattern16=%zu\n",
                 name,oa,ob,gap,p?"alternative":"baseline",side?"after":"before",
                 x.start,x.len,y.start,y.len,prefix,suffix,best.shift,best.matches,best.compared,
                 m300PatternCount(a,ba,x,8),m300PatternCount(b,bb,y,8),
                 m300PatternCount(a,ba,x,16),m300PatternCount(b,bb,y,16));
         }
     }
-    std::printf("SPR_M300_NOTE resource=%s ordinalA=%zu ordinalB=%zu gap=%zu interpretation=unmatched_bit_pattern_observations_not_codec_validation\\n",name,oa,ob,gap);
+    std::printf("SPR_M300_NOTE resource=%s ordinalA=%zu ordinalB=%zu gap=%zu interpretation=unmatched_bit_pattern_observations_not_codec_validation\n",name,oa,ob,gap);
 }
 
 void m299Compare(const char* name,size_t oa,size_t ob,size_t gap,
