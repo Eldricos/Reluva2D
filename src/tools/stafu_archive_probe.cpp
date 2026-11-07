@@ -6,6 +6,7 @@ int stafuSprDisplacementSegments(const char*,const char*,const char*);
 int stafuSprInteriorVerify(const char*,const char*,const char*);
 int stafuSprMaximalSpans(const char*,const char*,const char*);
 int stafuSprSpanReconcile(const char*,const char*,const char*);
+int stafuSprM286Record2AnchorPreservingGlobalChain(const char*,const char*,const char*);
 int stafuSprM285Record2GlobalBitChainOptimization(const char*,const char*,const char*);
 int stafuSprM284Record2BitChainLocalRealignment(const char*,const char*,const char*);
 int stafuSprM283Record2BitChainTransitionAnalysis(const char*,const char*,const char*);
@@ -243,6 +244,8 @@ int stafuToolMain(int argc, char** argv) {
         return stafuSprMaximalSpans(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-span-reconcile") == 0)
         return stafuSprSpanReconcile(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
+    if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-m286-record2-anchor-preserving-global-chain") == 0)
+        return stafuSprM286Record2AnchorPreservingGlobalChain(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-m285-record2-global-bit-chain-optimization") == 0)
         return stafuSprM285Record2GlobalBitChainOptimization(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-m284-record2-bit-chain-local-realignment") == 0)
