@@ -271,6 +271,77 @@ bool validateChain(const std::vector<BitMatch>& v,size_t na,size_t nb){
     return true;
 }
 size_t diagnosticGaps=0,diagnosticConflicts=0,diagnosticCompeting=0,diagnosticIntervals=0;
+
+bool m294Mode=false;
+bool sameBitMatch(const BitMatch& x,const BitMatch& y){
+    return x.a==y.a&&x.b==y.b&&x.len==y.len&&x.shift==y.shift;
+}
+// Split alternative paths at exact shared anchors, rather than assuming that
+// all changed matches belong to one continuous dependency.
+void transitionAnalysis(const char* name,size_t oa,size_t ob,size_t gap,
+                        const char* mode,size_t parameter,
+                        const std::vector<BitMatch>& baseline,
+                        const std::vector<BitMatch>& alternative,
+                        size_t na,size_t nb){
+    struct Shared {size_t oldIndex,newIndex;};
+    std::vector<Shared> shared;
+    for(size_t i=0;i<baseline.size();++i)
+        for(size_t j=0;j<alternative.size();++j)
+            if(sameBitMatch(baseline[i],alternative[j])){shared.push_back({i,j});break;}
+    size_t oldBegin=0,newBegin=0;
+    size_t prevA=0,prevB=0;
+    long long prevShift=0;
+    for(size_t boundary=0;boundary<=shared.size();++boundary){
+        const bool terminal=boundary==shared.size();
+        const size_t oldEnd=terminal?baseline.size():shared[boundary].oldIndex;
+        const size_t newEnd=terminal?alternative.size():shared[boundary].newIndex;
+        const size_t nextA=terminal?na:baseline[oldEnd].a;
+        const size_t nextB=terminal?nb:baseline[oldEnd].b;
+        if(oldEnd>oldBegin||newEnd>newBegin){
+            const long long nextShift=static_cast<long long>(nextB)-static_cast<long long>(nextA);
+            size_t oldBits=0,newBits=0;
+            for(size_t i=oldBegin;i<oldEnd;++i)oldBits+=baseline[i].len;
+            for(size_t i=newBegin;i<newEnd;++i)newBits+=alternative[i].len;
+            std::printf("SPR_M294_REGION resource=%s ordinalA=%zu ordinalB=%zu gap=%zu mode=%s parameter=%zu region=%zu leftAnchor=%d rightAnchor=%d fromA=%zu toA=%zu fromB=%zu toB=%zu oldRuns=%zu newRuns=%zu oldBits=%zu newBits=%zu coverageDelta=%lld leftShift=%lld rightShift=%lld rejoined=%d\\n",
+                name,oa,ob,gap,mode,parameter,boundary+1,oldBegin>0?1:0,terminal?0:1,
+                prevA,nextA,prevB,nextB,oldEnd-oldBegin,newEnd-newBegin,oldBits,newBits,
+                static_cast<long long>(newBits)-static_cast<long long>(oldBits),
+                prevShift,nextShift,terminal?0:1);
+            for(int path=0;path<2;++path){
+                const auto& runs=path==0?baseline:alternative;
+                const size_t begin=path==0?oldBegin:newBegin;
+                const size_t end=path==0?oldEnd:newEnd;
+                size_t cursorA=prevA,cursorB=prevB;
+                long long shiftBefore=prevShift;
+                for(size_t i=begin;i<=end;++i){
+                    const bool last=i==end;
+                    const size_t a=last?nextA:runs[i].a;
+                    const size_t b=last?nextB:runs[i].b;
+                    const long long shiftAfter=static_cast<long long>(b)-static_cast<long long>(a);
+                    const size_t gapA=a-cursorA,gapB=b-cursorB;
+                    std::printf("SPR_M294_TRANSITION resource=%s ordinalA=%zu ordinalB=%zu gap=%zu mode=%s parameter=%zu region=%zu path=%s step=%zu fromA=%zu toA=%zu fromB=%zu toB=%zu unmatchedA=%zu unmatchedB=%zu unmatchedDelta=%lld shiftBefore=%lld shiftAfter=%lld shiftDelta=%lld terminal=%d\\n",
+                        name,oa,ob,gap,mode,parameter,boundary+1,path==0?"baseline":"alternative",
+                        i-begin+1,cursorA,a,cursorB,b,gapA,gapB,
+                        static_cast<long long>(gapB)-static_cast<long long>(gapA),
+                        shiftBefore,shiftAfter,shiftAfter-shiftBefore,last?1:0);
+                    if(!last){
+                        cursorA=runs[i].a+runs[i].len;
+                        cursorB=runs[i].b+runs[i].len;
+                        shiftBefore=shiftAfter;
+                    }
+                }
+            }
+        }
+        if(!terminal){
+            const auto& anchor=baseline[oldEnd];
+            prevA=anchor.a+anchor.len;
+            prevB=anchor.b+anchor.len;
+            prevShift=static_cast<long long>(anchor.b)-static_cast<long long>(anchor.a);
+            oldBegin=oldEnd+1;newBegin=newEnd+1;
+        }
+    }
+}
+
 void bitGap(const char* name,size_t oa,size_t ob,size_t gap,
             const std::vector<uint8_t>& a,const std::vector<uint8_t>& b,
             size_t fromA,size_t toA,size_t fromB,size_t toB){
@@ -523,6 +594,9 @@ void bitGap(const char* name,size_t oa,size_t ob,size_t gap,
             for(const auto& v:alternative.runs)
                 if(m.a==v.a&&m.b==v.b&&m.len==v.len){++retained;break;}
         describeChange(mode,parameter,alternative);
+        if(m294Mode&&std::string(mode)=="leave_one_out"&&
+           (parameter==3||parameter==4||parameter==5||parameter==6||parameter==9))
+            transitionAnalysis(name,oa,ob,gap,mode,parameter,baseline,alternative.runs,na,nb);
         const size_t bits=coverage(alternative.runs);
         const size_t originalBits=coverage(baseline);
         std::printf("SPR_M293_PERTURB resource=%s ordinalA=%zu ordinalB=%zu gap=%zu mode=%s parameter=%zu pool=%zu bits=%zu deltaBits=%lld objective=%lld deltaObjective=%lld runs=%zu retainedBaseline=%zu replacedBaseline=%zu\n",
@@ -798,6 +872,11 @@ bool selfTest(){
     for(const auto& m:baseline){bool found=false;for(const auto& n:alternate)if(m.a==n.a&&m.b==n.b&&m.len==n.len)found=true;if(!found)++exits;}
     for(const auto& m:alternate){bool found=false;for(const auto& n:baseline)if(m.a==n.a&&m.b==n.b&&m.len==n.len)found=true;if(!found)++entries;}
     if(exits!=1||entries!=1||!validateChain(alternate,100,100))return false;
+    const std::vector<BitMatch> changed={{0,0,40,0},{48,49,35,1},{90,90,10,0}};
+    const std::vector<BitMatch> reference={{0,0,40,0},{50,50,30,0},{90,90,10,0}};
+    if(!validateChain(changed,110,110)||!validateChain(reference,110,110))return false;
+    // M294 must accept both a shared downstream rejoin and a changed internal path.
+    transitionAnalysis("SELFTEST",1,2,0,"leave_one_out",3,reference,changed,110,110);
     std::puts("SPR_M293_SELFTEST PASS");
     return true;
 }
@@ -816,4 +895,12 @@ int stafuSprM293Record2ChainDependencies(const char* installed,const char* cd,co
     std::printf("SPR_M293_SUMMARY_DIAGNOSTIC analyzedGaps=%zu competing=%zu conflicts=%zu intervals=%zu\n",diagnosticGaps,diagnosticCompeting,diagnosticConflicts,diagnosticIntervals);
     std::puts("SPR_M293_NOTE Read-only chain-entry and exit dependency diagnostics; localized means changed coordinate span <=256 bits per stream, not structural validation.");
     return 0;
+}
+
+int stafuSprM294Record2AlternativeTransitions(const char* installed,const char* cd,const char* optional){
+    m294Mode=true;
+    const int result=stafuSprM293Record2ChainDependencies(installed,cd,optional);
+    m294Mode=false;
+    if(result==0)std::puts("SPR_M294_NOTE Shared anchors mark observed chain rejoins, not decoder state equivalence; all coordinates are gap-relative bits.");
+    return result;
 }
