@@ -381,11 +381,11 @@ M296Evidence m296Evidence(const std::vector<BitMatch>& chain,
         if(unique){++out.uniqueRuns;out.uniqueBits+=m.len;}else ++out.repeatRuns;
         out.beforeN+=beforeN;out.beforeBad+=beforeBad;
         out.afterN+=afterN;out.afterBad+=afterBad;
-        std::printf("SPR_M296_CANDIDATE resource=%s ordinalA=%zu ordinalB=%zu gap=%zu mode=leave_one_out parameter=%zu path=%s segment=%zu bitA=%zu bitB=%zu length=%zu sampleBits=%zu occurrencesA=%zu occurrencesB=%zu unique=%d beforeBad=%zu beforeCompared=%zu afterBad=%zu afterCompared=%zu\\n",
+        std::printf("SPR_M296_CANDIDATE resource=%s ordinalA=%zu ordinalB=%zu gap=%zu mode=leave_one_out parameter=%zu path=%s segment=%zu bitA=%zu bitB=%zu length=%zu sampleBits=%zu occurrencesA=%zu occurrencesB=%zu unique=%d beforeBad=%zu beforeCompared=%zu afterBad=%zu afterCompared=%zu\n",
             name,oa,ob,gap,parameter,path,i+1,m.a,m.b,m.len,sample,occA,occB,unique?1:0,
             beforeBad,beforeN,afterBad,afterN);
     }
-    std::printf("SPR_M296_PATH resource=%s ordinalA=%zu ordinalB=%zu gap=%zu mode=leave_one_out parameter=%zu path=%s changedRuns=%zu changedBits=%zu uniqueRuns=%zu uniqueBits=%zu repeatedRuns=%zu beforeBad=%zu beforeCompared=%zu afterBad=%zu afterCompared=%zu\\n",
+    std::printf("SPR_M296_PATH resource=%s ordinalA=%zu ordinalB=%zu gap=%zu mode=leave_one_out parameter=%zu path=%s changedRuns=%zu changedBits=%zu uniqueRuns=%zu uniqueBits=%zu repeatedRuns=%zu beforeBad=%zu beforeCompared=%zu afterBad=%zu afterCompared=%zu\n",
         name,oa,ob,gap,parameter,path,out.runs,out.bits,out.uniqueRuns,out.uniqueBits,out.repeatRuns,
         out.beforeBad,out.beforeN,out.afterBad,out.afterN);
     return out;
@@ -411,7 +411,7 @@ void m296Compare(const char* name,size_t oa,size_t ob,size_t gap,size_t paramete
         xNoWorse&&xStrict?"baseline_dominates":
         yNoWorse&&yStrict?"alternative_dominates":
         !xStrict&&!yStrict?"equal":"tradeoff";
-    std::printf("SPR_M296_COMPARE resource=%s ordinalA=%zu ordinalB=%zu gap=%zu mode=leave_one_out parameter=%zu relation=%s coverageDelta=%lld uniqueBitsDelta=%lld beforeBadDelta=%lld afterBadDelta=%lld equalBoundarySamples=%d\\n",
+    std::printf("SPR_M296_COMPARE resource=%s ordinalA=%zu ordinalB=%zu gap=%zu mode=leave_one_out parameter=%zu relation=%s coverageDelta=%lld uniqueBitsDelta=%lld beforeBadDelta=%lld afterBadDelta=%lld equalBoundarySamples=%d\n",
         name,oa,ob,gap,parameter,relation,
         static_cast<long long>(y.bits)-static_cast<long long>(x.bits),
         static_cast<long long>(y.uniqueBits)-static_cast<long long>(x.uniqueBits),
