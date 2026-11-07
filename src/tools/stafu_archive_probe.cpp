@@ -8,6 +8,7 @@ int stafuSprMaximalSpans(const char*,const char*,const char*);
 int stafuSprSpanReconcile(const char*,const char*,const char*);
 int stafuSprM298Record2BoundarySensitivity(const char*,const char*,const char*);
 int stafuSprM299Record2Segment9Discrimination(const char*,const char*,const char*);
+int stafuSprM300Record2UnmatchedPatterns(const char*,const char*,const char*);
 int stafuSprM297Record2BoundaryNormalized(const char*,const char*,const char*);
 int stafuSprM296Record2EvidenceRanking(const char*,const char*,const char*);
 int stafuSprM295Record2BoundaryEvidence(const char*,const char*,const char*);
@@ -257,6 +258,8 @@ int stafuToolMain(int argc, char** argv) {
         return stafuSprMaximalSpans(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-span-reconcile") == 0)
         return stafuSprSpanReconcile(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
+    if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-m300-record2-unmatched-patterns") == 0)
+        return stafuSprM300Record2UnmatchedPatterns(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-m299-record2-segment9-discrimination") == 0)
         return stafuSprM299Record2Segment9Discrimination(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-m298-record2-boundary-sensitivity") == 0)
