@@ -1073,6 +1073,13 @@ bool selfTest(){
     const std::vector<uint8_t> pattern={0xAA,0xAA};
     if(occurrences(pattern,pattern,0,0,16,8)<2)return false;
     if(!equalBits(pattern,pattern,0,8,8))return false;
+    // M297: normalize by actual available flank bits and censor short samples.
+    size_t m297N=0;
+    if(flankMismatches(pattern,pattern,0,0,16,16,0,0,true,16,m297N)!=0||m297N!=0)return false;
+    if(flankMismatches(pattern,pattern,0,0,16,16,8,8,true,16,m297N)!=0||m297N!=8)return false;
+    if(localOccurrences(pattern,0,16,0,8)!=2)return false;
+    if(localOccurrences(pattern,0,16,0,16)!=1)return false;
+    if(m297Lengths[0]!=16||m297Lengths[4]!=64)return false;
     if(!validateChain(baseline,100,100))return false;
     const BitMatch test={10,20,64,10};
     const BitMatch trimmed={18,28,48,10};
