@@ -276,6 +276,7 @@ bool m294Mode=false;
 
 bool sameBitMatch(const BitMatch& x,const BitMatch& y);
 bool m295Mode=false;
+bool m296Mode=false;
 size_t matchingFlank(const std::vector<uint8_t>& a,const std::vector<uint8_t>& b,
                      size_t baseA,size_t baseB,size_t nA,size_t nB,
                      size_t atA,size_t atB,bool left,size_t cap){
@@ -350,6 +351,72 @@ void boundaryEvidence(const char* name,size_t oa,size_t ob,size_t gap,
                 m.a-prevEndA,m.b-prevEndB,nextA-(m.a+m.len),nextB-(m.b+m.len));
         }
     }
+}
+
+
+struct M296Evidence {
+    size_t bits=0,runs=0,uniqueRuns=0,uniqueBits=0,repeatRuns=0;
+    size_t beforeBad=0,beforeN=0,afterBad=0,afterN=0;
+};
+M296Evidence m296Evidence(const std::vector<BitMatch>& chain,
+                          const std::vector<BitMatch>& other,
+                          const std::vector<uint8_t>& a,const std::vector<uint8_t>& b,
+                          size_t ba,size_t bb,size_t na,size_t nb,
+                          const char* name,size_t oa,size_t ob,size_t gap,
+                          size_t parameter,const char* path){
+    M296Evidence out;
+    for(size_t i=0;i<chain.size();++i){
+        const auto& m=chain[i];
+        bool shared=false;
+        for(const auto& x:other)if(sameBitMatch(m,x)){shared=true;break;}
+        if(shared)continue;
+        const size_t sample=std::min(size_t(32),m.len);
+        const size_t occA=localOccurrences(a,ba,na,m.a,sample);
+        const size_t occB=localOccurrences(b,bb,nb,m.b,sample);
+        const bool unique=occA==1&&occB==1;
+        size_t beforeN=0,afterN=0;
+        const size_t beforeBad=flankMismatches(a,b,ba,bb,na,nb,m.a,m.b,true,16,beforeN);
+        const size_t afterBad=flankMismatches(a,b,ba,bb,na,nb,m.a+m.len,m.b+m.len,false,16,afterN);
+        ++out.runs;out.bits+=m.len;
+        if(unique){++out.uniqueRuns;out.uniqueBits+=m.len;}else ++out.repeatRuns;
+        out.beforeN+=beforeN;out.beforeBad+=beforeBad;
+        out.afterN+=afterN;out.afterBad+=afterBad;
+        std::printf("SPR_M296_CANDIDATE resource=%s ordinalA=%zu ordinalB=%zu gap=%zu mode=leave_one_out parameter=%zu path=%s segment=%zu bitA=%zu bitB=%zu length=%zu sampleBits=%zu occurrencesA=%zu occurrencesB=%zu unique=%d beforeBad=%zu beforeCompared=%zu afterBad=%zu afterCompared=%zu\\n",
+            name,oa,ob,gap,parameter,path,i+1,m.a,m.b,m.len,sample,occA,occB,unique?1:0,
+            beforeBad,beforeN,afterBad,afterN);
+    }
+    std::printf("SPR_M296_PATH resource=%s ordinalA=%zu ordinalB=%zu gap=%zu mode=leave_one_out parameter=%zu path=%s changedRuns=%zu changedBits=%zu uniqueRuns=%zu uniqueBits=%zu repeatedRuns=%zu beforeBad=%zu beforeCompared=%zu afterBad=%zu afterCompared=%zu\\n",
+        name,oa,ob,gap,parameter,path,out.runs,out.bits,out.uniqueRuns,out.uniqueBits,out.repeatRuns,
+        out.beforeBad,out.beforeN,out.afterBad,out.afterN);
+    return out;
+}
+void m296Compare(const char* name,size_t oa,size_t ob,size_t gap,size_t parameter,
+                 const std::vector<BitMatch>& baseline,const std::vector<BitMatch>& alternative,
+                 const std::vector<uint8_t>& a,const std::vector<uint8_t>& b,
+                 size_t ba,size_t bb,size_t na,size_t nb){
+    const auto x=m296Evidence(baseline,alternative,a,b,ba,bb,na,nb,name,oa,ob,gap,parameter,"baseline");
+    const auto y=m296Evidence(alternative,baseline,a,b,ba,bb,na,nb,name,oa,ob,gap,parameter,"alternative");
+    // Coverage, uniqueness and mismatch counts are kept separate. In particular,
+    // mismatch counts with different denominators cannot imply dominance.
+    const bool comparable=x.beforeN==y.beforeN&&x.afterN==y.afterN;
+    const bool xNoWorse=x.bits>=y.bits&&x.uniqueBits>=y.uniqueBits&&
+        (!comparable||(x.beforeBad<=y.beforeBad&&x.afterBad<=y.afterBad));
+    const bool yNoWorse=y.bits>=x.bits&&y.uniqueBits>=x.uniqueBits&&
+        (!comparable||(y.beforeBad<=x.beforeBad&&y.afterBad<=x.afterBad));
+    const bool xStrict=x.bits>y.bits||x.uniqueBits>y.uniqueBits||
+        (comparable&&(x.beforeBad<y.beforeBad||x.afterBad<y.afterBad));
+    const bool yStrict=y.bits>x.bits||y.uniqueBits>x.uniqueBits||
+        (comparable&&(y.beforeBad<x.beforeBad||y.afterBad<x.afterBad));
+    const char* relation=!comparable?"incomparable_sample_sizes":
+        xNoWorse&&xStrict?"baseline_dominates":
+        yNoWorse&&yStrict?"alternative_dominates":
+        !xStrict&&!yStrict?"equal":"tradeoff";
+    std::printf("SPR_M296_COMPARE resource=%s ordinalA=%zu ordinalB=%zu gap=%zu mode=leave_one_out parameter=%zu relation=%s coverageDelta=%lld uniqueBitsDelta=%lld beforeBadDelta=%lld afterBadDelta=%lld equalBoundarySamples=%d\\n",
+        name,oa,ob,gap,parameter,relation,
+        static_cast<long long>(y.bits)-static_cast<long long>(x.bits),
+        static_cast<long long>(y.uniqueBits)-static_cast<long long>(x.uniqueBits),
+        static_cast<long long>(y.beforeBad)-static_cast<long long>(x.beforeBad),
+        static_cast<long long>(y.afterBad)-static_cast<long long>(x.afterBad),comparable?1:0);
 }
 
 bool sameBitMatch(const BitMatch& x,const BitMatch& y){
@@ -676,9 +743,12 @@ void bitGap(const char* name,size_t oa,size_t ob,size_t gap,
         if((m294Mode||m295Mode)&&std::string(mode)=="leave_one_out"&&
            (parameter==3||parameter==4||parameter==5||parameter==6||parameter==9))
             transitionAnalysis(name,oa,ob,gap,mode,parameter,baseline,alternative.runs,na,nb);
-        if(m295Mode&&std::string(mode)=="leave_one_out"&&
+        if((m295Mode||m296Mode)&&std::string(mode)=="leave_one_out"&&
            (parameter==3||parameter==4||parameter==5||parameter==6||parameter==9))
             boundaryEvidence(name,oa,ob,gap,mode,parameter,baseline,alternative.runs,a,b,ba,bb,na,nb);
+        if(m296Mode&&std::string(mode)=="leave_one_out"&&
+           (parameter==3||parameter==4||parameter==5||parameter==6||parameter==9))
+            m296Compare(name,oa,ob,gap,parameter,baseline,alternative.runs,a,b,ba,bb,na,nb);
         const size_t bits=coverage(alternative.runs);
         const size_t originalBits=coverage(baseline);
         std::printf("SPR_M293_PERTURB resource=%s ordinalA=%zu ordinalB=%zu gap=%zu mode=%s parameter=%zu pool=%zu bits=%zu deltaBits=%lld objective=%lld deltaObjective=%lld runs=%zu retainedBaseline=%zu replacedBaseline=%zu\n",
@@ -992,5 +1062,13 @@ int stafuSprM295Record2BoundaryEvidence(const char* installed,const char* cd,con
     const int result=stafuSprM293Record2ChainDependencies(installed,cd,optional);
     m295Mode=false;
     if(result==0)std::puts("SPR_M295_NOTE Bit boundaries and local repetitions are observational evidence, not compression-code or decoder-state validation.");
+    return result;
+}
+
+int stafuSprM296Record2EvidenceRanking(const char* installed,const char* cd,const char* optional){
+    m296Mode=true;
+    const int result=stafuSprM293Record2ChainDependencies(installed,cd,optional);
+    m296Mode=false;
+    if(result==0)std::puts("SPR_M296_NOTE Changed-path evidence only; no scalar confidence, codec inference, or decoder-state claim. Dominance requires equal boundary sample counts.");
     return result;
 }
