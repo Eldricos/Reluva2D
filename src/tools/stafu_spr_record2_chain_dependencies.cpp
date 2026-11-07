@@ -273,6 +273,84 @@ bool validateChain(const std::vector<BitMatch>& v,size_t na,size_t nb){
 size_t diagnosticGaps=0,diagnosticConflicts=0,diagnosticCompeting=0,diagnosticIntervals=0;
 
 bool m294Mode=false;
+
+bool m295Mode=false;
+size_t matchingFlank(const std::vector<uint8_t>& a,const std::vector<uint8_t>& b,
+                     size_t baseA,size_t baseB,size_t nA,size_t nB,
+                     size_t atA,size_t atB,bool left,size_t cap){
+    size_t count=0;
+    while(count<cap){
+        if(left){
+            if(atA<=count||atB<=count)break;
+            if(bitAt(a,baseA+atA-count-1)!=bitAt(b,baseB+atB-count-1))break;
+        }else{
+            if(atA+count>=nA||atB+count>=nB)break;
+            if(bitAt(a,baseA+atA+count)!=bitAt(b,baseB+atB+count))break;
+        }
+        ++count;
+    }
+    return count;
+}
+size_t flankMismatches(const std::vector<uint8_t>& a,const std::vector<uint8_t>& b,
+                       size_t baseA,size_t baseB,size_t nA,size_t nB,
+                       size_t atA,size_t atB,bool left,size_t cap,size_t& compared){
+    compared=0;size_t mismatch=0;
+    for(size_t i=0;i<cap;++i){
+        if(left&&(atA<=i||atB<=i))break;
+        if(!left&&(atA+i>=nA||atB+i>=nB))break;
+        const size_t x=left?atA-i-1:atA+i,y=left?atB-i-1:atB+i;
+        mismatch+=bitAt(a,baseA+x)!=bitAt(b,baseB+y);
+        ++compared;
+    }
+    return mismatch;
+}
+size_t localOccurrences(const std::vector<uint8_t>& data,size_t base,size_t length,
+                        size_t start,size_t bits){
+    if(bits==0||bits>length)return 0;
+    size_t count=0;
+    for(size_t pos=0;pos+bits<=length;++pos){
+        bool equal=true;
+        for(size_t i=0;i<bits;++i)
+            if(bitAt(data,base+pos+i)!=bitAt(data,base+start+i)){equal=false;break;}
+        if(equal)++count;
+    }
+    return count;
+}
+void boundaryEvidence(const char* name,size_t oa,size_t ob,size_t gap,
+                      const char* mode,size_t parameter,
+                      const std::vector<BitMatch>& baseline,
+                      const std::vector<BitMatch>& alternative,
+                      const std::vector<uint8_t>& a,const std::vector<uint8_t>& b,
+                      size_t baseA,size_t baseB,size_t nA,size_t nB){
+    for(int path=0;path<2;++path){
+        const auto& current=path==0?baseline:alternative;
+        const auto& other=path==0?alternative:baseline;
+        for(size_t i=0;i<current.size();++i){
+            const auto& m=current[i];
+            bool shared=false;
+            for(const auto& x:other)if(sameBitMatch(m,x)){shared=true;break;}
+            if(shared)continue;
+            const size_t left=matchingFlank(a,b,baseA,baseB,nA,nB,m.a,m.b,true,32);
+            const size_t right=matchingFlank(a,b,baseA,baseB,nA,nB,m.a+m.len,m.b+m.len,false,32);
+            size_t beforeN=0,afterN=0;
+            const size_t beforeBad=flankMismatches(a,b,baseA,baseB,nA,nB,m.a,m.b,true,16,beforeN);
+            const size_t afterBad=flankMismatches(a,b,baseA,baseB,nA,nB,m.a+m.len,m.b+m.len,false,16,afterN);
+            const size_t sample=std::min(size_t(32),m.len);
+            const size_t occurrencesA=localOccurrences(a,baseA,nA,m.a,sample);
+            const size_t occurrencesB=localOccurrences(b,baseB,nB,m.b,sample);
+            const size_t prevEndA=i?current[i-1].a+current[i-1].len:0;
+            const size_t prevEndB=i?current[i-1].b+current[i-1].len:0;
+            const size_t nextA=i+1<current.size()?current[i+1].a:nA;
+            const size_t nextB=i+1<current.size()?current[i+1].b:nB;
+            std::printf("SPR_M295_BOUNDARY resource=%s ordinalA=%zu ordinalB=%zu gap=%zu mode=%s parameter=%zu path=%s segment=%zu bitA=%zu bitB=%zu length=%zu shift=%lld leftExact=%zu rightExact=%zu beforeCompared=%zu beforeMismatches=%zu afterCompared=%zu afterMismatches=%zu sampleBits=%zu occurrencesA=%zu occurrencesB=%zu prevGapA=%zu prevGapB=%zu nextGapA=%zu nextGapB=%zu\n",
+                name,oa,ob,gap,mode,parameter,path==0?"baseline":"alternative",i+1,m.a,m.b,m.len,
+                static_cast<long long>(m.b)-static_cast<long long>(m.a),left,right,
+                beforeN,beforeBad,afterN,afterBad,sample,occurrencesA,occurrencesB,
+                m.a-prevEndA,m.b-prevEndB,nextA-(m.a+m.len),nextB-(m.b+m.len));
+        }
+    }
+}
+
 bool sameBitMatch(const BitMatch& x,const BitMatch& y){
     return x.a==y.a&&x.b==y.b&&x.len==y.len&&x.shift==y.shift;
 }
@@ -594,9 +672,12 @@ void bitGap(const char* name,size_t oa,size_t ob,size_t gap,
             for(const auto& v:alternative.runs)
                 if(m.a==v.a&&m.b==v.b&&m.len==v.len){++retained;break;}
         describeChange(mode,parameter,alternative);
-        if(m294Mode&&std::string(mode)=="leave_one_out"&&
+        if((m294Mode||m295Mode)&&std::string(mode)=="leave_one_out"&&
            (parameter==3||parameter==4||parameter==5||parameter==6||parameter==9))
             transitionAnalysis(name,oa,ob,gap,mode,parameter,baseline,alternative.runs,na,nb);
+        if(m295Mode&&std::string(mode)=="leave_one_out"&&
+           (parameter==3||parameter==4||parameter==5||parameter==6||parameter==9))
+            boundaryEvidence(name,oa,ob,gap,mode,parameter,baseline,alternative.runs,a,b,ba,bb,na,nb);
         const size_t bits=coverage(alternative.runs);
         const size_t originalBits=coverage(baseline);
         std::printf("SPR_M293_PERTURB resource=%s ordinalA=%zu ordinalB=%zu gap=%zu mode=%s parameter=%zu pool=%zu bits=%zu deltaBits=%lld objective=%lld deltaObjective=%lld runs=%zu retainedBaseline=%zu replacedBaseline=%zu\n",
@@ -902,5 +983,13 @@ int stafuSprM294Record2AlternativeTransitions(const char* installed,const char* 
     const int result=stafuSprM293Record2ChainDependencies(installed,cd,optional);
     m294Mode=false;
     if(result==0)std::puts("SPR_M294_NOTE Shared anchors mark observed chain rejoins, not decoder state equivalence; all coordinates are gap-relative bits.");
+    return result;
+}
+
+int stafuSprM295Record2BoundaryEvidence(const char* installed,const char* cd,const char* optional){
+    m295Mode=true;
+    const int result=stafuSprM293Record2ChainDependencies(installed,cd,optional);
+    m295Mode=false;
+    if(result==0)std::puts("SPR_M295_NOTE Bit boundaries and local repetitions are observational evidence, not compression-code or decoder-state validation.");
     return result;
 }
