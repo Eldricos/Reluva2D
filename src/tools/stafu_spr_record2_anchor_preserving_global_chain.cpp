@@ -353,7 +353,7 @@ bool survey(reluva::stafu::ResourceManager& manager,const char* name,Totals& tot
 
 bool selfTest(){
     const std::vector<BitMatch> baseline={{0,0,40,0},{50,50,40,0}};
-    const std::vector<BitMatch> candidates={{0,0,40,0},{45,45,55,0},{50,50,40,0}};
+    const std::vector<BitMatch> candidates={{0,0,40,0},{45,46,55,1},{50,50,40,0}};
     const auto u=bitChain(candidates);
     const auto p=preserveAnchors(candidates,baseline,baseline);
     if(coverage(u)!=95||coverage(p.runs)!=80||p.retained284!=2||p.retained282!=2)return false;
