@@ -625,9 +625,9 @@ void m300Compare(const char* name,size_t oa,size_t ob,size_t gap,
            m.a+m.len>right.a||m.b+m.len>right.b||
            right.a+right.len>na||right.b+right.len>nb)return;
         const M300Span aa[]={{left.a+left.len,m.a-left.a-left.len},{m.a+m.len,right.a-m.a-m.len}};
-        const M300Span bb[]={{left.b+left.len,m.b-left.b-left.len},{m.b+m.len,right.b-m.b-m.len}};
+        const M300Span bSpans[]={{left.b+left.len,m.b-left.b-left.len},{m.b+m.len,right.b-m.b-m.len}};
         for(int side=0;side<2;++side){
-            const auto x=aa[side],y=bb[side];
+            const auto x=aa[side],y=bSpans[side];
             size_t prefix=m300Common(a,ba,x,b,bb,y,false);
             size_t suffix=m300Common(a,ba,x,b,bb,y,true);
             auto best=m300BestOffset(a,ba,x,b,bb,y,32);
