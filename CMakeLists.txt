@@ -497,6 +497,7 @@ if(RELUVA_BUILD_TESTS)
     add_test(NAME stafu_spr_m307_wide_matched_controls COMMAND reluva-tool -stafu spr-m307-record2-wide-matched-controls __selftest__ unused)
     add_test(NAME stafu_spr_m308_motif_census COMMAND reluva-tool -stafu spr-m308-record2-motif-census __selftest__ unused)
     add_test(NAME stafu_spr_m309_motif_context COMMAND reluva-tool -stafu spr-m309-record2-motif-context __selftest__ unused)
+    add_test(NAME stafu_spr_m310_perfect_context_chains COMMAND reluva-tool -stafu spr-m310-record2-perfect-context-chains __selftest__ unused)
 
     add_executable(reluva_stafu_spr_gif_structure_tests tests/test_stafu_spr_gif_structure.cpp)
     target_link_libraries(reluva_stafu_spr_gif_structure_tests PRIVATE reluva_engines reluva_warnings)
