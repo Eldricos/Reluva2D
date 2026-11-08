@@ -501,6 +501,7 @@ if(RELUVA_BUILD_TESTS)
     add_test(NAME stafu_spr_m311_unique_exact_intervals COMMAND reluva-tool -stafu spr-m311-record2-unique-exact-intervals __selftest__ unused)
     add_test(NAME stafu_spr_m312_shift_boundary_analysis COMMAND reluva-tool -stafu spr-m312-record2-shift-boundary-analysis __selftest__ unused)
     add_test(NAME stafu_spr_m313_suffix_structure COMMAND reluva-tool -stafu spr-m313-record2-suffix-structure __selftest__ unused)
+    add_test(NAME stafu_spr_m314_suffix_boundary COMMAND reluva-tool -stafu spr-m314-record2-suffix-boundary __selftest__ unused)
 
     add_executable(reluva_stafu_spr_gif_structure_tests tests/test_stafu_spr_gif_structure.cpp)
     target_link_libraries(reluva_stafu_spr_gif_structure_tests PRIVATE reluva_engines reluva_warnings)
