@@ -1032,7 +1032,7 @@ void m307Nearby(const char* name,size_t oa,size_t ob,const std::vector<uint8_t>&
             }
         }
         std::printf("SPR_M307_CONTROL resource=%s ordinalA=%zu ordinalB=%zu candidate=%s width=%zu threshold=%zu stride=%zu shiftMin=-64 shiftMax=64 excludeShiftZero=1 scanLimitBits=%zu starts=%zu comparisons=%zu atLeast=%zu greater=%zu maximum=%zu maxShift=%d maxStartA=%zu sampling=deterministic_overlapping\n",
-                    name,oa,ob,w.label,w.length,w.threshold,limit,starts,compared,atLeast,greater,best,bestShift,bestStart);
+                    name,oa,ob,w.label,w.length,w.threshold,stride,std::min(bitsA,limit),starts,compared,atLeast,greater,best,bestShift,bestStart);
     }
 }
 
