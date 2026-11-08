@@ -499,6 +499,7 @@ if(RELUVA_BUILD_TESTS)
     add_test(NAME stafu_spr_m309_motif_context COMMAND reluva-tool -stafu spr-m309-record2-motif-context __selftest__ unused)
     add_test(NAME stafu_spr_m310_perfect_context_chains COMMAND reluva-tool -stafu spr-m310-record2-perfect-context-chains __selftest__ unused)
     add_test(NAME stafu_spr_m311_unique_exact_intervals COMMAND reluva-tool -stafu spr-m311-record2-unique-exact-intervals __selftest__ unused)
+    add_test(NAME stafu_spr_m312_shift_boundary_analysis COMMAND reluva-tool -stafu spr-m312-record2-shift-boundary-analysis __selftest__ unused)
 
     add_executable(reluva_stafu_spr_gif_structure_tests tests/test_stafu_spr_gif_structure.cpp)
     target_link_libraries(reluva_stafu_spr_gif_structure_tests PRIVATE reluva_engines reluva_warnings)
