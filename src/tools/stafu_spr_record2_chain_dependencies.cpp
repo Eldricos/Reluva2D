@@ -293,6 +293,7 @@ bool m309Mode=false;
 bool m310Mode=false;
 bool m311Mode=false;
 bool m312Mode=false;
+bool m313Mode=false;
 std::vector<Image> m308Records;
 size_t matchingFlank(const std::vector<uint8_t>& a,const std::vector<uint8_t>& b,
                      size_t baseA,size_t baseB,size_t nA,size_t nB,
@@ -1242,6 +1243,88 @@ void m310Compare(const std::vector<BitMatch>& baseline,
 }
 
 
+
+size_t m313CommonSuffix(const std::vector<uint8_t>& a,const std::vector<uint8_t>& b){
+    const size_t limit=std::min(a.size(),b.size())*8;
+    size_t matched=0;
+    while(matched<limit&&bitAt(a,a.size()*8-1-matched)==bitAt(b,b.size()*8-1-matched))
+        ++matched;
+    return matched;
+}
+size_t m313CommonPrefix(const std::vector<uint8_t>& a,const std::vector<uint8_t>& b){
+    const size_t limit=std::min(a.size(),b.size())*8;
+    size_t matched=0;
+    while(matched<limit&&bitAt(a,matched)==bitAt(b,matched))++matched;
+    return matched;
+}
+bool m313Selftest(){
+    const std::vector<uint8_t> a{0x12,0xAB,0xCD};
+    const std::vector<uint8_t> b{0x34,0xAB,0xCD};
+    const std::vector<uint8_t> c{0x56,0xAB,0xCD};
+    const std::vector<uint8_t> d{0x12,0xAB,0xCE};
+    return m313CommonSuffix(a,b)==16&&m313CommonSuffix(b,c)==16&&
+           m313CommonSuffix(a,d)==1&&m313CommonPrefix(a,d)==22&&
+           m313CommonSuffix(a,a)==24&&m313CommonSuffix(a,{})==0;
+}
+void m313Compare(){
+    std::vector<const Image*> records;
+    for(const auto& rec:m308Records)
+        if(rec.ordinal>=4&&rec.ordinal<=7)records.push_back(&rec);
+    std::sort(records.begin(),records.end(),[](const Image* a,const Image* b){return a->ordinal<b->ordinal;});
+    if(records.size()!=4||records[0]->ordinal!=4||records[1]->ordinal!=5||
+       records[2]->ordinal!=6||records[3]->ordinal!=7){
+        std::printf("SPR_M313_ERROR expectedFourDirectRecords=1 found=%zu\\n",records.size());
+        return;
+    }
+    size_t suffix[4][4]={};
+    size_t longest=0;
+    for(size_t i=0;i<4;++i){
+        const auto& a=records[i]->data;
+        const size_t bits=a.size()*8;
+        size_t trailingZero=0,trailingOne=0;
+        while(trailingZero<bits&&!bitAt(a,bits-1-trailingZero))++trailingZero;
+        while(trailingOne<bits&&bitAt(a,bits-1-trailingOne))++trailingOne;
+        std::printf("SPR_M313_RECORD ordinal=%zu bits=%zu bytes=%zu terminalByte=%02X trailingZeroBits=%zu trailingOneBits=%zu\\n",
+                    records[i]->ordinal,bits,a.size(),a.empty()?0u:static_cast<unsigned>(a.back()),trailingZero,trailingOne);
+        for(size_t j=i+1;j<4;++j){
+            const auto& b=records[j]->data;
+            const size_t nb=b.size()*8;
+            const size_t common=m313CommonSuffix(a,b);
+            const size_t pre=m313CommonPrefix(a,b);
+            suffix[i][j]=suffix[j][i]=common;
+            longest=std::max(longest,common);
+            const size_t startA=bits-common,startB=nb-common;
+            size_t mismatch32=0,compared32=0;
+            for(size_t k=0;k<32&&k<startA&&k<startB;++k){
+                mismatch32+=bitAt(a,startA-1-k)!=bitAt(b,startB-1-k)?1u:0u;
+                ++compared32;
+            }
+            size_t prefixMismatches=0;
+            const size_t sharedPrefix=std::min(startA,startB);
+            for(size_t k=0;k<sharedPrefix;++k)
+                prefixMismatches+=bitAt(a,k)!=bitAt(b,k)?1u:0u;
+            std::printf("SPR_M313_PAIR ordinalA=%zu ordinalB=%zu bitsA=%zu bitsB=%zu commonSuffix=%zu startA=%zu startB=%zu shift=%lld commonPrefix=%zu prefixCompared=%zu prefixMismatches=%zu boundaryMismatch=%d preBoundaryMismatches=%zu/%zu suffixReachesStart=%d\\n",
+                        records[i]->ordinal,records[j]->ordinal,bits,nb,common,startA,startB,
+                        static_cast<long long>(startB)-static_cast<long long>(startA),pre,sharedPrefix,prefixMismatches,
+                        (startA>0&&startB>0)?1:0,mismatch32,compared32,
+                        (startA==0||startB==0)?1:0);
+        }
+    }
+    size_t triples=0,violations=0;
+    for(size_t i=0;i<4;++i)for(size_t j=i+1;j<4;++j)for(size_t k=j+1;k<4;++k){
+        const size_t lower=std::min(suffix[i][j],suffix[j][k]);
+        const bool consistent=suffix[i][k]>=lower;
+        if(!consistent)++violations;
+        ++triples;
+        std::printf("SPR_M313_TRIPLE ordinalA=%zu ordinalB=%zu ordinalC=%zu suffixAB=%zu suffixBC=%zu suffixAC=%zu nested=%d\\n",
+                    records[i]->ordinal,records[j]->ordinal,records[k]->ordinal,
+                    suffix[i][j],suffix[j][k],suffix[i][k],consistent?1:0);
+    }
+    const size_t all=std::min(std::min(suffix[0][1],suffix[0][2]),suffix[0][3]);
+    std::printf("SPR_M313_SUMMARY records=4 pairs=6 triples=%zu nestingViolations=%zu commonSuffixAllFour=%zu longestPairSuffix=%zu bitOrder=MSB_first suffixAlignment=record_end\\n",
+                triples,violations,all,longest);
+}
+
 struct M311Interval {
     size_t ra,rb,sa,sb,length,observations;
 };
@@ -2120,6 +2203,9 @@ void bitGap(const char* name,size_t oa,size_t ob,size_t gap,
         if((m295Mode||m296Mode)&&std::string(mode)=="leave_one_out"&&
            (parameter==3||parameter==4||parameter==5||parameter==6||parameter==9))
             boundaryEvidence(name,oa,ob,gap,mode,parameter,baseline,alternative.runs,a,b,ba,bb,na,nb);
+        if(m313Mode&&std::string(mode)=="leave_one_out"&&parameter==9&&
+           std::string(name)=="BRDGRIKR.SPR"&&oa==5&&ob==6&&gap==0)
+            m313Compare();
         if((m311Mode||m312Mode)&&std::string(mode)=="leave_one_out"&&parameter==9&&
            std::string(name)=="BRDGRIKR.SPR"&&oa==5&&ob==6&&gap==0)
             m311Compare(baseline,a,b,ba,bb,na,nb);
@@ -2345,7 +2431,7 @@ bool survey(reluva::stafu::ResourceManager& manager,const char* name,Totals& tot
         }
         ++ordinal;
     }
-    if((m308Mode||m309Mode||m310Mode||m311Mode||m312Mode)&&std::string(name)=="BRDGRIKR.SPR")m308Records=direct;
+    if((m308Mode||m309Mode||m310Mode||m311Mode||m312Mode||m313Mode)&&std::string(name)=="BRDGRIKR.SPR")m308Records=direct;
     Totals local;
     for(size_t k=1;k<direct.size();++k){
         const auto& a=direct[k-1];const auto& b=direct[k];
@@ -2639,5 +2725,22 @@ int stafuSprM312Record2ShiftBoundaryAnalysis(const char* installed,const char* c
     m312Mode=false;
     m308Records.clear();
     if(result==0)std::puts("SPR_M312_NOTE Three longest shifted motif-seeded intervals; 32-bit boundary contexts and nearest nonoverlapping A-coordinate intervals. Gap/shift arithmetic is an identity, not independent evidence for insertion, deletion, replacement, or codec behavior.");
+    return result;
+}
+
+int stafuSprM313Record2SuffixStructure(const char* installed,const char* cd,const char* optional){
+    if(!m313Selftest()){
+        std::fprintf(stderr,"SPR_M313_SELFTEST FAIL\\n");
+        return 1;
+    }
+    if(std::string(installed)=="__selftest__"){
+        std::puts("SPR_M313_SELFTEST PASS");
+        return 0;
+    }
+    m313Mode=true;
+    const int result=stafuSprM293Record2ChainDependencies(installed,cd,optional);
+    m313Mode=false;
+    m308Records.clear();
+    if(result==0)std::puts("SPR_M313_NOTE Direct record-end aligned bit suffixes for records 4-7; prefix mismatch counts and suffix nesting are descriptive. A shared suffix may be padding or repeated content; no decoder or format inference is established.");
     return result;
 }
