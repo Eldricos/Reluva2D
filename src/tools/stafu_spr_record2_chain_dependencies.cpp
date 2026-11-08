@@ -1340,7 +1340,7 @@ void m314Window(const char* label,const std::vector<uint8_t>& data,size_t begin,
     begin=std::min(begin,bits);end=std::min(end,bits);
     std::printf("SPR_M314_WINDOW label=%s begin=%zu end=%zu bits=",label,begin,end);
     for(size_t i=begin;i<end;++i)std::putchar(bitAt(data,i)?'1':'0');
-    std::putchar('\\n');
+    std::putchar('\n');
 }
 void m314Compare(){
     const Image* a=nullptr;const Image* b=nullptr;const Image* c=nullptr;
@@ -1359,13 +1359,13 @@ void m314Compare(){
     const size_t sa=na-suffix,sb=nb-suffix;
     const long long shift=static_cast<long long>(sb)-static_cast<long long>(sa);
     const bool byteShift=shift%8==0;
-    std::printf("SPR_M314_SUFFIX ordinalA=5 ordinalB=6 bitsA=%zu bitsB=%zu suffixBits=%zu startA=%zu startB=%zu shift=%lld shiftBytes=%lld byteAlignedShift=%d startBitA=%zu startBitB=%zu terminalBitA=%zu terminalBitB=%zu\\n",
+    std::printf("SPR_M314_SUFFIX ordinalA=5 ordinalB=6 bitsA=%zu bitsB=%zu suffixBits=%zu startA=%zu startB=%zu shift=%lld shiftBytes=%lld byteAlignedShift=%d startBitA=%zu startBitB=%zu terminalBitA=%zu terminalBitB=%zu\n",
         na,nb,suffix,sa,sb,shift,shift/8,byteShift?1:0,sa%8,sb%8,na%8,nb%8);
     const size_t left=std::min(size_t(64),std::min(sa,sb));
     size_t mismatches=0;
     for(size_t i=0;i<left;++i)
         if(bitAt(x,sa-left+i)!=bitAt(y,sb-left+i))++mismatches;
-    std::printf("SPR_M314_BOUNDARY beforeBits=%zu beforeMismatches=%zu immediatelyPrecedingEqual=%d suffixBytesWhole=%zu suffixRemainderBits=%zu\\n",
+    std::printf("SPR_M314_BOUNDARY beforeBits=%zu beforeMismatches=%zu immediatelyPrecedingEqual=%d suffixBytesWhole=%zu suffixRemainderBits=%zu\n",
         left,mismatches,(sa&&sb&&bitAt(x,sa-1)==bitAt(y,sb-1))?1:0,suffix/8,suffix%8);
     m314Window("record5_pre",x,sa-left,sa);
     m314Window("record6_pre",y,sb-left,sb);
@@ -1382,16 +1382,16 @@ void m314Compare(){
     }
     const size_t suffixOverlap=sa<na&&ia+il>sb&&ia<nb?
         (std::min(nb,ia+il)>std::max(sb,ia)?std::min(nb,ia+il)-std::max(sb,ia):0):0;
-    std::printf("SPR_M314_INTERNAL_PAIR ordinalA=6 ordinalB=7 startA=%zu endA=%zu startB=%zu endB=%zu length=%zu compared=%zu mismatches=%zu suffix56OverlapInRecord6=%zu suffix56Start=%zu internalEnd=%zu separationBits=%lld\\n",
+    std::printf("SPR_M314_INTERNAL_PAIR ordinalA=6 ordinalB=7 startA=%zu endA=%zu startB=%zu endB=%zu length=%zu compared=%zu mismatches=%zu suffix56OverlapInRecord6=%zu suffix56Start=%zu internalEnd=%zu separationBits=%lld\n",
         ia,ia+il,ib,ib+il,il,checked,bad,suffixOverlap,sb,ia+il,
         static_cast<long long>(sb)-static_cast<long long>(ia+il));
     // M310's longest shifted 4->6 interval [1882,2816) -> [1934,2868).
     const size_t otherStart=1934,otherEnd=2868;
     const size_t otherOverlap=std::min(nb,otherEnd)>std::max(sb,otherStart)?
         std::min(nb,otherEnd)-std::max(sb,otherStart):0;
-    std::printf("SPR_M314_INTERNAL_REFERENCE pair=4_to_6 record6Start=%zu record6End=%zu suffix56Overlap=%zu separationBits=%lld referenceSource=M310\\n",
+    std::printf("SPR_M314_INTERNAL_REFERENCE pair=4_to_6 record6Start=%zu record6End=%zu suffix56Overlap=%zu separationBits=%lld referenceSource=M310\n",
         otherStart,otherEnd,otherOverlap,static_cast<long long>(sb)-static_cast<long long>(otherEnd));
-    std::printf("SPR_M314_SUMMARY suffixBits=%zu boundaryMismatches=%zu/%zu internal67Checked=%zu internal67Mismatches=%zu internal67Overlap=%zu internal46Overlap=%zu\\n",
+    std::printf("SPR_M314_SUMMARY suffixBits=%zu boundaryMismatches=%zu/%zu internal67Checked=%zu internal67Mismatches=%zu internal67Overlap=%zu internal46Overlap=%zu\n",
         suffix,mismatches,left,checked,bad,suffixOverlap,otherOverlap);
 }
 
@@ -2820,7 +2820,7 @@ int stafuSprM313Record2SuffixStructure(const char* installed,const char* cd,cons
 
 int stafuSprM314Record2SuffixBoundary(const char* installed,const char* cd,const char* optional){
     if(!m314Selftest()){
-        std::fprintf(stderr,"SPR_M314_SELFTEST FAIL\\n");
+        std::fprintf(stderr,"SPR_M314_SELFTEST FAIL\n");
         return 1;
     }
     if(std::string(installed)=="__selftest__"){
