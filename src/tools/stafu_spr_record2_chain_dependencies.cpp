@@ -286,6 +286,7 @@ bool m302Mode=false;
 bool m303Mode=false;
 bool m304Mode=false;
 bool m305Mode=false;
+bool m306Mode=false;
 size_t matchingFlank(const std::vector<uint8_t>& a,const std::vector<uint8_t>& b,
                      size_t baseA,size_t baseB,size_t nA,size_t nB,
                      size_t atA,size_t atB,bool left,size_t cap){
@@ -936,6 +937,87 @@ void m305Compare(const char* name,size_t oa,size_t ob,size_t gap,
     }
 }
 
+
+size_t m306Longest(const std::vector<uint8_t>& a,size_t ba,size_t pa,
+                   const std::vector<uint8_t>& b,size_t bb,size_t pb,size_t n){
+    size_t best=0,run=0;
+    for(size_t i=0;i<n;++i){
+        if(bitAt(a,ba+pa+i)==bitAt(b,bb+pb+i)){++run;best=std::max(best,run);}
+        else run=0;
+    }
+    return best;
+}
+void m306Compare(const std::vector<BitMatch>& baseline,const std::vector<BitMatch>& alternative,
+                 const std::vector<uint8_t>& a,const std::vector<uint8_t>& b,
+                 size_t ba,size_t bb,size_t na,size_t nb){
+    if(baseline.size()<10)return;
+    size_t li=0,ri=0;bool lf=false,rf=false;
+    for(size_t i=0;i<alternative.size();++i){
+        if(sameBitMatch(alternative[i],baseline[7])){li=i;lf=true;}
+        if(sameBitMatch(alternative[i],baseline[9])){ri=i;rf=true;}
+    }
+    if(!lf||!rf||ri!=li+2)return;
+    const auto& left=baseline[7];const auto& right=baseline[9];
+    const BitMatch mids[]={baseline[8],alternative[li+1]};
+    for(int p=0;p<2;++p){
+        const auto& m=mids[p];
+        if(left.a+left.len>m.a||left.b+left.len>m.b||
+           m.a+m.len>right.a||m.b+m.len>right.b||
+           right.a+right.len>na||right.b+right.len>nb)return;
+        const M300Span ax[]={{left.a+left.len,m.a-left.a-left.len},{m.a+m.len,right.a-m.a-m.len}};
+        const M300Span by[]={{left.b+left.len,m.b-left.b.len},{m.b+m.len,right.b-m.b-m.len}};
+        for(int side=0;side<2;++side){
+            if(p==0&&side==0)continue;
+            const auto x=ax[side],y=by[side];
+            const size_t minimum=p==0?32:16;
+            const auto observed=m302Best(a,ba,x,b,bb,y,minimum,nullptr);
+            if(!observed.eligible)continue;
+            const int fixed=observed.score.shift;
+            size_t bestRun=0;int bestShift=0;size_t valid=0,atLeast=0,greater=0,boundaryAtLeast=0;
+            const size_t observedA=fixed<0?size_t(-fixed):0;
+            const size_t observedB=fixed>0?size_t(fixed):0;
+            const size_t observedRun=m306Longest(a,ba,x.start+observedA,b,bb,y.start+observedB,observed.score.compared);
+            for(int shift=-32;shift<=32;++shift){
+                const size_t offA=shift<0?size_t(-shift):0;
+                const size_t offB=shift>0?size_t(shift):0;
+                if(offA>=x.len||offB>=y.len)continue;
+                const size_t n=std::min(x.len-offA,y.len-offB);
+                if(n<minimum)continue;
+                const size_t longest=m306Longest(a,ba,x.start+offA,b,bb,y.start+offB,n);
+                ++valid;
+                if(longest>=observedRun)++atLeast;
+                if(longest>observedRun)++greater;
+                if((shift==-32||shift==32)&&longest>=observedRun)++boundaryAtLeast;
+                if(longest>bestRun){bestRun=longest;bestShift=shift;}
+                std::printf("SPR_M306_OFFSET path=%s side=%s shift=%d overlap=%zu longest=%zu selected=%d\\n",
+                            p?"alternative":"baseline",side?"after":"before",shift,n,longest,shift==fixed?1:0);
+            }
+            std::printf("SPR_M306_SUMMARY path=%s side=%s selectedShift=%d selectedOverlap=%zu selectedLongest=%zu eligibleOffsets=%zu atLeast=%zu greater=%zu boundaryAtLeast=%zu maximumLongest=%zu maximumShift=%d\\n",
+                        p?"alternative":"baseline",side?"after":"before",fixed,observed.score.compared,observedRun,valid,atLeast,greater,boundaryAtLeast,bestRun,bestShift);
+        }
+    }
+}
+void m306Nearby(const char* name,size_t oa,size_t ob,const std::vector<uint8_t>& a,
+                const std::vector<uint8_t>& b){
+    if(std::string(name)!="BRDGRIKR.SPR"||!((oa==4&&ob==5)||(oa==6&&ob==7)))return;
+    const size_t bitsA=a.size()*8,bitsB=b.size()*8;
+    constexpr size_t width=38,stride=64,limit=2048;
+    size_t windows=0,offsets=0,atLeast26=0,maxRun=0;int maxShift=0;size_t maxStart=0;
+    for(size_t start=0;start+width<=std::min(bitsA,limit);start+=stride){
+        for(int shift=-32;shift<=32;++shift){
+            const long long other=static_cast<long long>(start)+shift;
+            if(other<0||static_cast<size_t>(other)+width>bitsB)continue;
+            const size_t longest=m306Longest(a,0,start,b,0,static_cast<size_t>(other),width);
+            ++offsets;
+            if(longest>=26)++atLeast26;
+            if(longest>maxRun){maxRun=longest;maxShift=shift;maxStart=start;}
+        }
+        ++windows;
+    }
+    std::printf("SPR_M306_NEARBY resource=%s ordinalA=%zu ordinalB=%zu width=%zu stride=%zu scanLimitBits=%zu windows=%zu comparisons=%zu atLeast26=%zu maximumLongest=%zu maximumShift=%d maximumStartA=%zu sampling=deterministic_nonexhaustive\\n",
+                name,oa,ob,width,stride,limit,windows,offsets,atLeast26,maxRun,maxShift,maxStart);
+}
+
 void m304Compare(const char* name,size_t oa,size_t ob,size_t gap,
                  const std::vector<BitMatch>& baseline,const std::vector<BitMatch>& alternative,
                  const std::vector<uint8_t>& a,const std::vector<uint8_t>& b,
@@ -1482,6 +1564,9 @@ void bitGap(const char* name,size_t oa,size_t ob,size_t gap,
         if((m295Mode||m296Mode)&&std::string(mode)=="leave_one_out"&&
            (parameter==3||parameter==4||parameter==5||parameter==6||parameter==9))
             boundaryEvidence(name,oa,ob,gap,mode,parameter,baseline,alternative.runs,a,b,ba,bb,na,nb);
+        if(m306Mode&&std::string(mode)=="leave_one_out"&&parameter==9&&
+           std::string(name)=="BRDGRIKR.SPR"&&oa==5&&ob==6&&gap==0)
+            m306Compare(baseline,alternative.runs,a,b,ba,bb,na,nb);
         if(m305Mode&&std::string(mode)=="leave_one_out"&&parameter==9&&
            std::string(name)=="BRDGRIKR.SPR"&&oa==5&&ob==6&&gap==0)
             m305Compare(name,oa,ob,gap,baseline,alternative.runs,a,b,ba,bb,na,nb);
@@ -1694,6 +1779,7 @@ bool survey(reluva::stafu::ResourceManager& manager,const char* name,Totals& tot
         const auto& a=direct[k-1];const auto& b=direct[k];
         if(b.ordinal!=a.ordinal+1)continue;
         ++local.pairs;
+        if(m306Mode)m306Nearby(name,a.ordinal,b.ordinal,a.data,b.data);
         const size_t pre=prefix(a.data,b.data);
         const auto found=candidates(a.data,b.data,pre);
         const auto selected=chain(found);
@@ -1919,5 +2005,13 @@ int stafuSprM305Record2AnchorConstrained(const char* installed,const char* cd,co
     const int result=stafuSprM293Record2ChainDependencies(installed,cd,optional);
     m305Mode=false;
     if(result==0)std::puts("SPR_M305_NOTE Exact runs are clipped to each path's unmatched spans. Outside extensions can cross anchors and are excluded from confined evidence; fixed offsets remain post-hoc observations, not codec validation.");
+    return result;
+}
+
+int stafuSprM306Record2FixedOffsetSpecificity(const char* installed,const char* cd,const char* optional){
+    m306Mode=true;
+    const int result=stafuSprM293Record2ChainDependencies(installed,cd,optional);
+    m306Mode=false;
+    if(result==0)std::puts("SPR_M306_NOTE All eligible offsets +/-32 within the same unmatched intervals; nearby record-pair windows are deterministic sparse samples, not matched-distribution controls. Selected offsets and 26-bit threshold were chosen post hoc. No calibrated significance or codec validation.");
     return result;
 }
