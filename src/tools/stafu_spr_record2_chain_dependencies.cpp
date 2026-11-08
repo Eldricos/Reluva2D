@@ -287,6 +287,7 @@ bool m303Mode=false;
 bool m304Mode=false;
 bool m305Mode=false;
 bool m306Mode=false;
+bool m307Mode=false;
 size_t matchingFlank(const std::vector<uint8_t>& a,const std::vector<uint8_t>& b,
                      size_t baseA,size_t baseB,size_t nA,size_t nB,
                      size_t atA,size_t atB,bool left,size_t cap){
@@ -947,6 +948,94 @@ size_t m306Longest(const std::vector<uint8_t>& a,size_t ba,size_t pa,
     }
     return best;
 }
+
+struct M307Window {size_t length;size_t threshold;const char* label;};
+constexpr M307Window m307Windows[]={{38,26,"baseline_after"},{54,15,"alternative_before"},{22,19,"alternative_after"}};
+void m307Compare(const std::vector<BitMatch>& baseline,const std::vector<BitMatch>& alternative,
+                 const std::vector<uint8_t>& a,const std::vector<uint8_t>& b,
+                 size_t ba,size_t bb,size_t na,size_t nb){
+    if(baseline.size()<10)return;
+    size_t li=0,ri=0;bool lf=false,rf=false;
+    for(size_t i=0;i<alternative.size();++i){
+        if(sameBitMatch(alternative[i],baseline[7])){li=i;lf=true;}
+        if(sameBitMatch(alternative[i],baseline[9])){ri=i;rf=true;}
+    }
+    if(!lf||!rf||ri!=li+2)return;
+    const auto& left=baseline[7];const auto& right=baseline[9];
+    const BitMatch mids[]={baseline[8],alternative[li+1]};
+    for(int p=0;p<2;++p){
+        const auto& m=mids[p];
+        if(left.a+left.len>m.a||left.b+left.len>m.b||
+           m.a+m.len>right.a||m.b+m.len>right.b||
+           right.a+right.len>na||right.b+right.len>nb)return;
+        const M300Span ax[]={{left.a+left.len,m.a-left.a-left.len},{m.a+m.len,right.a-m.a-m.len}};
+        const M300Span by[]={{left.b+left.len,m.b-left.b-left.len},{m.b+m.len,right.b-m.b-m.len}};
+        for(int side=0;side<2;++side){
+            if(p==0&&side==0)continue;
+            const auto x=ax[side],y=by[side];
+            const size_t minimum=p==0?32:16;
+            const auto selected=m302Best(a,ba,x,b,bb,y,minimum,nullptr);
+            if(!selected.eligible)continue;
+            const int selectedShift=selected.score.shift;
+            const size_t sa=selectedShift<0?static_cast<size_t>(-selectedShift):0;
+            const size_t sb=selectedShift>0?static_cast<size_t>(selectedShift):0;
+            const size_t selectedRun=m306Longest(a,ba,x.start+sa,b,bb,y.start+sb,selected.score.compared);
+            size_t eligible=0,atLeast=0,greater=0,bestRun=0,bestOverlap=0;
+            int bestShift=0;
+            // Enumerate every shift with the required overlap, not merely +/-32.
+            const int minShift=-static_cast<int>(x.len-minimum);
+            const int maxShift=static_cast<int>(y.len-minimum);
+            for(int shift=minShift;shift<=maxShift;++shift){
+                const size_t offA=shift<0?static_cast<size_t>(-shift):0;
+                const size_t offB=shift>0?static_cast<size_t>(shift):0;
+                if(offA>=x.len||offB>=y.len)continue;
+                const size_t n=std::min(x.len-offA,y.len-offB);
+                if(n<minimum)continue;
+                const size_t run=m306Longest(a,ba,x.start+offA,b,bb,y.start+offB,n);
+                ++eligible;
+                if(run>=selectedRun)++atLeast;
+                if(run>selectedRun)++greater;
+                if(run>bestRun||(run==bestRun&&n>bestOverlap)){
+                    bestRun=run;bestShift=shift;bestOverlap=n;
+                }
+                std::printf("SPR_M307_OFFSET path=%s side=%s shift=%d overlap=%zu longest=%zu selected=%d\\n",
+                            p?"alternative":"baseline",side?"after":"before",shift,n,run,shift==selectedShift?1:0);
+            }
+            std::printf("SPR_M307_WIDE path=%s side=%s spanA=%zu spanB=%zu minOverlap=%zu shiftMin=%d shiftMax=%d selectedShift=%d selectedLongest=%zu selectedOverlap=%zu eligible=%zu atLeastSelected=%zu greater=%zu bestShift=%d bestLongest=%zu bestOverlap=%zu selectedAtSearchEdge=%d\n",
+                        p?"alternative":"baseline",side?"after":"before",x.len,y.len,minimum,minShift,maxShift,
+                        selectedShift,selectedRun,selected.score.compared,eligible,atLeast,greater,
+                        bestShift,bestRun,bestOverlap,(selectedShift==minShift||selectedShift==maxShift)?1:0);
+        }
+    }
+}
+void m307Nearby(const char* name,size_t oa,size_t ob,const std::vector<uint8_t>& a,
+                const std::vector<uint8_t>& b){
+    if(std::string(name)!="BRDGRIKR.SPR"||!((oa==4&&ob==5)||(oa==6&&ob==7)))return;
+    constexpr size_t stride=16,limit=2048;
+    const size_t bitsA=a.size()*8,bitsB=b.size()*8;
+    for(const auto& w:m307Windows){
+        size_t starts=0,compared=0,atLeast=0,greater=0,best=0;
+        int bestShift=0;size_t bestStart=0;
+        // Fixed-length, fixed-coordinate-offset windows in nearby record pairs.
+        // Shift zero is excluded to avoid identical-position comparisons.
+        for(size_t start=0;start+w.length<=std::min(bitsA,limit);start+=stride){
+            ++starts;
+            for(int shift=-64;shift<=64;++shift){
+                if(shift==0)continue;
+                const long long other=static_cast<long long>(start)+shift;
+                if(other<0||static_cast<size_t>(other)+w.length>bitsB)continue;
+                const size_t run=m306Longest(a,0,start,b,0,static_cast<size_t>(other),w.length);
+                ++compared;
+                if(run>=w.threshold)++atLeast;
+                if(run>w.threshold)++greater;
+                if(run>best){best=run;bestShift=shift;bestStart=start;}
+            }
+        }
+        std::printf("SPR_M307_CONTROL resource=%s ordinalA=%zu ordinalB=%zu candidate=%s width=%zu threshold=%zu stride=%zu shiftMin=-64 shiftMax=64 excludeShiftZero=1 scanLimitBits=%zu starts=%zu comparisons=%zu atLeast=%zu greater=%zu maximum=%zu maxShift=%d maxStartA=%zu sampling=deterministic_overlapping\n",
+                    name,oa,ob,w.label,w.length,w.threshold,limit,starts,compared,atLeast,greater,best,bestShift,bestStart);
+    }
+}
+
 void m306Compare(const std::vector<BitMatch>& baseline,const std::vector<BitMatch>& alternative,
                  const std::vector<uint8_t>& a,const std::vector<uint8_t>& b,
                  size_t ba,size_t bb,size_t na,size_t nb){
@@ -1564,6 +1653,9 @@ void bitGap(const char* name,size_t oa,size_t ob,size_t gap,
         if((m295Mode||m296Mode)&&std::string(mode)=="leave_one_out"&&
            (parameter==3||parameter==4||parameter==5||parameter==6||parameter==9))
             boundaryEvidence(name,oa,ob,gap,mode,parameter,baseline,alternative.runs,a,b,ba,bb,na,nb);
+        if(m307Mode&&std::string(mode)=="leave_one_out"&&parameter==9&&
+           std::string(name)=="BRDGRIKR.SPR"&&oa==5&&ob==6&&gap==0)
+            m307Compare(baseline,alternative.runs,a,b,ba,bb,na,nb);
         if(m306Mode&&std::string(mode)=="leave_one_out"&&parameter==9&&
            std::string(name)=="BRDGRIKR.SPR"&&oa==5&&ob==6&&gap==0)
             m306Compare(baseline,alternative.runs,a,b,ba,bb,na,nb);
@@ -1779,6 +1871,7 @@ bool survey(reluva::stafu::ResourceManager& manager,const char* name,Totals& tot
         const auto& a=direct[k-1];const auto& b=direct[k];
         if(b.ordinal!=a.ordinal+1)continue;
         ++local.pairs;
+        if(m307Mode)m307Nearby(name,a.ordinal,b.ordinal,a.data,b.data);
         if(m306Mode)m306Nearby(name,a.ordinal,b.ordinal,a.data,b.data);
         const size_t pre=prefix(a.data,b.data);
         const auto found=candidates(a.data,b.data,pre);
@@ -2013,5 +2106,13 @@ int stafuSprM306Record2FixedOffsetSpecificity(const char* installed,const char* 
     const int result=stafuSprM293Record2ChainDependencies(installed,cd,optional);
     m306Mode=false;
     if(result==0)std::puts("SPR_M306_NOTE All eligible offsets +/-32 within the same unmatched intervals; nearby record-pair windows are deterministic sparse samples, not matched-distribution controls. Selected offsets and 26-bit threshold were chosen post hoc. No calibrated significance or codec validation.");
+    return result;
+}
+
+int stafuSprM307Record2WideMatchedControls(const char* installed,const char* cd,const char* optional){
+    m307Mode=true;
+    const int result=stafuSprM293Record2ChainDependencies(installed,cd,optional);
+    m307Mode=false;
+    if(result==0)std::puts("SPR_M307_NOTE All overlap-eligible shifts in anchored unmatched spans; nearby controls match comparison length, exclude shift zero, and use deterministic overlapping windows. Selected runs and thresholds are post hoc; control pairs are not an exchangeable null distribution. No calibrated significance or codec validation.");
     return result;
 }
