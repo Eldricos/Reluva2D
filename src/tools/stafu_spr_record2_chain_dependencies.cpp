@@ -1204,7 +1204,7 @@ void m310Compare(const std::vector<BitMatch>& baseline,
         const size_t posA=h.ordinal<k.ordinal?h.at:k.at;
         const size_t posB=h.ordinal<k.ordinal?k.at:h.at;
         edges.push_back({ordinalA,ordinalB,posA,posB,left,right,isFixed});
-        std::printf("SPR_M310_PERFECT ordinalA=%zu bitA=%zu ordinalB=%zu bitB=%zu fixedPosition=%d adjacent=%d exactLeft=%zu motif=%zu exactRight=%zu totalExact=%zu startA=%zu startB=%zu endA=%zu endB=%zu selected=%d\\n",
+        std::printf("SPR_M310_PERFECT ordinalA=%zu bitA=%zu ordinalB=%zu bitB=%zu fixedPosition=%d adjacent=%d exactLeft=%zu motif=%zu exactRight=%zu totalExact=%zu startA=%zu startB=%zu endA=%zu endB=%zu selected=%d\n",
                     ordinalA,posA,ordinalB,posB,isFixed?1:0,isAdjacent?1:0,
                     left,best,right,left+best+right,posA-left,posB-left,
                     posA+best+right,posB+best+right,isSelected?1:0);
@@ -1232,10 +1232,10 @@ void m310Compare(const std::vector<BitMatch>& baseline,
                         path.size(),path.front().ra,path.back().rb);
             for(const auto& e:path)
                 std::printf(" edge=%zu:%zu>%zu:%zu",e.ra,e.pa,e.rb,e.pb);
-            std::putchar('\\n');
+            std::putchar('\n');
         }
     }
-    std::printf("SPR_M310_SUMMARY motifBits=%zu occurrences=%zu examinedPairs=%zu perfect64=%zu adjacentPerfect=%zu fixedPerfect=%zu selectedPerfect=%zu chainStarts=%zu longestChainLinks=%zu\\n",
+    std::printf("SPR_M310_SUMMARY motifBits=%zu occurrences=%zu examinedPairs=%zu perfect64=%zu adjacentPerfect=%zu fixedPerfect=%zu selectedPerfect=%zu chainStarts=%zu longestChainLinks=%zu\n",
                 best,hits.size(),examined,full,adjacent,fixed,selectedPerfect,chains,bestLinks);
 }
 
