@@ -1367,7 +1367,7 @@ void m311Compare(const std::vector<BitMatch>& baseline,
                 const bool edge=availableA==0||availableB==0;
                 const bool immediateEqual=!edge&&
                     bitAt(ra->data,before?v.sa-1:endA)==bitAt(rb->data,before?v.sb-1:endB);
-                std::printf("SPR_M312_BOUNDARY rank=%zu ordinalA=%zu ordinalB=%zu side=%s startA=%zu endA=%zu startB=%zu endB=%zu length=%zu shift=%lld edge=%d immediateEqual=%d contextBits=%zu contextMismatches=%zu contextA=0x%08llX contextB=0x%08llX\\n",
+                std::printf("SPR_M312_BOUNDARY rank=%zu ordinalA=%zu ordinalB=%zu side=%s startA=%zu endA=%zu startB=%zu endB=%zu length=%zu shift=%lld edge=%d immediateEqual=%d contextBits=%zu contextMismatches=%zu contextA=0x%08llX contextB=0x%08llX\n",
                     i+1,v.ra,v.rb,before?"left":"right",v.sa,endA,v.sb,endB,v.length,
                     static_cast<long long>(v.sb)-static_cast<long long>(v.sa),
                     edge?1:0,immediateEqual?1:0,compared,mismatches,sigA,sigB);
@@ -1391,7 +1391,7 @@ void m311Compare(const std::vector<BitMatch>& baseline,
                     }
                 }
                 if(!neighbor){
-                    std::printf("SPR_M312_NEIGHBOR rank=%zu side=%s found=0\\n",i+1,before?"left":"right");
+                    std::printf("SPR_M312_NEIGHBOR rank=%zu side=%s found=0\n",i+1,before?"left":"right");
                     continue;
                 }
                 const size_t gapA=before?v.sa-(neighbor->sa+neighbor->length):neighbor->sa-endA;
@@ -1401,14 +1401,14 @@ void m311Compare(const std::vector<BitMatch>& baseline,
                 const long long delta=gapB-static_cast<long long>(gapA);
                 const long long neighborShift=static_cast<long long>(neighbor->sb)-static_cast<long long>(neighbor->sa);
                 const long long currentShift=static_cast<long long>(v.sb)-static_cast<long long>(v.sa);
-                std::printf("SPR_M312_NEIGHBOR rank=%zu side=%s found=1 neighborStartA=%zu neighborStartB=%zu neighborLength=%zu gapA=%zu gapB=%lld gapDelta=%lld currentShift=%lld neighborShift=%lld shiftDelta=%lld consistent=%d\\n",
+                std::printf("SPR_M312_NEIGHBOR rank=%zu side=%s found=1 neighborStartA=%zu neighborStartB=%zu neighborLength=%zu gapA=%zu gapB=%lld gapDelta=%lld currentShift=%lld neighborShift=%lld shiftDelta=%lld consistent=%d\n",
                     i+1,before?"left":"right",neighbor->sa,neighbor->sb,neighbor->length,
                     gapA,gapB,delta,currentShift,neighborShift,
                     before?currentShift-neighborShift:neighborShift-currentShift,
                     delta==(before?currentShift-neighborShift:neighborShift-currentShift)?1:0);
             }
         }
-        std::printf("SPR_M312_SUMMARY examinedShifted=%zu contextWindow=32 neighborPolicy=nearest_nonoverlapping_A\\n",reported);
+        std::printf("SPR_M312_SUMMARY examinedShifted=%zu contextWindow=32 neighborPolicy=nearest_nonoverlapping_A\n",reported);
     }
     std::printf("SPR_M311_SEGMENT9 recordA=5 startA=%zu endA=%zu recordB=6 startB=%zu endB=%zu selectedMotifA=%zu selectedMotifB=%zu motifBits=%zu\n",
         segA,segEndA,segB,segEndB,chosenA,chosenB,best);
