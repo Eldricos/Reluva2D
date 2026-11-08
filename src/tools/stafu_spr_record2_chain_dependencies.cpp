@@ -289,6 +289,7 @@ bool m305Mode=false;
 bool m306Mode=false;
 bool m307Mode=false;
 bool m308Mode=false;
+bool m309Mode=false;
 std::vector<Image> m308Records;
 size_t matchingFlank(const std::vector<uint8_t>& a,const std::vector<uint8_t>& b,
                      size_t baseA,size_t baseB,size_t nA,size_t nB,
@@ -1023,6 +1024,119 @@ void m308Compare(const std::vector<BitMatch>& baseline,
     }
 }
 
+
+struct M309Hit {size_t ordinal=0,at=0,bits=0;};
+std::vector<M309Hit> m309Hits(const std::vector<uint8_t>& data,size_t ordinal,
+                             const std::vector<uint8_t>& motif,size_t length){
+    std::vector<M309Hit> result;
+    const size_t bits=data.size()*8;
+    if(length==0||bits<length)return result;
+    for(size_t at=0;at<=bits-length;++at){
+        size_t k=0;
+        for(;k<length;++k)if(bitAt(data,at+k)!=bitAt(motif,k))break;
+        if(k==length)result.push_back({ordinal,at,bits});
+    }
+    return result;
+}
+size_t m309Side(const std::vector<uint8_t>& a,size_t atA,
+                const std::vector<uint8_t>& b,size_t atB,
+                size_t length,bool left,size_t limit){
+    size_t n=0;
+    while(n<limit){
+        if(left){
+            if(n>=atA||n>=atB)break;
+            if(bitAt(a,atA-n-1)!=bitAt(b,atB-n-1))break;
+        }else{
+            if(atA+length+n>=a.size()*8||atB+length+n>=b.size()*8)break;
+            if(bitAt(a,atA+length+n)!=bitAt(b,atB+length+n))break;
+        }
+        ++n;
+    }
+    return n;
+}
+size_t m309WindowMismatches(const std::vector<uint8_t>& a,size_t atA,
+                           const std::vector<uint8_t>& b,size_t atB,
+                           size_t length,bool left,size_t& compared){
+    compared=0;size_t errors=0;
+    for(size_t k=0;k<32;++k){
+        if(left){
+            if(k>=atA||k>=atB)break;
+            errors+=bitAt(a,atA-k-1)!=bitAt(b,atB-k-1)?1u:0u;
+        }else{
+            if(atA+length+k>=a.size()*8||atB+length+k>=b.size()*8)break;
+            errors+=bitAt(a,atA+length+k)!=bitAt(b,atB+length+k)?1u:0u;
+        }
+        ++compared;
+    }
+    return errors;
+}
+void m309Compare(const std::vector<BitMatch>& baseline,
+                 const std::vector<uint8_t>& a,const std::vector<uint8_t>& b,
+                 size_t ba,size_t bb,size_t na,size_t nb){
+    if(baseline.size()<10)return;
+    const auto& mid=baseline[8],&right=baseline[9];
+    if(mid.a+mid.len>right.a||mid.b+mid.len>right.b||right.a>na||right.b>nb)return;
+    const M300Span x{mid.a+mid.len,right.a-mid.a-mid.len};
+    const M300Span y{mid.b+mid.len,right.b-mid.b-mid.len};
+    const auto selected=m302Best(a,ba,x,b,bb,y,32,nullptr);
+    if(!selected.eligible)return;
+    const int shift=selected.score.shift;
+    const size_t offA=shift<0?static_cast<size_t>(-shift):0;
+    const size_t offB=shift>0?static_cast<size_t>(shift):0;
+    size_t best=0,run=0,at=0;
+    for(size_t i=0;i<selected.score.compared;++i){
+        if(bitAt(a,ba+x.start+offA+i)==bitAt(b,bb+y.start+offB+i)){
+            ++run;if(run>best){best=run;at=i+1-run;}
+        }else run=0;
+    }
+    if(!best)return;
+    const size_t chosenA=ba+x.start+offA+at,chosenB=bb+y.start+offB+at;
+    std::vector<uint8_t> motif((best+7)/8,0);
+    for(size_t k=0;k<best;++k)
+        if(bitAt(a,chosenA+k))motif[k/8]|=static_cast<uint8_t>(0x80u>>(k%8));
+    std::vector<M309Hit> hits;
+    for(const auto& rec:m308Records){
+        if(rec.ordinal<4||rec.ordinal>7)continue;
+        auto h=m309Hits(rec.data,rec.ordinal,motif,best);
+        hits.insert(hits.end(),h.begin(),h.end());
+    }
+    std::printf("SPR_M309_MOTIF length=%zu chosenA=%zu chosenB=%zu occurrences=%zu flankBits=32\n",
+                best,chosenA,chosenB,hits.size());
+    for(const auto& h:hits){
+        size_t samePositionRecords=0;
+        for(const auto& other:hits)if(other.at==h.at)++samePositionRecords;
+        std::printf("SPR_M309_HIT ordinal=%zu bit=%zu fixedAcrossFour=%d positionMultiplicity=%zu selected=%d\n",
+                    h.ordinal,h.at,samePositionRecords==4?1:0,samePositionRecords,
+                    (h.ordinal==5&&h.at==chosenA)||(h.ordinal==6&&h.at==chosenB)?1:0);
+    }
+    size_t pairs=0,selectedPairs=0;
+    for(size_t i=0;i<hits.size();++i)for(size_t j=i+1;j<hits.size();++j){
+        const auto& h=hits[i],&k=hits[j];
+        if(h.ordinal==k.ordinal)continue;
+        const Image* ra=nullptr;const Image* rb=nullptr;
+        for(const auto& rec:m308Records){
+            if(rec.ordinal==h.ordinal)ra=&rec;
+            if(rec.ordinal==k.ordinal)rb=&rec;
+        }
+        if(!ra||!rb)continue;
+        size_t nl=0,nr=0;
+        const size_t ml=m309WindowMismatches(ra->data,h.at,rb->data,k.at,best,true,nl);
+        const size_t mr=m309WindowMismatches(ra->data,h.at,rb->data,k.at,best,false,nr);
+        const size_t exactLeft=m309Side(ra->data,h.at,rb->data,k.at,best,true,32);
+        const size_t exactRight=m309Side(ra->data,h.at,rb->data,k.at,best,false,32);
+        const bool selectedPair=(h.ordinal==5&&h.at==chosenA&&k.ordinal==6&&k.at==chosenB)||
+                                (k.ordinal==5&&k.at==chosenA&&h.ordinal==6&&h.at==chosenB);
+        if(selectedPair)++selectedPairs;
+        const bool fixed=h.at==k.at;
+        std::printf("SPR_M309_PAIR ordinalA=%zu bitA=%zu ordinalB=%zu bitB=%zu fixedPosition=%d selected=%d leftMatch=%zu/%zu rightMatch=%zu/%zu exactLeft=%zu exactRight=%zu totalMatch=%zu/%zu\n",
+                    h.ordinal,h.at,k.ordinal,k.at,fixed?1:0,selectedPair?1:0,
+                    nl-ml,nl,nr-mr,nr,exactLeft,exactRight,nl+nr-ml-mr,nl+nr);
+        ++pairs;
+    }
+    std::printf("SPR_M309_SUMMARY hits=%zu crossRecordPairs=%zu selectedPairs=%zu selectedA=%zu selectedB=%zu\n",
+                hits.size(),pairs,selectedPairs,chosenA,chosenB);
+}
+
 struct M307Window {size_t length;size_t threshold;const char* label;};
 constexpr M307Window m307Windows[]={{38,26,"baseline_after"},{54,15,"alternative_before"},{22,19,"alternative_after"}};
 void m307Compare(const std::vector<BitMatch>& baseline,const std::vector<BitMatch>& alternative,
@@ -1727,6 +1841,9 @@ void bitGap(const char* name,size_t oa,size_t ob,size_t gap,
         if((m295Mode||m296Mode)&&std::string(mode)=="leave_one_out"&&
            (parameter==3||parameter==4||parameter==5||parameter==6||parameter==9))
             boundaryEvidence(name,oa,ob,gap,mode,parameter,baseline,alternative.runs,a,b,ba,bb,na,nb);
+        if(m309Mode&&std::string(mode)=="leave_one_out"&&parameter==9&&
+           std::string(name)=="BRDGRIKR.SPR"&&oa==5&&ob==6&&gap==0)
+            m309Compare(baseline,a,b,ba,bb,na,nb);
         if(m308Mode&&std::string(mode)=="leave_one_out"&&parameter==9&&
            std::string(name)=="BRDGRIKR.SPR"&&oa==5&&ob==6&&gap==0)
             m308Compare(baseline,a,b,ba,bb,na,nb);
@@ -1943,7 +2060,7 @@ bool survey(reluva::stafu::ResourceManager& manager,const char* name,Totals& tot
         }
         ++ordinal;
     }
-    if(m308Mode&&std::string(name)=="BRDGRIKR.SPR")m308Records=direct;
+    if((m308Mode||m309Mode)&&std::string(name)=="BRDGRIKR.SPR")m308Records=direct;
     Totals local;
     for(size_t k=1;k<direct.size();++k){
         const auto& a=direct[k-1];const auto& b=direct[k];
@@ -2201,5 +2318,14 @@ int stafuSprM308Record2MotifCensus(const char* installed,const char* cd,const ch
     m308Mode=false;
     m308Records.clear();
     if(result==0)std::puts("SPR_M308_NOTE Motif selected post hoc from baseline exact run. Overlapping occurrences and adjacent records are descriptive, not independent null samples or codec validation.");
+    return result;
+}
+
+int stafuSprM309Record2MotifContext(const char* installed,const char* cd,const char* optional){
+    m309Mode=true;
+    const int result=stafuSprM293Record2ChainDependencies(installed,cd,optional);
+    m309Mode=false;
+    m308Records.clear();
+    if(result==0)std::puts("SPR_M309_NOTE All cross-record pairs of post-hoc motif occurrences; 32-bit left/right context and contiguous extensions are descriptive, correlated and not calibrated significance or codec validation.");
     return result;
 }
