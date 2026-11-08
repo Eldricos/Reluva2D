@@ -19,6 +19,7 @@ int stafuSprM308Record2MotifCensus(const char*,const char*,const char*);
 int stafuSprM309Record2MotifContext(const char*,const char*,const char*);
 int stafuSprM310Record2PerfectContextChains(const char*,const char*,const char*);
 int stafuSprM311Record2UniqueExactIntervals(const char*,const char*,const char*);
+int stafuSprM312Record2ShiftBoundaryAnalysis(const char*,const char*,const char*);
 int stafuSprM304Record2ExactExtension(const char*,const char*,const char*);
 int stafuSprM297Record2BoundaryNormalized(const char*,const char*,const char*);
 int stafuSprM296Record2EvidenceRanking(const char*,const char*,const char*);
@@ -269,6 +270,8 @@ int stafuToolMain(int argc, char** argv) {
         return stafuSprMaximalSpans(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-span-reconcile") == 0)
         return stafuSprSpanReconcile(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
+    if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-m312-record2-shift-boundary-analysis") == 0)
+        return stafuSprM312Record2ShiftBoundaryAnalysis(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-m311-record2-unique-exact-intervals") == 0)
         return stafuSprM311Record2UniqueExactIntervals(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-m310-record2-perfect-context-chains") == 0)
