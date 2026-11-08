@@ -285,6 +285,7 @@ bool m301Mode=false;
 bool m302Mode=false;
 bool m303Mode=false;
 bool m304Mode=false;
+bool m305Mode=false;
 size_t matchingFlank(const std::vector<uint8_t>& a,const std::vector<uint8_t>& b,
                      size_t baseA,size_t baseB,size_t nA,size_t nB,
                      size_t atA,size_t atB,bool left,size_t cap){
@@ -856,6 +857,85 @@ void m304Inspect(const char* name,size_t oa,size_t ob,size_t gap,const char* pat
             path,side,posA+start,posB+start,i-start,start==0?1:0,i==count?1:0);
     }
 }
+
+struct M305Run {size_t start=0,len=0;};
+std::vector<M305Run> m305Runs(const std::vector<uint8_t>& a,size_t ba,size_t pa,
+                              const std::vector<uint8_t>& b,size_t bb,size_t pb,size_t count){
+    std::vector<M305Run> out;
+    size_t i=0;
+    while(i<count){
+        if(bitAt(a,ba+pa+i)!=bitAt(b,bb+pb+i)){++i;continue;}
+        const size_t start=i;
+        while(i<count&&bitAt(a,ba+pa+i)==bitAt(b,bb+pb+i))++i;
+        out.push_back({start,i-start});
+    }
+    return out;
+}
+void m305Inspect(const char* name,size_t oa,size_t ob,size_t gap,const char* path,
+                 const char* side,const std::vector<uint8_t>& a,size_t ba,M300Span x,
+                 const std::vector<uint8_t>& b,size_t bb,M300Span y,
+                 size_t na,size_t nb){
+    const size_t minimum=path[0]=='b'?32:16;
+    const auto best=m302Best(a,ba,x,b,bb,y,minimum,nullptr);
+    if(!best.eligible){
+        std::printf("SPR_M305_SKIP path=%s side=%s reason=insufficient_overlap aBits=%zu bBits=%zu\\n",
+                    path,side,x.len,y.len);return;
+    }
+    const int shift=best.score.shift;
+    const size_t offA=shift<0?static_cast<size_t>(-shift):0;
+    const size_t offB=shift>0?static_cast<size_t>(shift):0;
+    const size_t pa=x.start+offA,pb=y.start+offB,n=best.score.compared;
+    const auto runs=m305Runs(a,ba,pa,b,bb,pb,n);
+    size_t longest=0,at=0,interior=0,touching=0;
+    for(const auto& run:runs){
+        if(run.len>longest){longest=run.len;at=run.start;}
+        const bool left=run.start==0,right=run.start+run.len==n;
+        if(left||right)++touching;else ++interior;
+        std::printf("SPR_M305_ISLAND path=%s side=%s aStart=%zu bStart=%zu length=%zu confined=1 touchesSpanStart=%d touchesSpanEnd=%d internal=%d\\n",
+                    path,side,pa+run.start,pb+run.start,run.len,left?1:0,right?1:0,
+                    (!left&&!right)?1:0);
+    }
+    // Fixed-displacement extension outside the unmatched interval is reported
+    // separately; these bits cannot count as independent unmatched evidence.
+    size_t outsideLeft=0,outsideRight=0;
+    while(pa>outsideLeft&&pb>outsideLeft&&
+          bitAt(a,ba+pa-outsideLeft-1)==bitAt(b,bb+pb-outsideLeft-1))++outsideLeft;
+    while(pa+n+outsideRight<na&&pb+n+outsideRight<nb&&
+          bitAt(a,ba+pa+n+outsideRight)==bitAt(b,bb+pb+n+outsideRight))++outsideRight;
+    const size_t withinLeft=std::min(outsideLeft,std::min(offA,offB));
+    const size_t withinRight=std::min(outsideRight,std::min(x.len-offA-n,y.len-offB-n));
+    std::printf("SPR_M305_CONFINED resource=%s ordinalA=%zu ordinalB=%zu gap=%zu path=%s side=%s shift=%d searchBoundary=%d aSpanStart=%zu aSpanEnd=%zu bSpanStart=%zu bSpanEnd=%zu overlapStartA=%zu overlapStartB=%zu overlapBits=%zu matchingBits=%zu confinedLongest=%zu confinedLongestAt=%zu islands=%zu interiorIslands=%zu edgeIslands=%zu exactLeftInside=%zu exactRightInside=%zu exactLeftOutsidePossible=%zu exactRightOutsidePossible=%zu interpretation=anchor_constrained_observation\\n",
+                name,oa,ob,gap,path,side,shift,(shift==-32||shift==32)?1:0,
+                x.start,x.start+x.len,y.start,y.start+y.len,pa,pb,n,best.score.matches,
+                longest,at,runs.size(),interior,touching,withinLeft,withinRight,
+                outsideLeft>withinLeft?outsideLeft-withinLeft:0,
+                outsideRight>withinRight?outsideRight-withinRight:0);
+}
+void m305Compare(const char* name,size_t oa,size_t ob,size_t gap,
+                 const std::vector<BitMatch>& baseline,const std::vector<BitMatch>& alternative,
+                 const std::vector<uint8_t>& a,const std::vector<uint8_t>& b,
+                 size_t ba,size_t bb,size_t na,size_t nb){
+    if(baseline.size()<10)return;
+    size_t li=0,ri=0;bool lf=false,rf=false;
+    for(size_t i=0;i<alternative.size();++i){
+        if(sameBitMatch(alternative[i],baseline[7])){li=i;lf=true;}
+        if(sameBitMatch(alternative[i],baseline[9])){ri=i;rf=true;}
+    }
+    if(!lf||!rf||ri!=li+2)return;
+    const auto& left=baseline[7];const auto& right=baseline[9];
+    const BitMatch mids[]={baseline[8],alternative[li+1]};
+    for(int p=0;p<2;++p){
+        const auto& m=mids[p];
+        if(left.a+left.len>m.a||left.b+left.len>m.b||
+           m.a+m.len>right.a||m.b+m.len>right.b||
+           right.a+right.len>na||right.b+right.len>nb)return;
+        const M300Span ax[]={{left.a+left.len,m.a-left.a-left.len},{m.a+m.len,right.a-m.a-m.len}};
+        const M300Span by[]={{left.b+left.len,m.b-left.b-left.len},{m.b+m.len,right.b-m.b-m.len}};
+        m305Inspect(name,oa,ob,gap,p?"alternative":"baseline","after",a,ba,ax[1],b,bb,by[1],na,nb);
+        if(p)m305Inspect(name,oa,ob,gap,"alternative","before",a,ba,ax[0],b,bb,by[0],na,nb);
+    }
+}
+
 void m304Compare(const char* name,size_t oa,size_t ob,size_t gap,
                  const std::vector<BitMatch>& baseline,const std::vector<BitMatch>& alternative,
                  const std::vector<uint8_t>& a,const std::vector<uint8_t>& b,
@@ -1402,6 +1482,9 @@ void bitGap(const char* name,size_t oa,size_t ob,size_t gap,
         if((m295Mode||m296Mode)&&std::string(mode)=="leave_one_out"&&
            (parameter==3||parameter==4||parameter==5||parameter==6||parameter==9))
             boundaryEvidence(name,oa,ob,gap,mode,parameter,baseline,alternative.runs,a,b,ba,bb,na,nb);
+        if(m305Mode&&std::string(mode)=="leave_one_out"&&parameter==9&&
+           std::string(name)=="BRDGRIKR.SPR"&&oa==5&&ob==6&&gap==0)
+            m305Compare(name,oa,ob,gap,baseline,alternative.runs,a,b,ba,bb,na,nb);
         if(m304Mode&&std::string(mode)=="leave_one_out"&&parameter==9&&
            std::string(name)=="BRDGRIKR.SPR"&&oa==5&&ob==6&&gap==0)
             m304Compare(name,oa,ob,gap,baseline,alternative.runs,a,b,ba,bb,na,nb);
@@ -1828,5 +1911,13 @@ int stafuSprM304Record2ExactExtension(const char* installed,const char* cd,const
     const int result=stafuSprM293Record2ChainDependencies(installed,cd,optional);
     m304Mode=false;
     if(result==0)std::puts("SPR_M304_NOTE Fixed-shift exact islands and flanks are observational; extensions may cross segment anchors and do not validate a codec or decoder state.");
+    return result;
+}
+
+int stafuSprM305Record2AnchorConstrained(const char* installed,const char* cd,const char* optional){
+    m305Mode=true;
+    const int result=stafuSprM293Record2ChainDependencies(installed,cd,optional);
+    m305Mode=false;
+    if(result==0)std::puts("SPR_M305_NOTE Exact runs are clipped to each path's unmatched spans. Outside extensions can cross anchors and are excluded from confined evidence; fixed offsets remain post-hoc observations, not codec validation.");
     return result;
 }
