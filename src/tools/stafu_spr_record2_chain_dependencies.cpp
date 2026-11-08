@@ -1262,7 +1262,7 @@ bool m313Selftest(){
     const std::vector<uint8_t> b{0x34,0xAB,0xCD};
     const std::vector<uint8_t> c{0x56,0xAB,0xCD};
     const std::vector<uint8_t> d{0x12,0xAB,0xCE};
-    return m313CommonSuffix(a,b)==16&&m313CommonSuffix(b,c)==16&&
+    return m313CommonSuffix(a,b)==17&&m313CommonSuffix(b,c)==17&&
            m313CommonSuffix(a,d)==0&&m313CommonPrefix(a,d)==22&&
            m313CommonSuffix(a,a)==24&&m313CommonSuffix(a,{})==0;
 }
