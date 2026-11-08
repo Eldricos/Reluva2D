@@ -998,7 +998,7 @@ void m307Compare(const std::vector<BitMatch>& baseline,const std::vector<BitMatc
                 if(run>bestRun||(run==bestRun&&n>bestOverlap)){
                     bestRun=run;bestShift=shift;bestOverlap=n;
                 }
-                std::printf("SPR_M307_OFFSET path=%s side=%s shift=%d overlap=%zu longest=%zu selected=%d\\n",
+                std::printf("SPR_M307_OFFSET path=%s side=%s shift=%d overlap=%zu longest=%zu selected=%d\n",
                             p?"alternative":"baseline",side?"after":"before",shift,n,run,shift==selectedShift?1:0);
             }
             std::printf("SPR_M307_WIDE path=%s side=%s spanA=%zu spanB=%zu minOverlap=%zu shiftMin=%d shiftMax=%d selectedShift=%d selectedLongest=%zu selectedOverlap=%zu eligible=%zu atLeastSelected=%zu greater=%zu bestShift=%d bestLongest=%zu bestOverlap=%zu selectedAtSearchEdge=%d\n",
