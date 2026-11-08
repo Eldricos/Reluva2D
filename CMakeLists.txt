@@ -493,6 +493,7 @@ if(RELUVA_BUILD_TESTS)
     add_test(NAME stafu_spr_m303_structure_controls COMMAND reluva-tool -stafu spr-m303-record2-structure-controls __selftest__ unused)
     add_test(NAME stafu_spr_m304_exact_extension COMMAND reluva-tool -stafu spr-m304-record2-exact-extension __selftest__ unused)
     add_test(NAME stafu_spr_m305_anchor_constrained COMMAND reluva-tool -stafu spr-m305-record2-anchor-constrained __selftest__ unused)
+    add_test(NAME stafu_spr_m306_fixed_offset_specificity COMMAND reluva-tool -stafu spr-m306-record2-fixed-offset-specificity __selftest__ unused)
 
     add_executable(reluva_stafu_spr_gif_structure_tests tests/test_stafu_spr_gif_structure.cpp)
     target_link_libraries(reluva_stafu_spr_gif_structure_tests PRIVATE reluva_engines reluva_warnings)
