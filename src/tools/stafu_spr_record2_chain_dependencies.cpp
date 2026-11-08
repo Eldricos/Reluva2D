@@ -292,6 +292,7 @@ bool m308Mode=false;
 bool m309Mode=false;
 bool m310Mode=false;
 bool m311Mode=false;
+bool m312Mode=false;
 std::vector<Image> m308Records;
 size_t matchingFlank(const std::vector<uint8_t>& a,const std::vector<uint8_t>& b,
                      size_t baseA,size_t baseB,size_t nA,size_t nB,
@@ -1334,6 +1335,81 @@ void m311Compare(const std::vector<BitMatch>& baseline,
             prefix?"prefix":fixedPosition?"fixed_internal":"shifted_internal",
             v.observations,intersects?1:0,intersectsA?1:0,intersectsB?1:0);
     }
+    if(m312Mode){
+        size_t reported=0;
+        for(size_t i=0;i<intervals.size()&&reported<3;++i){
+            const auto& v=intervals[i];
+            if(v.sa==v.sb)continue;
+            const Image* ra=nullptr;const Image* rb=nullptr;
+            for(const auto& rec:m308Records){
+                if(rec.ordinal==v.ra)ra=&rec;
+                if(rec.ordinal==v.rb)rb=&rec;
+            }
+            if(!ra||!rb)continue;
+            ++reported;
+            const size_t bitsA=ra->data.size()*8,bitsB=rb->data.size()*8;
+            const size_t endA=v.sa+v.length,endB=v.sb+v.length;
+            for(int side=0;side<2;++side){
+                const bool before=side==0;
+                const size_t availableA=before?v.sa:bitsA-endA;
+                const size_t availableB=before?v.sb:bitsB-endB;
+                const size_t compared=std::min(size_t(32),std::min(availableA,availableB));
+                size_t mismatches=0;
+                unsigned long long sigA=0,sigB=0;
+                for(size_t k=0;k<compared;++k){
+                    const size_t pA=before?v.sa-compared+k:endA+k;
+                    const size_t pB=before?v.sb-compared+k:endB+k;
+                    const bool baBit=bitAt(ra->data,pA),bbBit=bitAt(rb->data,pB);
+                    sigA=(sigA<<1)|static_cast<unsigned>(baBit);
+                    sigB=(sigB<<1)|static_cast<unsigned>(bbBit);
+                    mismatches+=baBit!=bbBit;
+                }
+                const bool edge=availableA==0||availableB==0;
+                const bool immediateEqual=!edge&&
+                    bitAt(ra->data,before?v.sa-1:endA)==bitAt(rb->data,before?v.sb-1:endB);
+                std::printf("SPR_M312_BOUNDARY rank=%zu ordinalA=%zu ordinalB=%zu side=%s startA=%zu endA=%zu startB=%zu endB=%zu length=%zu shift=%lld edge=%d immediateEqual=%d contextBits=%zu contextMismatches=%zu contextA=0x%08llX contextB=0x%08llX\\n",
+                    i+1,v.ra,v.rb,before?"left":"right",v.sa,endA,v.sb,endB,v.length,
+                    static_cast<long long>(v.sb)-static_cast<long long>(v.sa),
+                    edge?1:0,immediateEqual?1:0,compared,mismatches,sigA,sigB);
+            }
+            // Nearest other qualifying interval for the same record pair, in each
+            // direction in A. This is descriptive: intervals can overlap or cross.
+            for(int side=0;side<2;++side){
+                const bool before=side==0;
+                const M311Interval* neighbor=nullptr;
+                size_t distance=static_cast<size_t>(-1);
+                for(const auto& w:intervals){
+                    if(w.ra!=v.ra||w.rb!=v.rb||(&w==&v))continue;
+                    if(before){
+                        if(w.sa+w.length>v.sa)continue;
+                        const size_t d=v.sa-(w.sa+w.length);
+                        if(d<distance){distance=d;neighbor=&w;}
+                    }else{
+                        if(w.sa<endA)continue;
+                        const size_t d=w.sa-endA;
+                        if(d<distance){distance=d;neighbor=&w;}
+                    }
+                }
+                if(!neighbor){
+                    std::printf("SPR_M312_NEIGHBOR rank=%zu side=%s found=0\\n",i+1,before?"left":"right");
+                    continue;
+                }
+                const size_t gapA=before?v.sa-(neighbor->sa+neighbor->length):neighbor->sa-endA;
+                const long long gapB=before?
+                    static_cast<long long>(v.sb)-static_cast<long long>(neighbor->sb+neighbor->length):
+                    static_cast<long long>(neighbor->sb)-static_cast<long long>(endB);
+                const long long delta=gapB-static_cast<long long>(gapA);
+                const long long neighborShift=static_cast<long long>(neighbor->sb)-static_cast<long long>(neighbor->sa);
+                const long long currentShift=static_cast<long long>(v.sb)-static_cast<long long>(v.sa);
+                std::printf("SPR_M312_NEIGHBOR rank=%zu side=%s found=1 neighborStartA=%zu neighborStartB=%zu neighborLength=%zu gapA=%zu gapB=%lld gapDelta=%lld currentShift=%lld neighborShift=%lld shiftDelta=%lld consistent=%d\\n",
+                    i+1,before?"left":"right",neighbor->sa,neighbor->sb,neighbor->length,
+                    gapA,gapB,delta,currentShift,neighborShift,
+                    before?currentShift-neighborShift:neighborShift-currentShift,
+                    delta==(before?currentShift-neighborShift:neighborShift-currentShift)?1:0);
+            }
+        }
+        std::printf("SPR_M312_SUMMARY examinedShifted=%zu contextWindow=32 neighborPolicy=nearest_nonoverlapping_A\\n",reported);
+    }
     std::printf("SPR_M311_SEGMENT9 recordA=5 startA=%zu endA=%zu recordB=6 startB=%zu endB=%zu selectedMotifA=%zu selectedMotifB=%zu motifBits=%zu\n",
         segA,segEndA,segB,segEndB,chosenA,chosenB,best);
     std::printf("SPR_M311_SUMMARY hits=%zu examinedPairs=%zu qualifiedObservations=%zu uniqueIntervals=%zu prefixes=%zu fixedInternal=%zu shiftedInternal=%zu segment9Intersect=%zu\n",
@@ -2044,7 +2120,7 @@ void bitGap(const char* name,size_t oa,size_t ob,size_t gap,
         if((m295Mode||m296Mode)&&std::string(mode)=="leave_one_out"&&
            (parameter==3||parameter==4||parameter==5||parameter==6||parameter==9))
             boundaryEvidence(name,oa,ob,gap,mode,parameter,baseline,alternative.runs,a,b,ba,bb,na,nb);
-        if(m311Mode&&std::string(mode)=="leave_one_out"&&parameter==9&&
+        if((m311Mode||m312Mode)&&std::string(mode)=="leave_one_out"&&parameter==9&&
            std::string(name)=="BRDGRIKR.SPR"&&oa==5&&ob==6&&gap==0)
             m311Compare(baseline,a,b,ba,bb,na,nb);
         if(m310Mode&&std::string(mode)=="leave_one_out"&&parameter==9&&
@@ -2269,7 +2345,7 @@ bool survey(reluva::stafu::ResourceManager& manager,const char* name,Totals& tot
         }
         ++ordinal;
     }
-    if((m308Mode||m309Mode||m310Mode||m311Mode)&&std::string(name)=="BRDGRIKR.SPR")m308Records=direct;
+    if((m308Mode||m309Mode||m310Mode||m311Mode||m312Mode)&&std::string(name)=="BRDGRIKR.SPR")m308Records=direct;
     Totals local;
     for(size_t k=1;k<direct.size();++k){
         const auto& a=direct[k-1];const auto& b=direct[k];
@@ -2554,5 +2630,14 @@ int stafuSprM311Record2UniqueExactIntervals(const char* installed,const char* cd
     m311Mode=false;
     m308Records.clear();
     if(result==0)std::puts("SPR_M311_NOTE Motif-seeded exact intervals >=64 bits, fully extended to record boundaries and deduplicated by record pair and both endpoints. Overlapping observations are not independent. Segment-nine intersections use baseline coordinates, not decoder-state evidence.");
+    return result;
+}
+
+int stafuSprM312Record2ShiftBoundaryAnalysis(const char* installed,const char* cd,const char* optional){
+    m312Mode=true;
+    const int result=stafuSprM293Record2ChainDependencies(installed,cd,optional);
+    m312Mode=false;
+    m308Records.clear();
+    if(result==0)std::puts("SPR_M312_NOTE Three longest shifted motif-seeded intervals; 32-bit boundary contexts and nearest nonoverlapping A-coordinate intervals. Gap/shift arithmetic is an identity, not independent evidence for insertion, deletion, replacement, or codec behavior.");
     return result;
 }
