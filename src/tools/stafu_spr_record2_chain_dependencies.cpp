@@ -290,6 +290,7 @@ bool m306Mode=false;
 bool m307Mode=false;
 bool m308Mode=false;
 bool m309Mode=false;
+bool m310Mode=false;
 std::vector<Image> m308Records;
 size_t matchingFlank(const std::vector<uint8_t>& a,const std::vector<uint8_t>& b,
                      size_t baseA,size_t baseB,size_t nA,size_t nB,
@@ -1137,6 +1138,107 @@ void m309Compare(const std::vector<BitMatch>& baseline,
                 hits.size(),pairs,selectedPairs,chosenA,chosenB);
 }
 
+
+void m310Compare(const std::vector<BitMatch>& baseline,
+                 const std::vector<uint8_t>& a,const std::vector<uint8_t>& b,
+                 size_t ba,size_t bb,size_t na,size_t nb){
+    if(baseline.size()<10)return;
+    const auto& mid=baseline[8],&right=baseline[9];
+    if(mid.a+mid.len>right.a||mid.b+mid.len>right.b||right.a>na||right.b>nb)return;
+    const M300Span x{mid.a+mid.len,right.a-mid.a-mid.len};
+    const M300Span y{mid.b+mid.len,right.b-mid.b-mid.len};
+    const auto selected=m302Best(a,ba,x,b,bb,y,32,nullptr);
+    if(!selected.eligible)return;
+    const int shift=selected.score.shift;
+    const size_t offA=shift<0?static_cast<size_t>(-shift):0;
+    const size_t offB=shift>0?static_cast<size_t>(shift):0;
+    size_t best=0,run=0,at=0;
+    for(size_t i=0;i<selected.score.compared;++i){
+        if(bitAt(a,ba+x.start+offA+i)==bitAt(b,bb+y.start+offB+i)){
+            ++run;if(run>best){best=run;at=i+1-run;}
+        }else run=0;
+    }
+    if(!best)return;
+    const size_t chosenA=ba+x.start+offA+at,chosenB=bb+y.start+offB+at;
+    std::vector<uint8_t> motif((best+7)/8,0);
+    for(size_t k=0;k<best;++k)
+        if(bitAt(a,chosenA+k))motif[k/8]|=static_cast<uint8_t>(0x80u>>(k%8));
+    std::vector<M309Hit> hits;
+    for(const auto& rec:m308Records){
+        if(rec.ordinal<4||rec.ordinal>7)continue;
+        auto h=m309Hits(rec.data,rec.ordinal,motif,best);
+        hits.insert(hits.end(),h.begin(),h.end());
+    }
+    struct Edge {size_t ra,rb,pa,pb,left,right;bool fixed;};
+    std::vector<Edge> edges;
+    size_t examined=0,full=0,adjacent=0,fixed=0,selectedPerfect=0;
+    for(size_t i=0;i<hits.size();++i)for(size_t j=i+1;j<hits.size();++j){
+        const auto& h=hits[i],&k=hits[j];
+        if(h.ordinal==k.ordinal)continue;
+        const Image* ra=nullptr;const Image* rb=nullptr;
+        for(const auto& rec:m308Records){
+            if(rec.ordinal==h.ordinal)ra=&rec;
+            if(rec.ordinal==k.ordinal)rb=&rec;
+        }
+        if(!ra||!rb)continue;
+        ++examined;
+        size_t nl=0,nr=0;
+        const size_t ml=m309WindowMismatches(ra->data,h.at,rb->data,k.at,best,true,nl);
+        const size_t mr=m309WindowMismatches(ra->data,h.at,rb->data,k.at,best,false,nr);
+        if(nl!=32||nr!=32||ml||mr)continue;
+        ++full;
+        const size_t left=m309Side(ra->data,h.at,rb->data,k.at,best,true,
+                                   std::min(h.at,k.at));
+        const size_t right=m309Side(ra->data,h.at,rb->data,k.at,best,false,
+                                    std::min(ra->data.size()*8-h.at-best,
+                                             rb->data.size()*8-k.at-best));
+        const bool isFixed=h.at==k.at;
+        const bool isAdjacent=(h.ordinal+1==k.ordinal)||(k.ordinal+1==h.ordinal);
+        const bool isSelected=(h.ordinal==5&&h.at==chosenA&&k.ordinal==6&&k.at==chosenB)||
+                              (k.ordinal==5&&k.at==chosenA&&h.ordinal==6&&h.at==chosenB);
+        if(isFixed)++fixed;
+        if(isAdjacent)++adjacent;
+        if(isSelected)++selectedPerfect;
+        const size_t ordinalA=std::min(h.ordinal,k.ordinal);
+        const size_t ordinalB=std::max(h.ordinal,k.ordinal);
+        const size_t posA=h.ordinal<k.ordinal?h.at:k.at;
+        const size_t posB=h.ordinal<k.ordinal?k.at:h.at;
+        edges.push_back({ordinalA,ordinalB,posA,posB,left,right,isFixed});
+        std::printf("SPR_M310_PERFECT ordinalA=%zu bitA=%zu ordinalB=%zu bitB=%zu fixedPosition=%d adjacent=%d exactLeft=%zu motif=%zu exactRight=%zu totalExact=%zu startA=%zu startB=%zu endA=%zu endB=%zu selected=%d\\n",
+                    ordinalA,posA,ordinalB,posB,isFixed?1:0,isAdjacent?1:0,
+                    left,best,right,left+best+right,posA-left,posB-left,
+                    posA+best+right,posB+best+right,isSelected?1:0);
+    }
+    // A chain requires consecutive record ordinals and increasing bit positions in
+    // both records. It does not imply a unique source-to-destination mapping.
+    size_t bestLinks=0,chains=0;
+    for(const auto& first:edges){
+        if(first.rb!=first.ra+1)continue;
+        std::vector<Edge> path{first};
+        while(true){
+            const Edge* next=nullptr;
+            for(const auto& e:edges){
+                if(e.ra!=path.back().rb||e.rb!=e.ra+1)continue;
+                if(e.pa<=path.back().pb)continue;
+                if(!next||e.pa<next->pa||(e.pa==next->pa&&e.pb<next->pb))next=&e;
+            }
+            if(!next)break;
+            path.push_back(*next);
+        }
+        ++chains;
+        if(path.size()>bestLinks){
+            bestLinks=path.size();
+            std::printf("SPR_M310_CHAIN links=%zu firstRecord=%zu lastRecord=%zu",
+                        path.size(),path.front().ra,path.back().rb);
+            for(const auto& e:path)
+                std::printf(" edge=%zu:%zu>%zu:%zu",e.ra,e.pa,e.rb,e.pb);
+            std::putchar('\\n');
+        }
+    }
+    std::printf("SPR_M310_SUMMARY motifBits=%zu occurrences=%zu examinedPairs=%zu perfect64=%zu adjacentPerfect=%zu fixedPerfect=%zu selectedPerfect=%zu chainStarts=%zu longestChainLinks=%zu\\n",
+                best,hits.size(),examined,full,adjacent,fixed,selectedPerfect,chains,bestLinks);
+}
+
 struct M307Window {size_t length;size_t threshold;const char* label;};
 constexpr M307Window m307Windows[]={{38,26,"baseline_after"},{54,15,"alternative_before"},{22,19,"alternative_after"}};
 void m307Compare(const std::vector<BitMatch>& baseline,const std::vector<BitMatch>& alternative,
@@ -1841,6 +1943,9 @@ void bitGap(const char* name,size_t oa,size_t ob,size_t gap,
         if((m295Mode||m296Mode)&&std::string(mode)=="leave_one_out"&&
            (parameter==3||parameter==4||parameter==5||parameter==6||parameter==9))
             boundaryEvidence(name,oa,ob,gap,mode,parameter,baseline,alternative.runs,a,b,ba,bb,na,nb);
+        if(m310Mode&&std::string(mode)=="leave_one_out"&&parameter==9&&
+           std::string(name)=="BRDGRIKR.SPR"&&oa==5&&ob==6&&gap==0)
+            m310Compare(baseline,a,b,ba,bb,na,nb);
         if(m309Mode&&std::string(mode)=="leave_one_out"&&parameter==9&&
            std::string(name)=="BRDGRIKR.SPR"&&oa==5&&ob==6&&gap==0)
             m309Compare(baseline,a,b,ba,bb,na,nb);
@@ -2060,7 +2165,7 @@ bool survey(reluva::stafu::ResourceManager& manager,const char* name,Totals& tot
         }
         ++ordinal;
     }
-    if((m308Mode||m309Mode)&&std::string(name)=="BRDGRIKR.SPR")m308Records=direct;
+    if((m308Mode||m309Mode||m310Mode)&&std::string(name)=="BRDGRIKR.SPR")m308Records=direct;
     Totals local;
     for(size_t k=1;k<direct.size();++k){
         const auto& a=direct[k-1];const auto& b=direct[k];
@@ -2327,5 +2432,14 @@ int stafuSprM309Record2MotifContext(const char* installed,const char* cd,const c
     m309Mode=false;
     m308Records.clear();
     if(result==0)std::puts("SPR_M309_NOTE All cross-record pairs of post-hoc motif occurrences; 32-bit left/right context and contiguous extensions are descriptive, correlated and not calibrated significance or codec validation.");
+    return result;
+}
+
+int stafuSprM310Record2PerfectContextChains(const char* installed,const char* cd,const char* optional){
+    m310Mode=true;
+    const int result=stafuSprM293Record2ChainDependencies(installed,cd,optional);
+    m310Mode=false;
+    m308Records.clear();
+    if(result==0)std::puts("SPR_M310_NOTE Perfect 32+32 flank pairs are selected post hoc from a repeated motif. Full exact extensions are bounded by record edges. Chains require adjacent record ordinals and increasing positions but are descriptive, not codec validation.");
     return result;
 }
