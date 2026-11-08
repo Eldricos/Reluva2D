@@ -294,6 +294,7 @@ bool m310Mode=false;
 bool m311Mode=false;
 bool m312Mode=false;
 bool m313Mode=false;
+bool m314Mode=false;
 std::vector<Image> m308Records;
 size_t matchingFlank(const std::vector<uint8_t>& a,const std::vector<uint8_t>& b,
                      size_t baseA,size_t baseB,size_t nA,size_t nB,
@@ -1325,6 +1326,75 @@ void m313Compare(){
                 triples,violations,all,longest);
 }
 
+
+bool m314Selftest(){
+    const std::vector<uint8_t> a{0x12,0xAB,0xCD};
+    const std::vector<uint8_t> b{0xFF,0x12,0xAB,0xCD};
+    const std::vector<uint8_t> c{0x34,0xAB,0xCD};
+    return m313CommonSuffix(a,b)==24&&m313CommonSuffix(a,c)==17&&
+           b.size()*8-m313CommonSuffix(a,b)==8&&
+           m313CommonSuffix(a,{})==0;
+}
+void m314Window(const char* label,const std::vector<uint8_t>& data,size_t begin,size_t end){
+    const size_t bits=data.size()*8;
+    begin=std::min(begin,bits);end=std::min(end,bits);
+    std::printf("SPR_M314_WINDOW label=%s begin=%zu end=%zu bits=",label,begin,end);
+    for(size_t i=begin;i<end;++i)std::putchar(bitAt(data,i)?'1':'0');
+    std::putchar('\\n');
+}
+void m314Compare(){
+    const Image* a=nullptr;const Image* b=nullptr;const Image* c=nullptr;
+    for(const auto& rec:m308Records){
+        if(rec.ordinal==5)a=&rec;
+        if(rec.ordinal==6)b=&rec;
+        if(rec.ordinal==7)c=&rec;
+    }
+    if(!a||!b||!c){
+        std::puts("SPR_M314_ERROR missingDirectRecord=1");
+        return;
+    }
+    const auto& x=a->data;const auto& y=b->data;const auto& z=c->data;
+    const size_t na=x.size()*8,nb=y.size()*8,nc=z.size()*8;
+    const size_t suffix=m313CommonSuffix(x,y);
+    const size_t sa=na-suffix,sb=nb-suffix;
+    const long long shift=static_cast<long long>(sb)-static_cast<long long>(sa);
+    const bool byteShift=shift%8==0;
+    std::printf("SPR_M314_SUFFIX ordinalA=5 ordinalB=6 bitsA=%zu bitsB=%zu suffixBits=%zu startA=%zu startB=%zu shift=%lld shiftBytes=%lld byteAlignedShift=%d startBitA=%zu startBitB=%zu terminalBitA=%zu terminalBitB=%zu\\n",
+        na,nb,suffix,sa,sb,shift,shift/8,byteShift?1:0,sa%8,sb%8,na%8,nb%8);
+    const size_t left=std::min(size_t(64),std::min(sa,sb));
+    size_t mismatches=0;
+    for(size_t i=0;i<left;++i)
+        if(bitAt(x,sa-left+i)!=bitAt(y,sb-left+i))++mismatches;
+    std::printf("SPR_M314_BOUNDARY beforeBits=%zu beforeMismatches=%zu immediatelyPrecedingEqual=%d suffixBytesWhole=%zu suffixRemainderBits=%zu\\n",
+        left,mismatches,(sa&&sb&&bitAt(x,sa-1)==bitAt(y,sb-1))?1:0,suffix/8,suffix%8);
+    m314Window("record5_pre",x,sa-left,sa);
+    m314Window("record6_pre",y,sb-left,sb);
+    m314Window("record5_suffix_first",x,sa,std::min(na,sa+64));
+    m314Window("record6_suffix_first",y,sb,std::min(nb,sb+64));
+    m314Window("record5_suffix_last",x,na-std::min(size_t(64),suffix),na);
+    m314Window("record6_suffix_last",y,nb-std::min(size_t(64),suffix),nb);
+    // M310's longest shifted 6->7 interval: [1631,2872) vs [1582,2823).
+    const size_t ia=1631,ib=1582,il=1241;
+    size_t checked=0,bad=0;
+    if(ia+il<=nb&&ib+il<=nc){
+        checked=il;
+        for(size_t k=0;k<il;++k)if(bitAt(y,ia+k)!=bitAt(z,ib+k))++bad;
+    }
+    const size_t suffixOverlap=sa<na&&ia+il>sb&&ia<nb?
+        (std::min(nb,ia+il)>std::max(sb,ia)?std::min(nb,ia+il)-std::max(sb,ia):0):0;
+    std::printf("SPR_M314_INTERNAL_PAIR ordinalA=6 ordinalB=7 startA=%zu endA=%zu startB=%zu endB=%zu length=%zu compared=%zu mismatches=%zu suffix56OverlapInRecord6=%zu suffix56Start=%zu internalEnd=%zu separationBits=%lld\\n",
+        ia,ia+il,ib,ib+il,il,checked,bad,suffixOverlap,sb,ia+il,
+        static_cast<long long>(sb)-static_cast<long long>(ia+il));
+    // M310's longest shifted 4->6 interval [1882,2816) -> [1934,2868).
+    const size_t otherStart=1934,otherEnd=2868;
+    const size_t otherOverlap=std::min(nb,otherEnd)>std::max(sb,otherStart)?
+        std::min(nb,otherEnd)-std::max(sb,otherStart):0;
+    std::printf("SPR_M314_INTERNAL_REFERENCE pair=4_to_6 record6Start=%zu record6End=%zu suffix56Overlap=%zu separationBits=%lld referenceSource=M310\\n",
+        otherStart,otherEnd,otherOverlap,static_cast<long long>(sb)-static_cast<long long>(otherEnd));
+    std::printf("SPR_M314_SUMMARY suffixBits=%zu boundaryMismatches=%zu/%zu internal67Checked=%zu internal67Mismatches=%zu internal67Overlap=%zu internal46Overlap=%zu\\n",
+        suffix,mismatches,left,checked,bad,suffixOverlap,otherOverlap);
+}
+
 struct M311Interval {
     size_t ra,rb,sa,sb,length,observations;
 };
@@ -2203,6 +2273,9 @@ void bitGap(const char* name,size_t oa,size_t ob,size_t gap,
         if((m295Mode||m296Mode)&&std::string(mode)=="leave_one_out"&&
            (parameter==3||parameter==4||parameter==5||parameter==6||parameter==9))
             boundaryEvidence(name,oa,ob,gap,mode,parameter,baseline,alternative.runs,a,b,ba,bb,na,nb);
+        if(m314Mode&&std::string(mode)=="leave_one_out"&&parameter==9&&
+           std::string(name)=="BRDGRIKR.SPR"&&oa==5&&ob==6&&gap==0)
+            m314Compare();
         if(m313Mode&&std::string(mode)=="leave_one_out"&&parameter==9&&
            std::string(name)=="BRDGRIKR.SPR"&&oa==5&&ob==6&&gap==0)
             m313Compare();
@@ -2431,7 +2504,7 @@ bool survey(reluva::stafu::ResourceManager& manager,const char* name,Totals& tot
         }
         ++ordinal;
     }
-    if((m308Mode||m309Mode||m310Mode||m311Mode||m312Mode||m313Mode)&&std::string(name)=="BRDGRIKR.SPR")m308Records=direct;
+    if((m308Mode||m309Mode||m310Mode||m311Mode||m312Mode||m313Mode||m314Mode)&&std::string(name)=="BRDGRIKR.SPR")m308Records=direct;
     Totals local;
     for(size_t k=1;k<direct.size();++k){
         const auto& a=direct[k-1];const auto& b=direct[k];
@@ -2742,5 +2815,22 @@ int stafuSprM313Record2SuffixStructure(const char* installed,const char* cd,cons
     m313Mode=false;
     m308Records.clear();
     if(result==0)std::puts("SPR_M313_NOTE Direct record-end aligned bit suffixes for records 4-7; prefix mismatch counts and suffix nesting are descriptive. A shared suffix may be padding or repeated content; no decoder or format inference is established.");
+    return result;
+}
+
+int stafuSprM314Record2SuffixBoundary(const char* installed,const char* cd,const char* optional){
+    if(!m314Selftest()){
+        std::fprintf(stderr,"SPR_M314_SELFTEST FAIL\\n");
+        return 1;
+    }
+    if(std::string(installed)=="__selftest__"){
+        std::puts("SPR_M314_SELFTEST PASS");
+        return 0;
+    }
+    m314Mode=true;
+    const int result=stafuSprM293Record2ChainDependencies(installed,cd,optional);
+    m314Mode=false;
+    m308Records.clear();
+    if(result==0)std::puts("SPR_M314_NOTE Bit-level suffix boundary and fixed M310 internal interval coordinates. Reference intervals are independently observed, not proof of common codec structure. Read-only diagnostic.");
     return result;
 }
