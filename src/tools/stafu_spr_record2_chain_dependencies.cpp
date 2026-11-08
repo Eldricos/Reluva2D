@@ -284,6 +284,7 @@ bool m300Mode=false;
 bool m301Mode=false;
 bool m302Mode=false;
 bool m303Mode=false;
+bool m304Mode=false;
 size_t matchingFlank(const std::vector<uint8_t>& a,const std::vector<uint8_t>& b,
                      size_t baseA,size_t baseB,size_t nA,size_t nB,
                      size_t atA,size_t atB,bool left,size_t cap){
@@ -789,6 +790,98 @@ void m303Report(const char* name,size_t oa,size_t ob,size_t gap,const char* path
                 winner.shift,winner.matches,winner.compared,edge?1:0,
                 block==0?"circular_shift":"block_permutation",block,trials,valid,nullAtLeast,fixedAtLeast,nullEdge);
         }
+    }
+}
+
+
+void m304Inspect(const char* name,size_t oa,size_t ob,size_t gap,const char* path,
+                 const char* side,const std::vector<uint8_t>& a,size_t ba,
+                 M300Span x,const std::vector<uint8_t>& b,size_t bb,M300Span y,
+                 size_t na,size_t nb){
+    const size_t minimum=(path[0]=='b'?32:16);
+    const auto best=m302Best(a,ba,x,b,bb,y,minimum,nullptr);
+    if(!best.eligible){
+        std::printf("SPR_M304_SKIP path=%s side=%s reason=insufficient_overlap\\n",path,side);
+        return;
+    }
+    const int shift=best.score.shift;
+    const size_t startA=shift<0?static_cast<size_t>(-shift):0;
+    const size_t startB=shift>0?static_cast<size_t>(shift):0;
+    const size_t count=best.score.compared;
+    const size_t posA=x.start+startA,posB=y.start+startB;
+    // Extend at the same absolute displacement, not by reoptimizing.
+    size_t left=0,right=0;
+    while(posA>left&&posB>left&&
+          bitAt(a,ba+posA-left-1)==bitAt(b,bb+posB-left-1))++left;
+    while(posA+count+right<na&&posB+count+right<nb&&
+          bitAt(a,ba+posA+count+right)==bitAt(b,bb+posB+count+right))++right;
+    size_t longest=0,longestStart=0,run=0,runStart=0,mismatches=0,firstBad=count,lastBad=0;
+    std::string mask;mask.reserve(count);
+    for(size_t i=0;i<count;++i){
+        const bool equal=bitAt(a,ba+posA+i)==bitAt(b,bb+posB+i);
+        mask.push_back(equal?'=':'X');
+        if(equal){
+            if(!run)runStart=i;
+            ++run;
+            if(run>longest){longest=run;longestStart=runStart;}
+        }else{
+            ++mismatches;firstBad=std::min(firstBad,i);lastBad=i;run=0;
+        }
+    }
+    const size_t edgeLeft=std::min(size_t(16),std::min(posA,posB));
+    const size_t edgeRight=std::min(size_t(16),std::min(na-posA-count,nb-posB-count));
+    std::printf("SPR_M304_ALIGN resource=%s ordinalA=%zu ordinalB=%zu gap=%zu path=%s side=%s minOverlap=%zu shift=%d boundary=%d aSpanStart=%zu aSpanBits=%zu bSpanStart=%zu bSpanBits=%zu aStart=%zu bStart=%zu compared=%zu matches=%zu mismatches=%zu longestExact=%zu longestExactAt=%zu firstMismatch=%lld lastMismatch=%lld exactLeft=%zu exactRight=%zu leftCensored=%d rightCensored=%d\\n",
+        name,oa,ob,gap,path,side,minimum,shift,(shift==-32||shift==32)?1:0,
+        x.start,x.len,y.start,y.len,posA,posB,count,best.score.matches,mismatches,
+        longest,longestStart,mismatches?static_cast<long long>(firstBad):-1LL,
+        mismatches?static_cast<long long>(lastBad):-1LL,left,right,
+        (posA==left||posB==left)?1:0,
+        (posA+count+right==na||posB+count+right==nb)?1:0);
+    std::printf("SPR_M304_BITS path=%s side=%s a=%s b=%s mask=%s\\n",
+        path,side,bits(a,ba+posA,count).c_str(),
+        bits(b,bb+posB,count).c_str(),mask.c_str());
+    std::printf("SPR_M304_FLANK path=%s side=%s leftA=%s leftB=%s rightA=%s rightB=%s\\n",
+        path,side,bits(a,ba+posA-edgeLeft,edgeLeft).c_str(),
+        bits(b,bb+posB-edgeLeft,edgeLeft).c_str(),
+        bits(a,ba+posA+count,edgeRight).c_str(),
+        bits(b,bb+posB+count,edgeRight).c_str());
+    // Report each maximal exact island, including short islands; no interpretation
+    // of a match island as a codeword or a valid decoder state.
+    size_t i=0;
+    while(i<count){
+        if(mask[i]=='X'){++i;continue;}
+        const size_t start=i;
+        while(i<count&&mask[i]=='=')++i;
+        std::printf("SPR_M304_ISLAND path=%s side=%s aStart=%zu bStart=%zu length=%zu touchesWindowStart=%d touchesWindowEnd=%d\\n",
+            path,side,posA+start,posB+start,i-start,start==0?1:0,i==count?1:0);
+    }
+}
+void m304Compare(const char* name,size_t oa,size_t ob,size_t gap,
+                 const std::vector<BitMatch>& baseline,const std::vector<BitMatch>& alternative,
+                 const std::vector<uint8_t>& a,const std::vector<uint8_t>& b,
+                 size_t ba,size_t bb,size_t na,size_t nb){
+    if(baseline.size()<10)return;
+    size_t li=0,ri=0;bool lf=false,rf=false;
+    for(size_t i=0;i<alternative.size();++i){
+        if(sameBitMatch(alternative[i],baseline[7])){li=i;lf=true;}
+        if(sameBitMatch(alternative[i],baseline[9])){ri=i;rf=true;}
+    }
+    if(!lf||!rf||ri!=li+2)return;
+    const auto& left=baseline[7];const auto& right=baseline[9];
+    const BitMatch mids[]={baseline[8],alternative[li+1]};
+    for(int p=0;p<2;++p){
+        const auto& m=mids[p];
+        if(left.a+left.len>m.a||left.b+left.len>m.b||
+           m.a+m.len>right.a||m.b+m.len>right.b||
+           right.a+right.len>na||right.b+right.len>nb)return;
+        const M300Span ax[]={{left.a+left.len,m.a-left.a-left.len},{m.a+m.len,right.a-m.a-m.len}};
+        const M300Span by[]={{left.b+left.len,m.b-left.b-left.len},{m.b+m.len,right.b-m.b-m.len}};
+        // The two strongest M303 target candidates, with no additional offset search.
+        const int side=p?1:1;
+        m304Inspect(name,oa,ob,gap,p?"alternative":"baseline",side?"after":"before",
+                    a,ba,ax[side],b,bb,by[side],na,nb);
+        if(p==1)m304Inspect(name,oa,ob,gap,"alternative","before",
+                             a,ba,ax[0],b,bb,by[0],na,nb);
     }
 }
 
@@ -1309,6 +1402,9 @@ void bitGap(const char* name,size_t oa,size_t ob,size_t gap,
         if((m295Mode||m296Mode)&&std::string(mode)=="leave_one_out"&&
            (parameter==3||parameter==4||parameter==5||parameter==6||parameter==9))
             boundaryEvidence(name,oa,ob,gap,mode,parameter,baseline,alternative.runs,a,b,ba,bb,na,nb);
+        if(m304Mode&&std::string(mode)=="leave_one_out"&&parameter==9&&
+           std::string(name)=="BRDGRIKR.SPR"&&oa==5&&ob==6&&gap==0)
+            m304Compare(name,oa,ob,gap,baseline,alternative.runs,a,b,ba,bb,na,nb);
         if(m303Mode&&std::string(mode)=="leave_one_out"&&parameter==9&&
            std::string(name)=="BRDGRIKR.SPR"&&oa==5&&ob==6&&gap==0)
             m303Compare(name,oa,ob,gap,baseline,alternative.runs,a,b,ba,bb,na,nb);
@@ -1724,5 +1820,13 @@ int stafuSprM303Record2StructureControls(const char* installed,const char* cd,co
     const int result=stafuSprM293Record2ChainDependencies(installed,cd,optional);
     m303Mode=false;
     if(result==0)std::puts("SPR_M303_NOTE 256 circular shifts and 4/8/16-bit block shuffles per sample/threshold; searched and fixed-overlap counts are descriptive, not independent calibrated p-values. Boundary means offset +/-32.");
+    return result;
+}
+
+int stafuSprM304Record2ExactExtension(const char* installed,const char* cd,const char* optional){
+    m304Mode=true;
+    const int result=stafuSprM293Record2ChainDependencies(installed,cd,optional);
+    m304Mode=false;
+    if(result==0)std::puts("SPR_M304_NOTE Fixed-shift exact islands and flanks are observational; extensions may cross segment anchors and do not validate a codec or decoder state.");
     return result;
 }
