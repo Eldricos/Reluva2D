@@ -288,6 +288,8 @@ bool m304Mode=false;
 bool m305Mode=false;
 bool m306Mode=false;
 bool m307Mode=false;
+bool m308Mode=false;
+std::vector<Image> m308Records;
 size_t matchingFlank(const std::vector<uint8_t>& a,const std::vector<uint8_t>& b,
                      size_t baseA,size_t baseB,size_t nA,size_t nB,
                      size_t atA,size_t atB,bool left,size_t cap){
@@ -947,6 +949,78 @@ size_t m306Longest(const std::vector<uint8_t>& a,size_t ba,size_t pa,
         else run=0;
     }
     return best;
+}
+
+
+size_t m308Count(const std::vector<uint8_t>& data,const std::vector<uint8_t>& motif,
+                 size_t motifBits,size_t& first,size_t& near,size_t center){
+    first=static_cast<size_t>(-1);near=0;size_t count=0;
+    const size_t bits=data.size()*8;
+    if(bits<motifBits)return 0;
+    for(size_t at=0;at<=bits-motifBits;++at){
+        bool equal=true;
+        for(size_t k=0;k<motifBits;++k)
+            if(bitAt(data,at+k)!=bitAt(motif,k)){equal=false;break;}
+        if(!equal)continue;
+        if(first==static_cast<size_t>(-1))first=at;
+        ++count;
+        if(at<=center+128&&center<=at+128)++near;
+        if(count<=12)std::printf("SPR_M308_HIT bit=%zu length=%zu\\n",at,motifBits);
+    }
+    return count;
+}
+void m308Compare(const std::vector<BitMatch>& baseline,
+                 const std::vector<uint8_t>& a,const std::vector<uint8_t>& b,
+                 size_t ba,size_t bb,size_t na,size_t nb){
+    if(baseline.size()<10)return;
+    const auto& middle=baseline[8],&right=baseline[9];
+    const size_t startA=middle.a+middle.len,startB=middle.b+middle.len;
+    if(startA>right.a||startB>right.b||right.a>na||right.b>nb)return;
+    const M300Span x{startA,right.a-startA},y{startB,right.b-startB};
+    const auto selected=m302Best(a,ba,x,b,bb,y,32,nullptr);
+    if(!selected.eligible)return;
+    const int shift=selected.score.shift;
+    const size_t offA=shift<0?static_cast<size_t>(-shift):0;
+    const size_t offB=shift>0?static_cast<size_t>(shift):0;
+    const size_t n=selected.score.compared;
+    size_t run=0,best=0,bestAt=0;
+    for(size_t i=0;i<n;++i){
+        if(bitAt(a,ba+x.start+offA+i)==bitAt(b,bb+y.start+offB+i)){
+            ++run;if(run>best){best=run;bestAt=i+1-run;}
+        }else run=0;
+    }
+    if(best==0)return;
+    const size_t bitA=ba+x.start+offA+bestAt,bitB=bb+y.start+offB+bestAt;
+    std::vector<uint8_t> motif((best+7)/8,0);
+    for(size_t k=0;k<best;++k)
+        if(bitAt(a,bitA+k))motif[k/8]|=static_cast<uint8_t>(0x80u>>(k%8));
+    std::printf("SPR_M308_MOTIF resource=BRDGRIKR.SPR ordinalA=5 ordinalB=6 gap=0 shift=%d length=%zu gapBitA=%zu gapBitB=%zu recordBitA=%zu recordBitB=%zu\\n",
+                shift,best,x.start+offA+bestAt,y.start+offB+bestAt,bitA,bitB);
+    for(const auto& rec:m308Records){
+        if(rec.ordinal<4||rec.ordinal>7)continue;
+        size_t first=0,near=0;
+        const size_t center=rec.ordinal==5?bitA:rec.ordinal==6?bitB:0;
+        std::printf("SPR_M308_RECORD_BEGIN ordinal=%zu bits=%zu\\n",rec.ordinal,rec.data.size()*8);
+        const size_t hits=m308Count(rec.data,motif,best,first,near,center);
+        std::printf("SPR_M308_RECORD ordinal=%zu motifBits=%zu occurrences=%zu firstBit=%lld near128=%zu center=%zu\\n",
+                    rec.ordinal,best,hits,first==static_cast<size_t>(-1)?-1LL:static_cast<long long>(first),
+                    rec.ordinal==5||rec.ordinal==6?near:0,center);
+    }
+    // Count occurrences in each anchor-constrained unmatched span separately.
+    for(int side=0;side<2;++side){
+        const auto& data=side==0?a:b;
+        const size_t base=side==0?ba:bb;
+        const M300Span span=side==0?x:y;
+        size_t count=0;
+        for(size_t at=0;at+best<=span.len;++at){
+            bool equal=true;
+            for(size_t k=0;k<best;++k)
+                if(bitAt(data,base+span.start+at+k)!=bitAt(motif,k)){equal=false;break;}
+            if(equal)++count;
+        }
+        std::printf("SPR_M308_LOCAL side=%s spanStart=%zu spanBits=%zu motifBits=%zu occurrences=%zu\\n",
+                    side==0?"A":"B",span.start,span.len,best,count);
+    }
 }
 
 struct M307Window {size_t length;size_t threshold;const char* label;};
@@ -1653,6 +1727,9 @@ void bitGap(const char* name,size_t oa,size_t ob,size_t gap,
         if((m295Mode||m296Mode)&&std::string(mode)=="leave_one_out"&&
            (parameter==3||parameter==4||parameter==5||parameter==6||parameter==9))
             boundaryEvidence(name,oa,ob,gap,mode,parameter,baseline,alternative.runs,a,b,ba,bb,na,nb);
+        if(m308Mode&&std::string(mode)=="leave_one_out"&&parameter==9&&
+           std::string(name)=="BRDGRIKR.SPR"&&oa==5&&ob==6&&gap==0)
+            m308Compare(baseline,a,b,ba,bb,na,nb);
         if(m307Mode&&std::string(mode)=="leave_one_out"&&parameter==9&&
            std::string(name)=="BRDGRIKR.SPR"&&oa==5&&ob==6&&gap==0)
             m307Compare(baseline,alternative.runs,a,b,ba,bb,na,nb);
@@ -1866,6 +1943,7 @@ bool survey(reluva::stafu::ResourceManager& manager,const char* name,Totals& tot
         }
         ++ordinal;
     }
+    if(m308Mode&&std::string(name)=="BRDGRIKR.SPR")m308Records=direct;
     Totals local;
     for(size_t k=1;k<direct.size();++k){
         const auto& a=direct[k-1];const auto& b=direct[k];
@@ -2114,5 +2192,14 @@ int stafuSprM307Record2WideMatchedControls(const char* installed,const char* cd,
     const int result=stafuSprM293Record2ChainDependencies(installed,cd,optional);
     m307Mode=false;
     if(result==0)std::puts("SPR_M307_NOTE All overlap-eligible shifts in anchored unmatched spans; nearby controls match comparison length, exclude shift zero, and use deterministic overlapping windows. Selected runs and thresholds are post hoc; control pairs are not an exchangeable null distribution. No calibrated significance or codec validation.");
+    return result;
+}
+
+int stafuSprM308Record2MotifCensus(const char* installed,const char* cd,const char* optional){
+    m308Mode=true;
+    const int result=stafuSprM293Record2ChainDependencies(installed,cd,optional);
+    m308Mode=false;
+    m308Records.clear();
+    if(result==0)std::puts("SPR_M308_NOTE Motif selected post hoc from baseline exact run. Overlapping occurrences and adjacent records are descriptive, not independent null samples or codec validation.");
     return result;
 }
