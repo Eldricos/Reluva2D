@@ -965,7 +965,7 @@ size_t m308Count(const std::vector<uint8_t>& data,const std::vector<uint8_t>& mo
         if(first==static_cast<size_t>(-1))first=at;
         ++count;
         if(at<=center+128&&center<=at+128)++near;
-        if(count<=12)std::printf("SPR_M308_HIT bit=%zu length=%zu\\n",at,motifBits);
+        if(count<=12)std::printf("SPR_M308_HIT bit=%zu length=%zu\n",at,motifBits);
     }
     return count;
 }
@@ -994,15 +994,15 @@ void m308Compare(const std::vector<BitMatch>& baseline,
     std::vector<uint8_t> motif((best+7)/8,0);
     for(size_t k=0;k<best;++k)
         if(bitAt(a,bitA+k))motif[k/8]|=static_cast<uint8_t>(0x80u>>(k%8));
-    std::printf("SPR_M308_MOTIF resource=BRDGRIKR.SPR ordinalA=5 ordinalB=6 gap=0 shift=%d length=%zu gapBitA=%zu gapBitB=%zu recordBitA=%zu recordBitB=%zu\\n",
+    std::printf("SPR_M308_MOTIF resource=BRDGRIKR.SPR ordinalA=5 ordinalB=6 gap=0 shift=%d length=%zu gapBitA=%zu gapBitB=%zu recordBitA=%zu recordBitB=%zu\n",
                 shift,best,x.start+offA+bestAt,y.start+offB+bestAt,bitA,bitB);
     for(const auto& rec:m308Records){
         if(rec.ordinal<4||rec.ordinal>7)continue;
         size_t first=0,near=0;
         const size_t center=rec.ordinal==5?bitA:rec.ordinal==6?bitB:0;
-        std::printf("SPR_M308_RECORD_BEGIN ordinal=%zu bits=%zu\\n",rec.ordinal,rec.data.size()*8);
+        std::printf("SPR_M308_RECORD_BEGIN ordinal=%zu bits=%zu\n",rec.ordinal,rec.data.size()*8);
         const size_t hits=m308Count(rec.data,motif,best,first,near,center);
-        std::printf("SPR_M308_RECORD ordinal=%zu motifBits=%zu occurrences=%zu firstBit=%lld near128=%zu center=%zu\\n",
+        std::printf("SPR_M308_RECORD ordinal=%zu motifBits=%zu occurrences=%zu firstBit=%lld near128=%zu center=%zu\n",
                     rec.ordinal,best,hits,first==static_cast<size_t>(-1)?-1LL:static_cast<long long>(first),
                     rec.ordinal==5||rec.ordinal==6?near:0,center);
     }
@@ -1018,7 +1018,7 @@ void m308Compare(const std::vector<BitMatch>& baseline,
                 if(bitAt(data,base+span.start+at+k)!=bitAt(motif,k)){equal=false;break;}
             if(equal)++count;
         }
-        std::printf("SPR_M308_LOCAL side=%s spanStart=%zu spanBits=%zu motifBits=%zu occurrences=%zu\\n",
+        std::printf("SPR_M308_LOCAL side=%s spanStart=%zu spanBits=%zu motifBits=%zu occurrences=%zu\n",
                     side==0?"A":"B",span.start,span.len,best,count);
     }
 }
