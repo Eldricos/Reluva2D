@@ -965,7 +965,7 @@ void m306Compare(const std::vector<BitMatch>& baseline,const std::vector<BitMatc
            m.a+m.len>right.a||m.b+m.len>right.b||
            right.a+right.len>na||right.b+right.len>nb)return;
         const M300Span ax[]={{left.a+left.len,m.a-left.a-left.len},{m.a+m.len,right.a-m.a-m.len}};
-        const M300Span by[]={{left.b+left.len,m.b-left.b.len},{m.b+m.len,right.b-m.b-m.len}};
+        const M300Span by[]={{left.b+left.len,m.b-left.b-left.len},{m.b+m.len,right.b-m.b-m.len}};
         for(int side=0;side<2;++side){
             if(p==0&&side==0)continue;
             const auto x=ax[side],y=by[side];
