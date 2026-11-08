@@ -13,6 +13,7 @@ int stafuSprM301Record2OffsetRobustness(const char*,const char*,const char*);
 int stafuSprM302Record2OffsetSignificance(const char*,const char*,const char*);
 int stafuSprM303Record2StructureControls(const char*,const char*,const char*);
 int stafuSprM305Record2AnchorConstrained(const char*,const char*,const char*);
+int stafuSprM306Record2FixedOffsetSpecificity(const char*,const char*,const char*);
 int stafuSprM304Record2ExactExtension(const char*,const char*,const char*);
 int stafuSprM297Record2BoundaryNormalized(const char*,const char*,const char*);
 int stafuSprM296Record2EvidenceRanking(const char*,const char*,const char*);
@@ -263,6 +264,8 @@ int stafuToolMain(int argc, char** argv) {
         return stafuSprMaximalSpans(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-span-reconcile") == 0)
         return stafuSprSpanReconcile(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
+    if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-m306-record2-fixed-offset-specificity") == 0)
+        return stafuSprM306Record2FixedOffsetSpecificity(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-m305-record2-anchor-constrained") == 0)
         return stafuSprM305Record2AnchorConstrained(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-m304-record2-exact-extension") == 0)
