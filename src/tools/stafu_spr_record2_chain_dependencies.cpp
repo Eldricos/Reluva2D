@@ -296,6 +296,7 @@ bool m312Mode=false;
 bool m313Mode=false;
 bool m314Mode=false;
 bool m315Mode=false;
+bool m316Mode=false;
 std::vector<Image> m308Records;
 size_t matchingFlank(const std::vector<uint8_t>& a,const std::vector<uint8_t>& b,
                      size_t baseA,size_t baseB,size_t nA,size_t nB,
@@ -1457,6 +1458,78 @@ void m315Compare(){
                 common,minPair,maxPair,identical?1:0,left);
 }
 
+
+bool m316Selftest(){
+    const std::vector<uint8_t> a{0x12,0xAB,0xCD};
+    const std::vector<uint8_t> b{0x34,0xAB,0xCD};
+    const std::vector<uint8_t> c{0x12,0xAB,0xCE};
+    if(m313CommonSuffix(a,b)!=17||m313CommonSuffix(a,c)!=0)return false;
+    if(bits(a,7,9)!=bits(b,7,9))return false;
+    if(bits(a,0,8)==bits(b,0,8))return false;
+    return (24-m313CommonSuffix(a,b))%8==7;
+}
+void m316Compare(){
+    const Image* a=nullptr;const Image* b=nullptr;
+    for(const auto& item:m308Records){
+        if(item.ordinal==5)a=&item;
+        if(item.ordinal==6)b=&item;
+    }
+    if(!a||!b){std::puts("SPR_M316_ERROR missing records 5 or 6");return;}
+    const auto& x=a->data;const auto& y=b->data;
+    const size_t na=x.size()*8,nb=y.size()*8;
+    const size_t suffix=m313CommonSuffix(x,y),sa=na-suffix,sb=nb-suffix;
+    const long long shift=static_cast<long long>(sb)-static_cast<long long>(sa);
+    std::printf("SPR_M316_SUFFIX ordinalA=5 ordinalB=6 bits=%zu startA=%zu startB=%zu endA=%zu endB=%zu shift=%lld startByteA=%zu startBitA=%zu startByteB=%zu startBitB=%zu wholeBytes=%zu trailingBits=%zu alignedToSameBitPhase=%d\\n",
+                suffix,sa,sb,na,nb,shift,sa/8,sa%8,sb/8,sb%8,suffix/8,suffix%8,sa%8==sb%8?1:0);
+    const size_t before=std::min(size_t(128),std::min(sa,sb));
+    for(size_t w: {size_t(8),size_t(16),size_t(32),size_t(64),size_t(128)}){
+        const size_t n=std::min(w,before);size_t bad=0;
+        for(size_t k=0;k<n;++k)bad+=bitAt(x,sa-n+k)!=bitAt(y,sb-n+k);
+        std::printf("SPR_M316_PRECEDING window=%zu compared=%zu mismatches=%zu exact=%d\\n",w,n,bad,bad==0?1:0);
+    }
+    const size_t windowStartA=sa-before,windowStartB=sb-before;
+    m314Window("m316_record5_preceding",x,windowStartA,sa);
+    m314Window("m316_record6_preceding",y,windowStartB,sb);
+    m314Window("m316_record5_suffix_head",x,sa,std::min(na,sa+128));
+    m314Window("m316_record6_suffix_head",y,sb,std::min(nb,sb+128));
+    m314Window("m316_record5_suffix_tail",x,na-std::min(size_t(128),suffix),na);
+    m314Window("m316_record6_suffix_tail",y,nb-std::min(size_t(128),suffix),nb);
+    // Compare the terminal interval with the previously reported record 5->6
+    // alternative segment-nine exact island, using absolute record bit offsets.
+    const size_t islandA=1939,islandB=1840,islandLen=91;
+    const size_t islandEndA=islandA+islandLen,islandEndB=islandB+islandLen;
+    const bool islandInRange=islandEndA<=na&&islandEndB<=nb;
+    size_t islandBad=0;
+    if(islandInRange)for(size_t k=0;k<islandLen;++k)
+        islandBad+=bitAt(x,islandA+k)!=bitAt(y,islandB+k);
+    std::printf("SPR_M316_REFERENCE kind=m310_record5_6_alternative_segment9 startA=%zu endA=%zu startB=%zu endB=%zu shift=%lld withinBounds=%d mismatches=%zu gapA=%lld gapB=%lld shiftChange=%lld\\n",
+                islandA,islandEndA,islandB,islandEndB,
+                static_cast<long long>(islandB)-static_cast<long long>(islandA),
+                islandInRange?1:0,islandBad,
+                static_cast<long long>(sa)-static_cast<long long>(islandEndA),
+                static_cast<long long>(sb)-static_cast<long long>(islandEndB),
+                shift-(static_cast<long long>(islandB)-static_cast<long long>(islandA)));
+    // Scan all shifts in a narrow band around the terminal alignment, restricted
+    // to the preceding 128 bits, to detect other exact islands without assuming
+    // that they form one uninterrupted correspondence.
+    size_t best=0,bestA=0,bestB=0;
+    for(int delta=-64;delta<=64;++delta){
+        size_t run=0;
+        for(size_t k=0;k<before;++k){
+            const long long posB=static_cast<long long>(sb-before+k)+delta;
+            if(posB<0||posB>=static_cast<long long>(nb)){run=0;continue;}
+            if(bitAt(x,sa-before+k)==bitAt(y,static_cast<size_t>(posB))){
+                ++run;if(run>best){best=run;bestA=sa-before+k+1-run;bestB=static_cast<size_t>(posB)+1-run;}
+            }else run=0;
+        }
+    }
+    std::printf("SPR_M316_NEARBY longestPrecedingRun=%zu startA=%zu startB=%zu shift=%lld suffixStartA=%zu suffixStartB=%zu\\n",
+                best,bestA,bestB,static_cast<long long>(bestB)-static_cast<long long>(bestA),sa,sb);
+    std::printf("SPR_M316_SUMMARY suffixBits=%zu precedingWindow=%zu nearestReferenceGapA=%lld nearestReferenceGapB=%lld codecInference=none\\n",
+                suffix,before,static_cast<long long>(sa)-static_cast<long long>(islandEndA),
+                static_cast<long long>(sb)-static_cast<long long>(islandEndB));
+}
+
 struct M311Interval {
     size_t ra,rb,sa,sb,length,observations;
 };
@@ -2335,6 +2408,9 @@ void bitGap(const char* name,size_t oa,size_t ob,size_t gap,
         if((m295Mode||m296Mode)&&std::string(mode)=="leave_one_out"&&
            (parameter==3||parameter==4||parameter==5||parameter==6||parameter==9))
             boundaryEvidence(name,oa,ob,gap,mode,parameter,baseline,alternative.runs,a,b,ba,bb,na,nb);
+        if(m316Mode&&std::string(mode)=="leave_one_out"&&parameter==9&&
+           std::string(name)=="BRDGRIKR.SPR"&&oa==5&&ob==6&&gap==0)
+            m316Compare();
         if(m315Mode&&std::string(mode)=="leave_one_out"&&parameter==9&&
            std::string(name)=="BRDGRIKR.SPR"&&oa==5&&ob==6&&gap==0)
             m315Compare();
@@ -2569,7 +2645,7 @@ bool survey(reluva::stafu::ResourceManager& manager,const char* name,Totals& tot
         }
         ++ordinal;
     }
-    if((m308Mode||m309Mode||m310Mode||m311Mode||m312Mode||m313Mode||m314Mode||m315Mode)&&std::string(name)=="BRDGRIKR.SPR")m308Records=direct;
+    if((m308Mode||m309Mode||m310Mode||m311Mode||m312Mode||m313Mode||m314Mode||m315Mode||m316Mode)&&std::string(name)=="BRDGRIKR.SPR")m308Records=direct;
     Totals local;
     for(size_t k=1;k<direct.size();++k){
         const auto& a=direct[k-1];const auto& b=direct[k];
@@ -2914,5 +2990,22 @@ int stafuSprM315Record2CommonTerminal(const char* installed,const char* cd,const
     m315Mode=false;
     m308Records.clear();
     if(result==0)std::puts("SPR_M315_NOTE Direct record-end aligned bit comparisons across records 4-7. Pairwise extra suffixes and boundary contexts are descriptive, not evidence of padding, encoding, or decoder behavior.");
+    return result;
+}
+
+int stafuSprM316Record2TerminalContext(const char* installed,const char* cd,const char* optional){
+    if(!m316Selftest()){
+        std::fprintf(stderr,"SPR_M316_SELFTEST FAIL\\n");
+        return 1;
+    }
+    if(std::string(installed)=="__selftest__"){
+        std::puts("SPR_M316_SELFTEST PASS");
+        return 0;
+    }
+    m316Mode=true;
+    const int result=stafuSprM293Record2ChainDependencies(installed,cd,optional);
+    m316Mode=false;
+    m308Records.clear();
+    if(result==0)std::puts("SPR_M316_NOTE Direct terminal suffix and nearby shifted comparisons. Historical segment-nine coordinates are reference observations, not proven related structure; no decoder inference.");
     return result;
 }
