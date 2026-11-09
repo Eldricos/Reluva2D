@@ -295,6 +295,7 @@ bool m311Mode=false;
 bool m312Mode=false;
 bool m313Mode=false;
 bool m314Mode=false;
+bool m315Mode=false;
 std::vector<Image> m308Records;
 size_t matchingFlank(const std::vector<uint8_t>& a,const std::vector<uint8_t>& b,
                      size_t baseA,size_t baseB,size_t nA,size_t nB,
@@ -1395,6 +1396,67 @@ void m314Compare(){
         suffix,mismatches,left,checked,bad,suffixOverlap,otherOverlap);
 }
 
+
+bool m315Selftest(){
+    const std::vector<uint8_t> a{0x10,0xAA,0xCC};
+    const std::vector<uint8_t> b{0x20,0xAA,0xCC};
+    const std::vector<uint8_t> c{0x30,0xAA,0xCC};
+    const std::vector<uint8_t> d{0x40,0xAA,0xCC};
+    const std::vector<uint8_t> e{0x40,0xAA,0xCD};
+    return m313CommonSuffix(a,b)==20&&m313CommonSuffix(a,c)==19&&
+           m313CommonSuffix(a,d)==18&&m313CommonSuffix(a,e)==0&&
+           m313CommonSuffix(a,a)==24;
+}
+void m315Compare(){
+    const Image* rec[4]={nullptr,nullptr,nullptr,nullptr};
+    for(const auto& item:m308Records)
+        if(item.ordinal>=4&&item.ordinal<=7)rec[item.ordinal-4]=&item;
+    for(size_t i=0;i<4;++i)if(!rec[i]){
+        std::printf("SPR_M315_ERROR missingOrdinal=%zu\\n",i+4);
+        return;
+    }
+    size_t common=rec[0]->data.size()*8;
+    for(size_t i=1;i<4;++i)common=std::min(common,m313CommonSuffix(rec[0]->data,rec[i]->data));
+    std::printf("SPR_M315_COMMON records=4 commonSuffixBits=%zu wholeBytes=%zu remainingBits=%zu alignment=record_end bitOrder=MSB_first\\n",
+                common,common/8,common%8);
+    for(size_t i=0;i<4;++i){
+        const auto& data=rec[i]->data;
+        const size_t n=data.size()*8,start=n-common;
+        const size_t window=std::min(size_t(64),start);
+        std::printf("SPR_M315_RECORD ordinal=%zu bits=%zu commonStart=%zu commonStartBitOffset=%zu unmatchedPrefixBits=%zu precedingWindowBits=%zu\\n",
+                    i+4,n,start,start%8,start,window);
+        const std::string label="record"+std::to_string(i+4)+"_before";
+        m314Window(label.c_str(),data,start-window,start);
+        const std::string terminal="record"+std::to_string(i+4)+"_terminal";
+        m314Window(terminal.c_str(),data,n-std::min(size_t(64),n),n);
+    }
+    size_t minPair=static_cast<size_t>(-1),maxPair=0;
+    for(size_t i=0;i<4;++i)for(size_t j=i+1;j<4;++j){
+        const auto& a=rec[i]->data;const auto& b=rec[j]->data;
+        const size_t na=a.size()*8,nb=b.size()*8;
+        const size_t pair=m313CommonSuffix(a,b);
+        minPair=std::min(minPair,pair);maxPair=std::max(maxPair,pair);
+        const size_t sa=na-pair,sb=nb-pair;
+        const size_t extra=pair-common;
+        const size_t w=std::min(size_t(64),std::min(sa,sb));
+        size_t mismatches=0;
+        for(size_t k=0;k<w;++k)
+            mismatches+=bitAt(a,sa-w+k)!=bitAt(b,sb-w+k)?1u:0u;
+        std::printf("SPR_M315_PAIR ordinalA=%zu ordinalB=%zu suffixBits=%zu extraBeyondAllFour=%zu startA=%zu startB=%zu shift=%lld precedingMismatches=%zu/%zu immediateBoundaryMismatch=%d\\n",
+                    i+4,j+4,pair,extra,sa,sb,
+                    static_cast<long long>(sb)-static_cast<long long>(sa),
+                    mismatches,w,(sa>0&&sb>0&&bitAt(a,sa-1)!=bitAt(b,sb-1))?1:0);
+    }
+    const size_t left=std::min(size_t(64),common);
+    bool identical=true;
+    for(size_t i=1;i<4;++i)
+        for(size_t k=0;k<common;++k)
+            if(bitAt(rec[0]->data,rec[0]->data.size()*8-common+k)!=
+               bitAt(rec[i]->data,rec[i]->data.size()*8-common+k))identical=false;
+    std::printf("SPR_M315_SUMMARY commonSuffixAllFour=%zu minPairSuffix=%zu maxPairSuffix=%zu verifiedAllFour=%d terminalWindowBits=%zu\\n",
+                common,minPair,maxPair,identical?1:0,left);
+}
+
 struct M311Interval {
     size_t ra,rb,sa,sb,length,observations;
 };
@@ -2273,6 +2335,9 @@ void bitGap(const char* name,size_t oa,size_t ob,size_t gap,
         if((m295Mode||m296Mode)&&std::string(mode)=="leave_one_out"&&
            (parameter==3||parameter==4||parameter==5||parameter==6||parameter==9))
             boundaryEvidence(name,oa,ob,gap,mode,parameter,baseline,alternative.runs,a,b,ba,bb,na,nb);
+        if(m315Mode&&std::string(mode)=="leave_one_out"&&parameter==9&&
+           std::string(name)=="BRDGRIKR.SPR"&&oa==5&&ob==6&&gap==0)
+            m315Compare();
         if(m314Mode&&std::string(mode)=="leave_one_out"&&parameter==9&&
            std::string(name)=="BRDGRIKR.SPR"&&oa==5&&ob==6&&gap==0)
             m314Compare();
@@ -2504,7 +2569,7 @@ bool survey(reluva::stafu::ResourceManager& manager,const char* name,Totals& tot
         }
         ++ordinal;
     }
-    if((m308Mode||m309Mode||m310Mode||m311Mode||m312Mode||m313Mode||m314Mode)&&std::string(name)=="BRDGRIKR.SPR")m308Records=direct;
+    if((m308Mode||m309Mode||m310Mode||m311Mode||m312Mode||m313Mode||m314Mode||m315Mode)&&std::string(name)=="BRDGRIKR.SPR")m308Records=direct;
     Totals local;
     for(size_t k=1;k<direct.size();++k){
         const auto& a=direct[k-1];const auto& b=direct[k];
@@ -2832,5 +2897,22 @@ int stafuSprM314Record2SuffixBoundary(const char* installed,const char* cd,const
     m314Mode=false;
     m308Records.clear();
     if(result==0)std::puts("SPR_M314_NOTE Bit-level suffix boundary and fixed M310 internal interval coordinates. Reference intervals are independently observed, not proof of common codec structure. Read-only diagnostic.");
+    return result;
+}
+
+int stafuSprM315Record2CommonTerminal(const char* installed,const char* cd,const char* optional){
+    if(!m315Selftest()){
+        std::fprintf(stderr,"SPR_M315_SELFTEST FAIL\\n");
+        return 1;
+    }
+    if(std::string(installed)=="__selftest__"){
+        std::puts("SPR_M315_SELFTEST PASS");
+        return 0;
+    }
+    m315Mode=true;
+    const int result=stafuSprM293Record2ChainDependencies(installed,cd,optional);
+    m315Mode=false;
+    m308Records.clear();
+    if(result==0)std::puts("SPR_M315_NOTE Direct record-end aligned bit comparisons across records 4-7. Pairwise extra suffixes and boundary contexts are descriptive, not evidence of padding, encoding, or decoder behavior.");
     return result;
 }
