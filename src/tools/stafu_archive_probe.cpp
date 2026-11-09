@@ -22,6 +22,7 @@ int stafuSprM311Record2UniqueExactIntervals(const char*,const char*,const char*)
 int stafuSprM312Record2ShiftBoundaryAnalysis(const char*,const char*,const char*);
 int stafuSprM313Record2SuffixStructure(const char*,const char*,const char*);
 int stafuSprM314Record2SuffixBoundary(const char*,const char*,const char*);
+int stafuSprM315Record2CommonTerminal(const char*,const char*,const char*);
 int stafuSprM304Record2ExactExtension(const char*,const char*,const char*);
 int stafuSprM297Record2BoundaryNormalized(const char*,const char*,const char*);
 int stafuSprM296Record2EvidenceRanking(const char*,const char*,const char*);
@@ -272,6 +273,8 @@ int stafuToolMain(int argc, char** argv) {
         return stafuSprMaximalSpans(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-span-reconcile") == 0)
         return stafuSprSpanReconcile(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
+    if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-m315-record2-common-terminal") == 0)
+        return stafuSprM315Record2CommonTerminal(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-m314-record2-suffix-boundary") == 0)
         return stafuSprM314Record2SuffixBoundary(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-m313-record2-suffix-structure") == 0)
