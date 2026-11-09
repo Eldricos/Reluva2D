@@ -506,6 +506,7 @@ if(RELUVA_BUILD_TESTS)
     add_test(NAME stafu_spr_m316_terminal_context COMMAND reluva-tool -stafu spr-m316-record2-terminal-context __selftest__ unused)
     add_test(NAME stafu_spr_m317_terminal_transition COMMAND reluva-tool -stafu spr-m317-record2-terminal-transition __selftest__ unused)
     add_test(NAME stafu_spr_m318_gap_alignment COMMAND reluva-tool -stafu spr-m318-record2-gap-alignment __selftest__ unused)
+    add_test(NAME stafu_spr_m319_boundary_alternatives COMMAND reluva-tool -stafu spr-m319-record2-boundary-alternatives __selftest__ unused)
 
     add_executable(reluva_stafu_spr_gif_structure_tests tests/test_stafu_spr_gif_structure.cpp)
     target_link_libraries(reluva_stafu_spr_gif_structure_tests PRIVATE reluva_engines reluva_warnings)
