@@ -2566,6 +2566,7 @@ void bitGap(const char* name,size_t oa,size_t ob,size_t gap,
             m317Compare();
         if(m318Mode && mode=="leave_one_out" && parameter==9 && std::string(name)=="BRDGRIKR.SPR" && oa==5 && ob==6 && gap==0){
             m318Compare();
+        }
         if(m316Mode&&std::string(mode)=="leave_one_out"&&parameter==9&&
            std::string(name)=="BRDGRIKR.SPR"&&oa==5&&ob==6&&gap==0)
             m316Compare();
