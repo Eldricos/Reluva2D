@@ -509,6 +509,7 @@ if(RELUVA_BUILD_TESTS)
     add_test(NAME stafu_spr_m319_boundary_alternatives COMMAND reluva-tool -stafu spr-m319-record2-boundary-alternatives __selftest__ unused)
     add_test(NAME stafu_spr_m320_cross_record_candidates COMMAND reluva-tool -stafu spr-m320-record2-cross-record-candidates __selftest__ unused)
     add_test(NAME stafu_spr_m321_pre_overlap_boundary COMMAND reluva-tool -stafu spr-m321-record2-pre-overlap-boundary __selftest__ unused)
+    add_test(NAME stafu_spr_m322_candidate_context COMMAND reluva-tool -stafu spr-m322-record2-candidate-context __selftest__ unused)
 
     add_executable(reluva_stafu_spr_gif_structure_tests tests/test_stafu_spr_gif_structure.cpp)
     target_link_libraries(reluva_stafu_spr_gif_structure_tests PRIVATE reluva_engines reluva_warnings)
