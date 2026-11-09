@@ -1557,11 +1557,11 @@ void m317Compare(){
     const bool terminal=m317Equal(x,sa,y,sb,suffix);
     const bool ordered=ia+il<=sa&&ib+il<=sb;
     const size_t ga=ordered?sa-(ia+il):0,gb=ordered?sb-(ib+il):0;
-    std::printf("SPR_M317_INTERVAL kind=nearby startA=%zu endA=%zu startB=%zu endB=%zu length=%zu shift=%lld verified=%d\\n",
+    std::printf("SPR_M317_INTERVAL kind=nearby startA=%zu endA=%zu startB=%zu endB=%zu length=%zu shift=%lld verified=%d\n",
                 ia,ia+il,ib,ib+il,il,static_cast<long long>(ib)-static_cast<long long>(ia),nearby?1:0);
-    std::printf("SPR_M317_INTERVAL kind=terminal startA=%zu endA=%zu startB=%zu endB=%zu length=%zu shift=%lld verified=%d\\n",
+    std::printf("SPR_M317_INTERVAL kind=terminal startA=%zu endA=%zu startB=%zu endB=%zu length=%zu shift=%lld verified=%d\n",
                 sa,na,sb,nb,suffix,static_cast<long long>(sb)-static_cast<long long>(sa),terminal?1:0);
-    std::printf("SPR_M317_TRANSITION ordered=%d gapA=%zu gapB=%zu gapDifference=%lld shiftChange=%lld\\n",
+    std::printf("SPR_M317_TRANSITION ordered=%d gapA=%zu gapB=%zu gapDifference=%lld shiftChange=%lld\n",
                 ordered?1:0,ga,gb,static_cast<long long>(gb)-static_cast<long long>(ga),
                 (static_cast<long long>(sb)-static_cast<long long>(sa))-
                 (static_cast<long long>(ib)-static_cast<long long>(ia)));
@@ -1579,7 +1579,7 @@ void m317Compare(){
         if(all==0)first=pos;last=pos;++all;
         if(pos>=ib-128&&pos<=ib+128){
             ++local;
-            std::printf("SPR_M317_COMPETITOR startA=%zu startB=%zu shift=%lld length=%zu\\n",
+            std::printf("SPR_M317_COMPETITOR startA=%zu startB=%zu shift=%lld length=%zu\n",
                         ia,pos,static_cast<long long>(pos)-static_cast<long long>(ia),il);
         }
     }
@@ -1590,7 +1590,7 @@ void m317Compare(){
         while(pa>left&&pb>left&&bitAt(x,pa-left-1)==bitAt(y,pb-left-1))++left;
         while(pa+len+right<na&&pb+len+right<nb&&
               bitAt(x,pa+len+right)==bitAt(y,pb+len+right))++right;
-        std::printf("SPR_M317_EXTENSION kind=%s left=%zu right=%zu maximalStartA=%zu maximalStartB=%zu maximalLength=%zu\\n",
+        std::printf("SPR_M317_EXTENSION kind=%s left=%zu right=%zu maximalStartA=%zu maximalStartB=%zu maximalLength=%zu\n",
                     which?"terminal":"nearby",left,right,pa-left,pb-left,len+left+right);
     }
     // Enumerate alternative exact runs >=16 bits for shifts near the transition,
@@ -1611,7 +1611,7 @@ void m317Compare(){
         }
         if(run>=16){++candidateCount;if(run>best){best=run;bestShift=shift;}}
     }
-    std::printf("SPR_M317_SUMMARY nearbyVerified=%d terminalVerified=%d exact100Occurrences=%zu localOccurrences=%zu firstPosition=%zu lastPosition=%zu candidateRuns16=%zu bestRun=%zu bestShift=%lld codecInference=none\\n",
+    std::printf("SPR_M317_SUMMARY nearbyVerified=%d terminalVerified=%d exact100Occurrences=%zu localOccurrences=%zu firstPosition=%zu lastPosition=%zu candidateRuns16=%zu bestRun=%zu bestShift=%lld codecInference=none\n",
                 nearby?1:0,terminal?1:0,all,local,first,last,candidateCount,best,bestShift);
 }
 
@@ -3100,7 +3100,7 @@ int stafuSprM316Record2TerminalContext(const char* installed,const char* cd,cons
 
 int stafuSprM317Record2TerminalTransition(const char* installed,const char* cd,const char* optional){
     if(!m317Selftest()){
-        std::fprintf(stderr,"SPR_M317_SELFTEST FAIL\\n");
+        std::fprintf(stderr,"SPR_M317_SELFTEST FAIL\n");
         return 1;
     }
     if(std::string(installed)=="__selftest__"){
