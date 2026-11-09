@@ -301,6 +301,7 @@ bool m317Mode=false;
 bool m318Mode=false;
 bool m319Mode=false;
 bool m320Mode=false;
+bool m321Mode=false;
 std::vector<Image> m308Records;
 size_t matchingFlank(const std::vector<uint8_t>& a,const std::vector<uint8_t>& b,
                      size_t baseA,size_t baseB,size_t nA,size_t nB,
@@ -1558,6 +1559,83 @@ bool m319Selftest(){
     return m317Equal(a,0,b,0,1)&&!m317Equal(a,0,b,1,1);
 }
 
+
+bool m321Selftest(){
+    const std::vector<uint8_t> a{0xA0},b{0xA0},c{0x80};
+    return m317Equal(a,0,b,0,8)&&!m317Equal(a,0,c,0,8);
+}
+void m321Compare(){
+    const Image *r4=nullptr,*r5=nullptr,*r6=nullptr,*r7=nullptr;
+    for(const auto& r:m308Records){
+        if(r.ordinal==4)r4=&r;
+        if(r.ordinal==5)r5=&r;
+        if(r.ordinal==6)r6=&r;
+        if(r.ordinal==7)r7=&r;
+    }
+    if(!r4||!r5||!r6||!r7){std::puts("SPR_M321_ERROR missing records 4-7");return;}
+    struct Pair {const Image* x;const Image* y;size_t sx;size_t sy;size_t len;const char* label;};
+    const Pair pairs[]={
+        {r4,r6,1882,1934,934,"4_to_6"},
+        {r4,r7,1882,1885,934,"4_to_7"},
+        {r6,r7,1631,1582,1241,"6_to_7"},
+        {r5,r6,2557,2621,251,"5_to_6_terminal"},
+        {r5,r6,2445,2520,100,"5_to_6_nearby"}
+    };
+    bool verified=true;
+    for(const auto& p:pairs){
+        const bool ok=m317Equal(p.x->data,p.sx,p.y->data,p.sy,p.len);
+        verified=verified&&ok;
+        std::printf("SPR_M321_ANCHOR pair=%s startA=%zu startB=%zu length=%zu verified=%d\n",
+            p.label,p.sx,p.sy,p.len,ok?1:0);
+    }
+    if(!verified){std::puts("SPR_M321_ERROR reference anchors failed");return;}
+    // Measure maximal left extension and nearby exact runs at the SAME shift.
+    // A run outside the anchor is independently observed, not a continuation.
+    for(const auto& p:pairs){
+        size_t left=0;
+        while(left<p.sx&&left<p.sy&&
+              bitAt(p.x->data,p.sx-left-1)==bitAt(p.y->data,p.sy-left-1))++left;
+        const size_t window=128,limit=std::min({window,p.sx,p.sy});
+        size_t best=0,bestEnd=0,cur=0,matched=0;
+        for(size_t k=limit;k>0;--k){
+            const size_t ax=p.sx-k,by=p.sy-k;
+            const bool eq=bitAt(p.x->data,ax)==bitAt(p.y->data,by);
+            matched+=eq?1u:0u;
+            if(eq){++cur;if(cur>best){best=cur;bestEnd=k-1;}}
+            else cur=0;
+        }
+        // bestEnd is a distance from the anchor to the run's final bit.
+        const size_t endA=p.sx-bestEnd,endB=p.sy-bestEnd;
+        std::printf("SPR_M321_PREBOUNDARY pair=%s leftExtension=%zu windowBits=%zu equalBits=%zu bestExactRun=%zu bestRunStartA=%zu bestRunEndA=%zu bestRunStartB=%zu bestRunEndB=%zu independentExtension=0\n",
+            p.label,left,limit,matched,best,endA-best,endA,endB-best,endB);
+        const size_t show=std::min(size_t(32),limit);
+        std::printf("SPR_M321_WINDOW pair=%s bitsA=%s bitsB=%s\n",p.label,
+            bits(p.x->data,p.sx-show,show).c_str(),
+            bits(p.y->data,p.sy-show,show).c_str());
+    }
+    // The 4/6/7 anchors span record 6 positions [1934,2868).
+    // They cover record 6's 2620 gap bit, but do not map record 5's gap.
+    const size_t record6Gap=2620;
+    const size_t pos4=record6Gap-52,pos7=record6Gap-49;
+    const bool triple=record6Gap>=1934&&record6Gap<2868&&
+        record6Gap>=1631&&record6Gap<2872&&
+        bitAt(r4->data,pos4)==bitAt(r6->data,record6Gap)&&
+        bitAt(r7->data,pos7)==bitAt(r6->data,record6Gap);
+    std::printf("SPR_M321_TRIPLE_GAP record4Bit=%zu record6Bit=%zu record7Bit=%zu value4=%d value6=%d value7=%d verified=%d record5Mapped=0\n",
+        pos4,record6Gap,pos7,bitAt(r4->data,pos4),bitAt(r6->data,record6Gap),
+        bitAt(r7->data,pos7),triple?1:0);
+    size_t candidateCount=0;
+    for(size_t pos=2545;pos<2557;++pos){
+        if(bitAt(r5->data,pos)!=bitAt(r6->data,record6Gap))continue;
+        ++candidateCount;
+        std::printf("SPR_M321_CANDIDATE record5Bit=%zu value=%d record6GapBit=%zu record5To6Verified=0 independentConstraint=0\n",
+            pos,bitAt(r5->data,pos),record6Gap);
+    }
+    std::printf("SPR_M321_SUMMARY anchorsVerified=1 tripleGapVerified=%d candidates=%zu eliminated=0 uniquelyLocalized=0 codecInference=none\n",
+        triple?1:0,candidateCount);
+    std::puts("SPR_M321_NOTE A verified 4/6/7 mapping of the record-6 gap bit does not imply any verified record-5 gap mapping. Fixed-shift preboundary runs are descriptive only.");
+}
+
 bool m320Selftest(){
     const std::string gap="011100111000";
     size_t candidates=0;
@@ -2715,6 +2793,8 @@ void bitGap(const char* name,size_t oa,size_t ob,size_t gap,
         if(m318Mode && std::string(mode)=="leave_one_out" && parameter==9 && std::string(name)=="BRDGRIKR.SPR" && oa==5 && ob==6 && gap==0){
             m318Compare();
         }
+        if(m321Mode && std::string(mode)=="leave_one_out" && parameter==9 && std::string(name)=="BRDGRIKR.SPR" && oa==5 && ob==6 && gap==0)
+            m321Compare();
         if(m320Mode && std::string(mode)=="leave_one_out" && parameter==9 && std::string(name)=="BRDGRIKR.SPR" && oa==5 && ob==6 && gap==0)
             m320Compare();
         if(m319Mode && std::string(mode)=="leave_one_out" && parameter==9 && std::string(name)=="BRDGRIKR.SPR" && oa==5 && ob==6 && gap==0)
@@ -2956,7 +3036,7 @@ bool survey(reluva::stafu::ResourceManager& manager,const char* name,Totals& tot
         }
         ++ordinal;
     }
-    if((m308Mode||m309Mode||m310Mode||m311Mode||m312Mode||m313Mode||m314Mode||m315Mode||m316Mode||m317Mode||m318Mode||m319Mode||m320Mode)&&std::string(name)=="BRDGRIKR.SPR")m308Records=direct;
+    if((m308Mode||m309Mode||m310Mode||m311Mode||m312Mode||m313Mode||m314Mode||m315Mode||m316Mode||m317Mode||m318Mode||m319Mode||m320Mode||m321Mode)&&std::string(name)=="BRDGRIKR.SPR")m308Records=direct;
     Totals local;
     for(size_t k=1;k<direct.size();++k){
         const auto& a=direct[k-1];const auto& b=direct[k];
@@ -3366,6 +3446,16 @@ int stafuSprM320Record2CrossRecordCandidates(const char* installed,const char* c
     m320Mode=true;
     const int result=stafuSprM293Record2ChainDependencies(installed,cd,optional);
     m320Mode=false;
+    m308Records.clear();
+    return result;
+}
+
+int stafuSprM321Record2PreOverlapBoundary(const char* installed,const char* cd,const char* optional){
+    if(!m321Selftest()){std::fprintf(stderr,"SPR_M321_SELFTEST FAIL\n");return 1;}
+    if(std::string(installed)=="__selftest__"){std::puts("SPR_M321_SELFTEST PASS");return 0;}
+    m321Mode=true;
+    const int result=stafuSprM293Record2ChainDependencies(installed,cd,optional);
+    m321Mode=false;
     m308Records.clear();
     return result;
 }
