@@ -302,6 +302,7 @@ bool m318Mode=false;
 bool m319Mode=false;
 bool m320Mode=false;
 bool m321Mode=false;
+bool m322Mode=false;
 std::vector<Image> m308Records;
 size_t matchingFlank(const std::vector<uint8_t>& a,const std::vector<uint8_t>& b,
                      size_t baseA,size_t baseB,size_t nA,size_t nB,
@@ -1560,6 +1561,78 @@ bool m319Selftest(){
 }
 
 
+
+std::vector<size_t> m322Candidates(const std::vector<uint8_t>& a,size_t begin,size_t end,int value){
+    std::vector<size_t> out;
+    for(size_t p=begin;p<end;++p)if(bitAt(a,p)==value)out.push_back(p);
+    return out;
+}
+bool m322Selftest(){
+    const std::vector<uint8_t> a{0x73,0x80}; // 011100111000
+    const auto candidates=m322Candidates(a,0,12,1);
+    return candidates==std::vector<size_t>({1,2,3,6,7,8}) &&
+        bits(a,0,12)=="011100111000" &&
+        m317Equal(a,1,a,1,5) && !m317Equal(a,0,a,1,5);
+}
+void m322Compare(){
+    const Image *r4=nullptr,*r5=nullptr,*r6=nullptr,*r7=nullptr;
+    for(const auto& r:m308Records){
+        if(r.ordinal==4)r4=&r;
+        if(r.ordinal==5)r5=&r;
+        if(r.ordinal==6)r6=&r;
+        if(r.ordinal==7)r7=&r;
+    }
+    if(!r4||!r5||!r6||!r7){std::puts("SPR_M322_ERROR missing records 4-7");return;}
+    const auto& a=r5->data;const auto& b=r6->data;
+    const bool anchors=
+        m317Equal(a,2445,b,2520,100)&&m317Equal(a,2557,b,2621,251)&&
+        m317Equal(r4->data,1882,b,1934,934)&&
+        m317Equal(r4->data,1882,r7->data,1885,934)&&
+        m317Equal(b,1631,r7->data,1582,1241);
+    if(!anchors||bits(a,2545,12)!="011100111000"||bitAt(b,2620)!=1){
+        std::puts("SPR_M322_ERROR anchor or gap validation failed");return;
+    }
+    const auto candidates=m322Candidates(a,2545,2557,bitAt(b,2620));
+    const bool triple=bitAt(r4->data,2568)==bitAt(b,2620)&&
+                      bitAt(r7->data,2571)==bitAt(b,2620);
+    std::printf("SPR_M322_REFERENCE anchorsVerified=%d tripleGapVerified=%d gapA=%s gapB=%s candidateCount=%zu\n",
+        anchors?1:0,triple?1:0,bits(a,2545,12).c_str(),bits(b,2620,1).c_str(),candidates.size());
+    for(size_t pos:candidates){
+        // Hypothetical mapping aligns the candidate itself with record 6 bit 2620.
+        // Only the central bit is constrained by the minimum-edit scripts.
+        const size_t radii[]={2,4,8,16};
+        std::printf("SPR_M322_CANDIDATE record5Bit=%zu gapOffset=%zu centralValue=%d\n",
+            pos,pos-2545,bitAt(a,pos));
+        for(size_t radius:radii){
+            const size_t startA=pos-radius,startB=2620-radius;
+            const size_t count=radius*2+1;
+            size_t equal=0,firstMismatch=count;
+            for(size_t i=0;i<count;++i){
+                if(bitAt(a,startA+i)==bitAt(b,startB+i))++equal;
+                else if(firstMismatch==count)firstMismatch=i;
+            }
+            const size_t leftAvailable=pos-2545;
+            const size_t rightAvailable=2556-pos;
+            const size_t gapOnlyLeft=std::min(radius,leftAvailable);
+            const size_t gapOnlyRight=std::min(radius,rightAvailable);
+            std::printf("SPR_M322_CONTEXT record5Bit=%zu radius=%zu match=%zu compared=%zu firstMismatchOffset=%lld windowA=%s windowB=%s gapOnlyLeft=%zu gapOnlyRight=%zu independentlyMapped=0\n",
+                pos,radius,equal,count,firstMismatch==count?-1LL:static_cast<long long>(firstMismatch)-static_cast<long long>(radius),
+                bits(a,startA,count).c_str(),bits(b,startB,count).c_str(),gapOnlyLeft,gapOnlyRight);
+        }
+        // Count adjacent bit agreement at the hypothetical shift, without
+        // converting agreement into a verified cross-record correspondence.
+        size_t left=0,right=0;
+        while(pos>left&&2620>left&&left<32&&
+              bitAt(a,pos-left-1)==bitAt(b,2620-left-1))++left;
+        while(pos+right+1<a.size()*8&&2621+right<b.size()*8&&right<32&&
+              bitAt(a,pos+right+1)==bitAt(b,2621+right))++right;
+        std::printf("SPR_M322_FLANK record5Bit=%zu hypotheticalLeft=%zu hypotheticalRight=%zu independentSupport=0\n",
+            pos,left,right);
+    }
+    std::printf("SPR_M322_SUMMARY candidates=%zu eliminatedByIndependentEvidence=0 uniqueRetained=0 contextComparisonIsHypothetical=1 inference=none\n",candidates.size());
+    std::puts("SPR_M322_NOTE Context similarity is descriptive: the proposed record5-to-record6 mapping is unverified before the terminal anchor. Do not rank or eliminate candidates using hypothetical flank matches.");
+}
+
 bool m321Selftest(){
     const std::vector<uint8_t> a{0xA0},b{0xA0},c{0x80};
     return m317Equal(a,0,b,0,8)&&!m317Equal(a,0,c,0,8);
@@ -2793,6 +2866,8 @@ void bitGap(const char* name,size_t oa,size_t ob,size_t gap,
         if(m318Mode && std::string(mode)=="leave_one_out" && parameter==9 && std::string(name)=="BRDGRIKR.SPR" && oa==5 && ob==6 && gap==0){
             m318Compare();
         }
+        if(m322Mode && std::string(mode)=="leave_one_out" && parameter==9 && std::string(name)=="BRDGRIKR.SPR" && oa==5 && ob==6 && gap==0)
+            m322Compare();
         if(m321Mode && std::string(mode)=="leave_one_out" && parameter==9 && std::string(name)=="BRDGRIKR.SPR" && oa==5 && ob==6 && gap==0)
             m321Compare();
         if(m320Mode && std::string(mode)=="leave_one_out" && parameter==9 && std::string(name)=="BRDGRIKR.SPR" && oa==5 && ob==6 && gap==0)
@@ -3036,7 +3111,7 @@ bool survey(reluva::stafu::ResourceManager& manager,const char* name,Totals& tot
         }
         ++ordinal;
     }
-    if((m308Mode||m309Mode||m310Mode||m311Mode||m312Mode||m313Mode||m314Mode||m315Mode||m316Mode||m317Mode||m318Mode||m319Mode||m320Mode||m321Mode)&&std::string(name)=="BRDGRIKR.SPR")m308Records=direct;
+    if((m308Mode||m309Mode||m310Mode||m311Mode||m312Mode||m313Mode||m314Mode||m315Mode||m316Mode||m317Mode||m318Mode||m319Mode||m320Mode||m321Mode||m322Mode)&&std::string(name)=="BRDGRIKR.SPR")m308Records=direct;
     Totals local;
     for(size_t k=1;k<direct.size();++k){
         const auto& a=direct[k-1];const auto& b=direct[k];
@@ -3456,6 +3531,16 @@ int stafuSprM321Record2PreOverlapBoundary(const char* installed,const char* cd,c
     m321Mode=true;
     const int result=stafuSprM293Record2ChainDependencies(installed,cd,optional);
     m321Mode=false;
+    m308Records.clear();
+    return result;
+}
+
+int stafuSprM322Record2CandidateContext(const char* installed,const char* cd,const char* optional){
+    if(!m322Selftest()){std::fprintf(stderr,"SPR_M322_SELFTEST FAIL\n");return 1;}
+    if(std::string(installed)=="__selftest__"){std::puts("SPR_M322_SELFTEST PASS");return 0;}
+    m322Mode=true;
+    const int result=stafuSprM293Record2ChainDependencies(installed,cd,optional);
+    m322Mode=false;
     m308Records.clear();
     return result;
 }
