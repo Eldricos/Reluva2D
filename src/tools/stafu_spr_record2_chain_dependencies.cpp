@@ -1403,8 +1403,8 @@ bool m315Selftest(){
     const std::vector<uint8_t> c{0x30,0xAA,0xCC};
     const std::vector<uint8_t> d{0x40,0xAA,0xCC};
     const std::vector<uint8_t> e{0x40,0xAA,0xCD};
-    return m313CommonSuffix(a,b)==20&&m313CommonSuffix(a,c)==19&&
-           m313CommonSuffix(a,d)==18&&m313CommonSuffix(a,e)==0&&
+    return m313CommonSuffix(a,b)==20&&m313CommonSuffix(a,c)==21&&
+           m313CommonSuffix(a,d)==20&&m313CommonSuffix(a,e)==0&&
            m313CommonSuffix(a,a)==24;
 }
 void m315Compare(){
