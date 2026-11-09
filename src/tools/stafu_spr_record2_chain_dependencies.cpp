@@ -1618,7 +1618,7 @@ void m323Compare(){
     const struct {int ordinal;const std::vector<uint8_t>* data;size_t projected;} targets[]={
         {4,&r4->data,2568},{6,&r6->data,2620},{7,&r7->data,2571}
     };
-    std::printf("SPR_M323_REFERENCE anchorsVerified=1 candidateCount=%zu searchRadius=256 minReportLength=8 strongThreshold=32\\n",candidates.size());
+    std::printf("SPR_M323_REFERENCE anchorsVerified=1 candidateCount=%zu searchRadius=256 minReportLength=8 strongThreshold=32\n",candidates.size());
     size_t totalStrong=0,totalUnique=0;
     for(size_t pos:candidates){
         size_t strong=0,unique=0;
@@ -1631,18 +1631,18 @@ void m323Compare(){
             const bool uniqueStrong=strongHits==1;
             if(strongHits)++strong;
             if(uniqueStrong)++unique;
-            std::printf("SPR_M323_TARGET record5Bit=%zu otherRecord=%d projectedCenter=%zu hits8=%zu hits32=%zu bestLength=%zu uniqueStrong=%d\\n",
+            std::printf("SPR_M323_TARGET record5Bit=%zu otherRecord=%d projectedCenter=%zu hits8=%zu hits32=%zu bestLength=%zu uniqueStrong=%d\n",
                 pos,target.ordinal,target.projected,hits.size(),strongHits,best,uniqueStrong?1:0);
             for(size_t i=0;i<std::min<size_t>(hits.size(),5);++i){
                 const auto& h=hits[i];
-                std::printf("SPR_M323_HIT record5Bit=%zu otherRecord=%d start5=%zu startOther=%zu length=%zu coversCandidate=1 independentlyAnchored=0\\n",
+                std::printf("SPR_M323_HIT record5Bit=%zu otherRecord=%d start5=%zu startOther=%zu length=%zu coversCandidate=1 independentlyAnchored=0\n",
                     pos,target.ordinal,h.start5,h.startOther,h.length);
             }
         }
         totalStrong+=strong;totalUnique+=unique;
-        std::printf("SPR_M323_CANDIDATE record5Bit=%zu recordsWith32BitHit=%zu recordsWithUnique32BitHit=%zu eliminated=0\\n",pos,strong,unique);
+        std::printf("SPR_M323_CANDIDATE record5Bit=%zu recordsWith32BitHit=%zu recordsWithUnique32BitHit=%zu eliminated=0\n",pos,strong,unique);
     }
-    std::printf("SPR_M323_SUMMARY candidates=%zu strongRecordCandidatePairs=%zu uniqueStrongPairs=%zu independentlyVerifiedCandidateMappings=0 eliminatedByIndependentEvidence=0 uniqueRetained=0 inference=none\\n",
+    std::printf("SPR_M323_SUMMARY candidates=%zu strongRecordCandidatePairs=%zu uniqueStrongPairs=%zu independentlyVerifiedCandidateMappings=0 eliminatedByIndependentEvidence=0 uniqueRetained=0 inference=none\n",
         candidates.size(),totalStrong,totalUnique);
     std::puts("SPR_M323_NOTE Exhaustive bounded candidate-centered exact runs, not constrained to the old shift. Overlapping hits and repeated data are correlated; 32-bit threshold and uniqueness within search window are diagnostics, not independent proof. No candidate elimination or codec inference.");
 }
@@ -3633,7 +3633,7 @@ int stafuSprM322Record2CandidateContext(const char* installed,const char* cd,con
 }
 
 int stafuSprM323Record2IndependentAlignment(const char* installed,const char* cd,const char* optional){
-    if(!m323Selftest()){std::fprintf(stderr,"SPR_M323_SELFTEST FAIL\\n");return 1;}
+    if(!m323Selftest()){std::fprintf(stderr,"SPR_M323_SELFTEST FAIL\n");return 1;}
     if(std::string(installed)=="__selftest__"){std::puts("SPR_M323_SELFTEST PASS");return 0;}
     m323Mode=true;
     const int result=stafuSprM293Record2ChainDependencies(installed,cd,optional);
