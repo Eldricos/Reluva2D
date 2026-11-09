@@ -29,6 +29,7 @@ int stafuSprM318Record2GapAlignment(const char*,const char*,const char*);
 int stafuSprM319Record2BoundaryAlternatives(const char*,const char*,const char*);
 int stafuSprM320Record2CrossRecordCandidates(const char*,const char*,const char*);
 int stafuSprM321Record2PreOverlapBoundary(const char*,const char*,const char*);
+int stafuSprM323Record2IndependentAlignment(const char*,const char*,const char*);
 int stafuSprM322Record2CandidateContext(const char*,const char*,const char*);
 int stafuSprM304Record2ExactExtension(const char*,const char*,const char*);
 int stafuSprM297Record2BoundaryNormalized(const char*,const char*,const char*);
@@ -280,6 +281,8 @@ int stafuToolMain(int argc, char** argv) {
         return stafuSprMaximalSpans(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-span-reconcile") == 0)
         return stafuSprSpanReconcile(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
+    if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-m323-record2-independent-alignment") == 0)
+        return stafuSprM323Record2IndependentAlignment(argv[3],argv[4],argc==6?argv[5]:nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-m322-record2-candidate-context") == 0)
         return stafuSprM322Record2CandidateContext(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-m321-record2-pre-overlap-boundary") == 0)
