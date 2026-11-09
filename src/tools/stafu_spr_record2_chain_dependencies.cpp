@@ -1562,7 +1562,7 @@ void m318Compare(){
         std::puts("SPR_M318_ERROR reference intervals invalid");return;
     }
     const size_t ga=sa-ea,gb=sb-eb;
-    std::printf("SPR_M318_GEOMETRY recordA=5 recordB=6 nearbyEndA=%zu nearbyEndB=%zu suffixStartA=%zu suffixStartB=%zu gapA=%zu gapB=%zu shiftBefore=%lld shiftAfter=%lld\\n",
+    std::printf("SPR_M318_GEOMETRY recordA=5 recordB=6 nearbyEndA=%zu nearbyEndB=%zu suffixStartA=%zu suffixStartB=%zu gapA=%zu gapB=%zu shiftBefore=%lld shiftAfter=%lld\n",
         ea,eb,sa,sb,ga,gb,static_cast<long long>(eb)-static_cast<long long>(ea),
         static_cast<long long>(sb)-static_cast<long long>(sa));
     m314Window("m318_gap_record5",x,ea,sa);
@@ -1588,7 +1588,7 @@ void m318Compare(){
         else {ops.push_back('I');++inserted;--j;}
     }
     std::reverse(ops.begin(),ops.end());
-    std::printf("SPR_M318_GAP_EDIT distance=%zu kept=%zu substitutions=%zu deletions=%zu insertions=%zu operations=%s tieBreak=diagonal_first\\n",
+    std::printf("SPR_M318_GAP_EDIT distance=%zu kept=%zu substitutions=%zu deletions=%zu insertions=%zu operations=%s tieBreak=diagonal_first\n",
         dp[ga][gb],kept,substituted,deleted,inserted,ops.c_str());
     // For every intermediate alignment, compare the gap plus 32-bit flanks
     // without moving either verified anchor. Expose mismatches and longest runs.
@@ -1604,11 +1604,11 @@ void m318Compare(){
             if(bitAt(x,pos)==bitAt(y,static_cast<size_t>(q))){++run;longest=std::max(longest,run);}
             else {++bad;run=0;}
         }
-        std::printf("SPR_M318_SHIFT shift=%lld compared=%zu mismatches=%zu longestExactRun=%zu fixedWindowA=%zu:%zu\\n",
+        std::printf("SPR_M318_SHIFT shift=%lld compared=%zu mismatches=%zu longestExactRun=%zu fixedWindowA=%zu:%zu\n",
             shift,compared,bad,longest,begin,end);
     }
     // A gap-only edit distance is bounded below by the length difference.
-    std::printf("SPR_M318_SUMMARY gapA=%zu gapB=%zu editDistance=%zu lengthDifference=%zu lowerBoundAttained=%d suffixBits=%zu note=descriptive_not_decoder_evidence\\n",
+    std::printf("SPR_M318_SUMMARY gapA=%zu gapB=%zu editDistance=%zu lengthDifference=%zu lowerBoundAttained=%d suffixBits=%zu note=descriptive_not_decoder_evidence\n",
         ga,gb,dp[ga][gb],ga>gb?ga-gb:gb-ga,dp[ga][gb]==(ga>gb?ga-gb:gb-ga)?1:0,suffix);
 }
 
@@ -2564,7 +2564,7 @@ void bitGap(const char* name,size_t oa,size_t ob,size_t gap,
         if(m317Mode&&std::string(mode)=="leave_one_out"&&parameter==9&&
            std::string(name)=="BRDGRIKR.SPR"&&oa==5&&ob==6&&gap==0)
             m317Compare();
-        if(m318Mode && mode=="leave_one_out" && parameter==9 && std::string(name)=="BRDGRIKR.SPR" && oa==5 && ob==6 && gap==0){
+        if(m318Mode && std::string(mode)=="leave_one_out" && parameter==9 && std::string(name)=="BRDGRIKR.SPR" && oa==5 && ob==6 && gap==0){
             m318Compare();
         }
         if(m316Mode&&std::string(mode)=="leave_one_out"&&parameter==9&&
