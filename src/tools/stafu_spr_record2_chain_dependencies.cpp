@@ -298,6 +298,7 @@ bool m314Mode=false;
 bool m315Mode=false;
 bool m316Mode=false;
 bool m317Mode=false;
+bool m318Mode=false;
 std::vector<Image> m308Records;
 size_t matchingFlank(const std::vector<uint8_t>& a,const std::vector<uint8_t>& b,
                      size_t baseA,size_t baseB,size_t nA,size_t nB,
@@ -1544,6 +1545,73 @@ bool m317Selftest(){
     return m317Equal(a,0,b,8,24)&&!m317Equal(a,0,b,7,24)&&
            !m317Equal(a,0,b,8,25)&&m317Equal(a,0,b,8,0);
 }
+
+bool m318Selftest(){
+    const std::vector<uint8_t> a{0xA0},b{0x80};
+    return m317Equal(a,0,b,0,1)&&!m317Equal(a,0,b,1,1);
+}
+void m318Compare(){
+    const Image *a=nullptr,*b=nullptr;
+    for(const auto& r:m308Records){if(r.ordinal==5)a=&r;if(r.ordinal==6)b=&r;}
+    if(!a||!b){std::puts("SPR_M318_ERROR missing records 5 or 6");return;}
+    const auto& x=a->data;const auto& y=b->data;
+    const size_t na=x.size()*8,nb=y.size()*8;
+    const size_t suffix=m313CommonSuffix(x,y),sa=na-suffix,sb=nb-suffix;
+    const size_t ia=2445,ib=2520,il=100,ea=ia+il,eb=ib+il;
+    if(ea>sa||eb>sb||!m317Equal(x,ia,y,ib,il)||!m317Equal(x,sa,y,sb,suffix)){
+        std::puts("SPR_M318_ERROR reference intervals invalid");return;
+    }
+    const size_t ga=sa-ea,gb=sb-eb;
+    std::printf("SPR_M318_GEOMETRY recordA=5 recordB=6 nearbyEndA=%zu nearbyEndB=%zu suffixStartA=%zu suffixStartB=%zu gapA=%zu gapB=%zu shiftBefore=%lld shiftAfter=%lld\\n",
+        ea,eb,sa,sb,ga,gb,static_cast<long long>(eb)-static_cast<long long>(ea),
+        static_cast<long long>(sb)-static_cast<long long>(sa));
+    m314Window("m318_gap_record5",x,ea,sa);
+    m314Window("m318_gap_record6",y,eb,sb);
+    m314Window("m318_context_record5",x,ea-32,std::min(na,sa+32));
+    m314Window("m318_context_record6",y,eb-32,std::min(nb,sb+32));
+    // Needleman-Wunsch unit-cost edit distance on the fixed intervening bits.
+    // This describes one possible bit edit script; it does not imply a codec operation.
+    std::vector<std::vector<size_t>> dp(ga+1,std::vector<size_t>(gb+1));
+    for(size_t i=0;i<=ga;++i)dp[i][0]=i;
+    for(size_t j=0;j<=gb;++j)dp[0][j]=j;
+    for(size_t i=1;i<=ga;++i)for(size_t j=1;j<=gb;++j){
+        const size_t cost=bitAt(x,ea+i-1)==bitAt(y,eb+j-1)?0:1;
+        dp[i][j]=std::min({dp[i-1][j]+1,dp[i][j-1]+1,dp[i-1][j-1]+cost});
+    }
+    size_t i=ga,j=gb,kept=0,substituted=0,deleted=0,inserted=0;
+    std::string ops;
+    while(i||j){
+        if(i&&j&&dp[i][j]==dp[i-1][j-1]+(bitAt(x,ea+i-1)==bitAt(y,eb+j-1)?0u:1u)){
+            const bool same=bitAt(x,ea+i-1)==bitAt(y,eb+j-1);
+            ops.push_back(same?'M':'S');same?++kept:++substituted;--i;--j;
+        }else if(i&&dp[i][j]==dp[i-1][j]+1){ops.push_back('D');++deleted;--i;}
+        else {ops.push_back('I');++inserted;--j;}
+    }
+    std::reverse(ops.begin(),ops.end());
+    std::printf("SPR_M318_GAP_EDIT distance=%zu kept=%zu substitutions=%zu deletions=%zu insertions=%zu operations=%s tieBreak=diagonal_first\\n",
+        dp[ga][gb],kept,substituted,deleted,inserted,ops.c_str());
+    // For every intermediate alignment, compare the gap plus 32-bit flanks
+    // without moving either verified anchor. Expose mismatches and longest runs.
+    for(long long shift=static_cast<long long>(eb)-static_cast<long long>(ea);
+        shift>=static_cast<long long>(sb)-static_cast<long long>(sa);--shift){
+        size_t compared=0,bad=0,longest=0,run=0;
+        const size_t begin=ea>=32?ea-32:0;
+        const size_t end=std::min(na,sa+32);
+        for(size_t pos=begin;pos<end;++pos){
+            const long long q=static_cast<long long>(pos)+shift;
+            if(q<0||q>=static_cast<long long>(nb))continue;
+            ++compared;
+            if(bitAt(x,pos)==bitAt(y,static_cast<size_t>(q))){++run;longest=std::max(longest,run);}
+            else {++bad;run=0;}
+        }
+        std::printf("SPR_M318_SHIFT shift=%lld compared=%zu mismatches=%zu longestExactRun=%zu fixedWindowA=%zu:%zu\\n",
+            shift,compared,bad,longest,begin,end);
+    }
+    // A gap-only edit distance is bounded below by the length difference.
+    std::printf("SPR_M318_SUMMARY gapA=%zu gapB=%zu editDistance=%zu lengthDifference=%zu lowerBoundAttained=%d suffixBits=%zu note=descriptive_not_decoder_evidence\\n",
+        ga,gb,dp[ga][gb],ga>gb?ga-gb:gb-ga,dp[ga][gb]==(ga>gb?ga-gb:gb-ga)?1:0,suffix);
+}
+
 void m317Compare(){
     const Image* a=nullptr;const Image* b=nullptr;
     for(const auto& r:m308Records){if(r.ordinal==5)a=&r;if(r.ordinal==6)b=&r;}
@@ -2496,6 +2564,9 @@ void bitGap(const char* name,size_t oa,size_t ob,size_t gap,
         if(m317Mode&&std::string(mode)=="leave_one_out"&&parameter==9&&
            std::string(name)=="BRDGRIKR.SPR"&&oa==5&&ob==6&&gap==0)
             m317Compare();
+        }
+        if(m318Mode && mode=="leave_one_out" && parameter==9 && std::string(name)=="BRDGRIKR.SPR" && oa==5 && ob==6 && gap==0){
+            m318Compare();
         if(m316Mode&&std::string(mode)=="leave_one_out"&&parameter==9&&
            std::string(name)=="BRDGRIKR.SPR"&&oa==5&&ob==6&&gap==0)
             m316Compare();
@@ -2733,7 +2804,7 @@ bool survey(reluva::stafu::ResourceManager& manager,const char* name,Totals& tot
         }
         ++ordinal;
     }
-    if((m308Mode||m309Mode||m310Mode||m311Mode||m312Mode||m313Mode||m314Mode||m315Mode||m316Mode||m317Mode)&&std::string(name)=="BRDGRIKR.SPR")m308Records=direct;
+    if((m308Mode||m309Mode||m310Mode||m311Mode||m312Mode||m313Mode||m314Mode||m315Mode||m316Mode||m317Mode||m318Mode)&&std::string(name)=="BRDGRIKR.SPR")m308Records=direct;
     Totals local;
     for(size_t k=1;k<direct.size();++k){
         const auto& a=direct[k-1];const auto& b=direct[k];
@@ -3112,5 +3183,16 @@ int stafuSprM317Record2TerminalTransition(const char* installed,const char* cd,c
     m317Mode=false;
     m308Records.clear();
     if(result==0)std::puts("SPR_M317_NOTE Fixed M316 intervals, direct gap bits, exhaustive fixed-window occurrences, and nearby-shift exact runs. Geometry and uniqueness are descriptive; no insertion/deletion or decoder inference.");
+    return result;
+}
+
+int stafuSprM318Record2GapAlignment(const char* installed,const char* cd,const char* optional){
+    if(!m318Selftest()){std::fprintf(stderr,"SPR_M318_SELFTEST FAIL\\n");return 1;}
+    if(std::string(installed)=="__selftest__"){std::puts("SPR_M318_SELFTEST PASS");return 0;}
+    m318Mode=true;
+    const int result=stafuSprM293Record2ChainDependencies(installed,cd,optional);
+    m318Mode=false;
+    m308Records.clear();
+    if(result==0)std::puts("SPR_M318_NOTE Gap edit scripts and intermediate shifts are observational, not evidence of insertion/deletion operations or codec semantics.");
     return result;
 }
