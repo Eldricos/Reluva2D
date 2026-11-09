@@ -297,6 +297,7 @@ bool m313Mode=false;
 bool m314Mode=false;
 bool m315Mode=false;
 bool m316Mode=false;
+bool m317Mode=false;
 std::vector<Image> m308Records;
 size_t matchingFlank(const std::vector<uint8_t>& a,const std::vector<uint8_t>& b,
                      size_t baseA,size_t baseB,size_t nA,size_t nB,
@@ -1530,6 +1531,90 @@ void m316Compare(){
                 static_cast<long long>(sb)-static_cast<long long>(islandEndB));
 }
 
+
+bool m317Equal(const std::vector<uint8_t>& a,size_t pa,
+               const std::vector<uint8_t>& b,size_t pb,size_t n){
+    if(pa>a.size()*8||pb>b.size()*8||n>a.size()*8-pa||n>b.size()*8-pb)return false;
+    for(size_t i=0;i<n;++i)if(bitAt(a,pa+i)!=bitAt(b,pb+i))return false;
+    return true;
+}
+bool m317Selftest(){
+    const std::vector<uint8_t> a{0xA5,0x5A,0xC3};
+    const std::vector<uint8_t> b{0x00,0xA5,0x5A,0xC3};
+    return m317Equal(a,0,b,8,24)&&!m317Equal(a,0,b,7,24)&&
+           !m317Equal(a,0,b,8,25)&&m317Equal(a,0,b,8,0);
+}
+void m317Compare(){
+    const Image* a=nullptr;const Image* b=nullptr;
+    for(const auto& r:m308Records){if(r.ordinal==5)a=&r;if(r.ordinal==6)b=&r;}
+    if(!a||!b){std::puts("SPR_M317_ERROR missing records 5 or 6");return;}
+    const auto& x=a->data;const auto& y=b->data;
+    const size_t na=x.size()*8,nb=y.size()*8;
+    const size_t suffix=m313CommonSuffix(x,y),sa=na-suffix,sb=nb-suffix;
+    // The nearby interval was observed in M316, not inferred from this routine.
+    const size_t ia=2445,ib=2520,il=100;
+    const bool nearby=m317Equal(x,ia,y,ib,il);
+    const bool terminal=m317Equal(x,sa,y,sb,suffix);
+    const bool ordered=ia+il<=sa&&ib+il<=sb;
+    const size_t ga=ordered?sa-(ia+il):0,gb=ordered?sb-(ib+il):0;
+    std::printf("SPR_M317_INTERVAL kind=nearby startA=%zu endA=%zu startB=%zu endB=%zu length=%zu shift=%lld verified=%d\\n",
+                ia,ia+il,ib,ib+il,il,static_cast<long long>(ib)-static_cast<long long>(ia),nearby?1:0);
+    std::printf("SPR_M317_INTERVAL kind=terminal startA=%zu endA=%zu startB=%zu endB=%zu length=%zu shift=%lld verified=%d\\n",
+                sa,na,sb,nb,suffix,static_cast<long long>(sb)-static_cast<long long>(sa),terminal?1:0);
+    std::printf("SPR_M317_TRANSITION ordered=%d gapA=%zu gapB=%zu gapDifference=%lld shiftChange=%lld\\n",
+                ordered?1:0,ga,gb,static_cast<long long>(gb)-static_cast<long long>(ga),
+                (static_cast<long long>(sb)-static_cast<long long>(sa))-
+                (static_cast<long long>(ib)-static_cast<long long>(ia)));
+    if(ordered){
+        m314Window("m317_gap_record5",x,ia+il,sa);
+        m314Window("m317_gap_record6",y,ib+il,sb);
+        m314Window("m317_transition_record5",x,ia+il>=16?ia+il-16:0,std::min(na,sa+16));
+        m314Window("m317_transition_record6",y,ib+il>=16?ib+il-16:0,std::min(nb,sb+16));
+    }
+    // Count exact 100-bit matches at every possible position in record 6.
+    // This is exhaustive for the fixed record-5 window, not for arbitrary windows.
+    size_t all=0,local=0;size_t first=0,last=0;
+    for(size_t pos=0;pos+il<=nb;++pos){
+        if(!m317Equal(x,ia,y,pos,il))continue;
+        if(all==0)first=pos;last=pos;++all;
+        if(pos>=ib-128&&pos<=ib+128){
+            ++local;
+            std::printf("SPR_M317_COMPETITOR startA=%zu startB=%zu shift=%lld length=%zu\\n",
+                        ia,pos,static_cast<long long>(pos)-static_cast<long long>(ia),il);
+        }
+    }
+    // Test exact extensions at the two reported alignments, with no overlap assumptions.
+    for(int which=0;which<2;++which){
+        const size_t pa=which?sa:ia,pb=which?sb:ib,len=which?suffix:il;
+        size_t left=0,right=0;
+        while(pa>left&&pb>left&&bitAt(x,pa-left-1)==bitAt(y,pb-left-1))++left;
+        while(pa+len+right<na&&pb+len+right<nb&&
+              bitAt(x,pa+len+right)==bitAt(y,pb+len+right))++right;
+        std::printf("SPR_M317_EXTENSION kind=%s left=%zu right=%zu maximalStartA=%zu maximalStartB=%zu maximalLength=%zu\\n",
+                    which?"terminal":"nearby",left,right,pa-left,pb-left,len+left+right);
+    }
+    // Enumerate alternative exact runs >=16 bits for shifts near the transition,
+    // confined to a fixed A window [2400,sa). These can overlap one another.
+    size_t candidateCount=0,best=0;long long bestShift=0;
+    const size_t begin=std::min(size_t(2400),sa);
+    for(long long shift=static_cast<long long>(ib)-static_cast<long long>(ia)-32;
+        shift<=static_cast<long long>(ib)-static_cast<long long>(ia)+32;++shift){
+        size_t run=0;
+        for(size_t pos=begin;pos<sa;++pos){
+            const long long q=static_cast<long long>(pos)+shift;
+            if(q>=0&&q<static_cast<long long>(nb)&&bitAt(x,pos)==bitAt(y,static_cast<size_t>(q))){
+                ++run;
+            }else{
+                if(run>=16){++candidateCount;if(run>best){best=run;bestShift=shift;}}
+                run=0;
+            }
+        }
+        if(run>=16){++candidateCount;if(run>best){best=run;bestShift=shift;}}
+    }
+    std::printf("SPR_M317_SUMMARY nearbyVerified=%d terminalVerified=%d exact100Occurrences=%zu localOccurrences=%zu firstPosition=%zu lastPosition=%zu candidateRuns16=%zu bestRun=%zu bestShift=%lld codecInference=none\\n",
+                nearby?1:0,terminal?1:0,all,local,first,last,candidateCount,best,bestShift);
+}
+
 struct M311Interval {
     size_t ra,rb,sa,sb,length,observations;
 };
@@ -2408,6 +2493,9 @@ void bitGap(const char* name,size_t oa,size_t ob,size_t gap,
         if((m295Mode||m296Mode)&&std::string(mode)=="leave_one_out"&&
            (parameter==3||parameter==4||parameter==5||parameter==6||parameter==9))
             boundaryEvidence(name,oa,ob,gap,mode,parameter,baseline,alternative.runs,a,b,ba,bb,na,nb);
+        if(m317Mode&&std::string(mode)=="leave_one_out"&&parameter==9&&
+           std::string(name)=="BRDGRIKR.SPR"&&oa==5&&ob==6&&gap==0)
+            m317Compare();
         if(m316Mode&&std::string(mode)=="leave_one_out"&&parameter==9&&
            std::string(name)=="BRDGRIKR.SPR"&&oa==5&&ob==6&&gap==0)
             m316Compare();
@@ -2645,7 +2733,7 @@ bool survey(reluva::stafu::ResourceManager& manager,const char* name,Totals& tot
         }
         ++ordinal;
     }
-    if((m308Mode||m309Mode||m310Mode||m311Mode||m312Mode||m313Mode||m314Mode||m315Mode||m316Mode)&&std::string(name)=="BRDGRIKR.SPR")m308Records=direct;
+    if((m308Mode||m309Mode||m310Mode||m311Mode||m312Mode||m313Mode||m314Mode||m315Mode||m316Mode||m317Mode)&&std::string(name)=="BRDGRIKR.SPR")m308Records=direct;
     Totals local;
     for(size_t k=1;k<direct.size();++k){
         const auto& a=direct[k-1];const auto& b=direct[k];
@@ -3007,5 +3095,22 @@ int stafuSprM316Record2TerminalContext(const char* installed,const char* cd,cons
     m316Mode=false;
     m308Records.clear();
     if(result==0)std::puts("SPR_M316_NOTE Direct terminal suffix and nearby shifted comparisons. Historical segment-nine coordinates are reference observations, not proven related structure; no decoder inference.");
+    return result;
+}
+
+int stafuSprM317Record2TerminalTransition(const char* installed,const char* cd,const char* optional){
+    if(!m317Selftest()){
+        std::fprintf(stderr,"SPR_M317_SELFTEST FAIL\\n");
+        return 1;
+    }
+    if(std::string(installed)=="__selftest__"){
+        std::puts("SPR_M317_SELFTEST PASS");
+        return 0;
+    }
+    m317Mode=true;
+    const int result=stafuSprM293Record2ChainDependencies(installed,cd,optional);
+    m317Mode=false;
+    m308Records.clear();
+    if(result==0)std::puts("SPR_M317_NOTE Fixed M316 intervals, direct gap bits, exhaustive fixed-window occurrences, and nearby-shift exact runs. Geometry and uniqueness are descriptive; no insertion/deletion or decoder inference.");
     return result;
 }
