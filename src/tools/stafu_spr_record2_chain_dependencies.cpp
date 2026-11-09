@@ -303,6 +303,7 @@ bool m319Mode=false;
 bool m320Mode=false;
 bool m321Mode=false;
 bool m322Mode=false;
+bool m323Mode=false;
 std::vector<Image> m308Records;
 size_t matchingFlank(const std::vector<uint8_t>& a,const std::vector<uint8_t>& b,
                      size_t baseA,size_t baseB,size_t nA,size_t nB,
@@ -1561,6 +1562,90 @@ bool m319Selftest(){
 }
 
 
+
+std::vector<size_t> m322Candidates(const std::vector<uint8_t>&,size_t,size_t,int);
+
+struct M323Hit {size_t start5=0,startOther=0,length=0;};
+std::vector<M323Hit> m323Search(const std::vector<uint8_t>& a,const std::vector<uint8_t>& b,
+                                size_t candidate,size_t projected,size_t radius,size_t minLength){
+    const size_t na=a.size()*8,nb=b.size()*8;
+    std::vector<M323Hit> hits;
+    if(candidate>=na||projected>=nb)return hits;
+    const size_t lo=projected>radius?projected-radius:0;
+    const size_t hi=std::min(nb-1,projected+radius);
+    for(size_t q=lo;q<=hi;++q){
+        if(bitAt(a,candidate)!=bitAt(b,q))continue;
+        size_t left=0,right=0;
+        while(candidate>left&&q>left&&bitAt(a,candidate-left-1)==bitAt(b,q-left-1))++left;
+        while(candidate+right+1<na&&q+right+1<nb&&
+              bitAt(a,candidate+right+1)==bitAt(b,q+right+1))++right;
+        const size_t len=left+1+right;
+        if(len>=minLength)hits.push_back({candidate-left,q-left,len});
+    }
+    std::sort(hits.begin(),hits.end(),[](const M323Hit& x,const M323Hit& y){
+        if(x.length!=y.length)return x.length>y.length;
+        if(x.start5!=y.start5)return x.start5<y.start5;
+        return x.startOther<y.startOther;
+    });
+    return hits;
+}
+bool m323Selftest(){
+    const std::vector<uint8_t> a{0xA5,0x5A,0xC3},b{0x00,0xA5,0x5A,0xC3,0x00};
+    const auto hits=m323Search(a,b,8,16,8,16);
+    if(hits.empty()||hits[0].start5!=0||hits[0].startOther!=8||hits[0].length<24)return false;
+    const std::vector<uint8_t> c{0x00},d{0xFF};
+    return m323Search(c,d,3,3,3,1).empty();
+}
+void m323Compare(){
+    const Image *r4=nullptr,*r5=nullptr,*r6=nullptr,*r7=nullptr;
+    for(const auto& r:m308Records){
+        if(r.ordinal==4)r4=&r;
+        if(r.ordinal==5)r5=&r;
+        if(r.ordinal==6)r6=&r;
+        if(r.ordinal==7)r7=&r;
+    }
+    if(!r4||!r5||!r6||!r7){std::puts("SPR_M323_ERROR missing records 4-7");return;}
+    const auto& a=r5->data;const auto& b=r6->data;
+    const bool anchors=m317Equal(a,2445,b,2520,100)&&
+        m317Equal(a,2557,b,2621,251)&&
+        m317Equal(r4->data,1882,b,1934,934)&&
+        m317Equal(r4->data,1882,r7->data,1885,934)&&
+        m317Equal(b,1631,r7->data,1582,1241);
+    if(!anchors||bits(a,2545,12)!="011100111000"||bitAt(b,2620)!=1){
+        std::puts("SPR_M323_ERROR reference validation failed");return;
+    }
+    const auto candidates=m322Candidates(a,2545,2557,1);
+    const struct {int ordinal;const std::vector<uint8_t>* data;size_t projected;} targets[]={
+        {4,&r4->data,2568},{6,&r6->data,2620},{7,&r7->data,2571}
+    };
+    std::printf("SPR_M323_REFERENCE anchorsVerified=1 candidateCount=%zu searchRadius=256 minReportLength=8 strongThreshold=32\\n",candidates.size());
+    size_t totalStrong=0,totalUnique=0;
+    for(size_t pos:candidates){
+        size_t strong=0,unique=0;
+        for(const auto& target:targets){
+            // Projection only centers the bounded search; it is NOT a verified alignment.
+            const auto hits=m323Search(a,*target.data,pos,target.projected,256,8);
+            size_t best=hits.empty()?0:hits[0].length;
+            size_t strongHits=0;
+            for(const auto& hit:hits)if(hit.length>=32)++strongHits;
+            const bool uniqueStrong=strongHits==1;
+            if(strongHits)++strong;
+            if(uniqueStrong)++unique;
+            std::printf("SPR_M323_TARGET record5Bit=%zu otherRecord=%d projectedCenter=%zu hits8=%zu hits32=%zu bestLength=%zu uniqueStrong=%d\\n",
+                pos,target.ordinal,target.projected,hits.size(),strongHits,best,uniqueStrong?1:0);
+            for(size_t i=0;i<std::min<size_t>(hits.size(),5);++i){
+                const auto& h=hits[i];
+                std::printf("SPR_M323_HIT record5Bit=%zu otherRecord=%d start5=%zu startOther=%zu length=%zu coversCandidate=1 independentlyAnchored=0\\n",
+                    pos,target.ordinal,h.start5,h.startOther,h.length);
+            }
+        }
+        totalStrong+=strong;totalUnique+=unique;
+        std::printf("SPR_M323_CANDIDATE record5Bit=%zu recordsWith32BitHit=%zu recordsWithUnique32BitHit=%zu eliminated=0\\n",pos,strong,unique);
+    }
+    std::printf("SPR_M323_SUMMARY candidates=%zu strongRecordCandidatePairs=%zu uniqueStrongPairs=%zu independentlyVerifiedCandidateMappings=0 eliminatedByIndependentEvidence=0 uniqueRetained=0 inference=none\\n",
+        candidates.size(),totalStrong,totalUnique);
+    std::puts("SPR_M323_NOTE Exhaustive bounded candidate-centered exact runs, not constrained to the old shift. Overlapping hits and repeated data are correlated; 32-bit threshold and uniqueness within search window are diagnostics, not independent proof. No candidate elimination or codec inference.");
+}
 
 std::vector<size_t> m322Candidates(const std::vector<uint8_t>& a,size_t begin,size_t end,int value){
     std::vector<size_t> out;
@@ -2866,6 +2951,8 @@ void bitGap(const char* name,size_t oa,size_t ob,size_t gap,
         if(m318Mode && std::string(mode)=="leave_one_out" && parameter==9 && std::string(name)=="BRDGRIKR.SPR" && oa==5 && ob==6 && gap==0){
             m318Compare();
         }
+        if(m323Mode && std::string(mode)=="leave_one_out" && parameter==9 && std::string(name)=="BRDGRIKR.SPR" && oa==5 && ob==6 && gap==0)
+            m323Compare();
         if(m322Mode && std::string(mode)=="leave_one_out" && parameter==9 && std::string(name)=="BRDGRIKR.SPR" && oa==5 && ob==6 && gap==0)
             m322Compare();
         if(m321Mode && std::string(mode)=="leave_one_out" && parameter==9 && std::string(name)=="BRDGRIKR.SPR" && oa==5 && ob==6 && gap==0)
@@ -3111,7 +3198,7 @@ bool survey(reluva::stafu::ResourceManager& manager,const char* name,Totals& tot
         }
         ++ordinal;
     }
-    if((m308Mode||m309Mode||m310Mode||m311Mode||m312Mode||m313Mode||m314Mode||m315Mode||m316Mode||m317Mode||m318Mode||m319Mode||m320Mode||m321Mode||m322Mode)&&std::string(name)=="BRDGRIKR.SPR")m308Records=direct;
+    if((m308Mode||m309Mode||m310Mode||m311Mode||m312Mode||m313Mode||m314Mode||m315Mode||m316Mode||m317Mode||m318Mode||m319Mode||m320Mode||m321Mode||m322Mode||m323Mode)&&std::string(name)=="BRDGRIKR.SPR")m308Records=direct;
     Totals local;
     for(size_t k=1;k<direct.size();++k){
         const auto& a=direct[k-1];const auto& b=direct[k];
@@ -3541,6 +3628,16 @@ int stafuSprM322Record2CandidateContext(const char* installed,const char* cd,con
     m322Mode=true;
     const int result=stafuSprM293Record2ChainDependencies(installed,cd,optional);
     m322Mode=false;
+    m308Records.clear();
+    return result;
+}
+
+int stafuSprM323Record2IndependentAlignment(const char* installed,const char* cd,const char* optional){
+    if(!m323Selftest()){std::fprintf(stderr,"SPR_M323_SELFTEST FAIL\\n");return 1;}
+    if(std::string(installed)=="__selftest__"){std::puts("SPR_M323_SELFTEST PASS");return 0;}
+    m323Mode=true;
+    const int result=stafuSprM293Record2ChainDependencies(installed,cd,optional);
+    m323Mode=false;
     m308Records.clear();
     return result;
 }
