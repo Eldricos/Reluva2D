@@ -1595,7 +1595,7 @@ void m320Compare(){
     for(const auto& c:cross){
         const bool ok=m317Equal(c.x->data,c.px,c.y->data,c.py,c.n);
         all=all&&ok;
-        std::printf("SPR_M320_REFERENCE pair=%s startA=%zu startB=%zu length=%zu verified=%d\\n",
+        std::printf("SPR_M320_REFERENCE pair=%s startA=%zu startB=%zu length=%zu verified=%d\n",
             c.label,c.px,c.py,c.n,ok?1:0);
     }
     // The M310 common interval ends at bit 2868 in record 6.
@@ -1608,7 +1608,7 @@ void m320Compare(){
         m317Equal(r4->data,sharedBegin6-52,r5->data,sharedBegin6-64,sharedEnd6-sharedBegin6)&&
         m317Equal(r5->data,sharedBegin6-64,r6->data,sharedBegin6,sharedEnd6-sharedBegin6)&&
         m317Equal(r6->data,sharedBegin6,r7->data,sharedBegin6-49,sharedEnd6-sharedBegin6);
-    std::printf("SPR_M320_FOUR_WAY record6Start=%zu record6End=%zu length=%zu verified=%d\\n",
+    std::printf("SPR_M320_FOUR_WAY record6Start=%zu record6End=%zu length=%zu verified=%d\n",
         sharedBegin6,sharedEnd6,sharedEnd6-sharedBegin6,intersection?1:0);
     size_t candidates=0,covered=0;
     for(size_t pos=ea;pos<sa;++pos){
@@ -1626,10 +1626,10 @@ void m320Compare(){
         const int v4=valid?bitAt(r4->data,q4):-1;
         const int v6=valid?bitAt(r6->data,q6):-1;
         const int v7=valid?bitAt(r7->data,q7):-1;
-        std::printf("SPR_M320_CANDIDATE record5Bit=%zu value=1 verifiedCrossRecordCoverage=%d extrapolatedRecord4Bit=%zu extrapolatedRecord6Bit=%zu extrapolatedRecord7Bit=%zu extrapolatedValues=%d,%d,%d extrapolationIsEvidence=0\\n",
+        std::printf("SPR_M320_CANDIDATE record5Bit=%zu value=1 verifiedCrossRecordCoverage=%d extrapolatedRecord4Bit=%zu extrapolatedRecord6Bit=%zu extrapolatedRecord7Bit=%zu extrapolatedValues=%d,%d,%d extrapolationIsEvidence=0\n",
             pos,(in4&&in7)?1:0,q4,q6,q7,v4,v6,v7);
     }
-    std::printf("SPR_M320_SUMMARY candidates=%zu independentlyCoveredCandidates=%zu eliminatedByVerifiedCrossRecordEvidence=0 fourWayVerified=%d uniqueRetained=0 inference=none\\n",
+    std::printf("SPR_M320_SUMMARY candidates=%zu independentlyCoveredCandidates=%zu eliminatedByVerifiedCrossRecordEvidence=0 fourWayVerified=%d uniqueRetained=0 inference=none\n",
         candidates,covered,intersection?1:0);
     std::puts("SPR_M320_NOTE Records 4/7 independently verify the terminal overlap, but that overlap begins AFTER all six record-5 gap candidates. Extrapolated coordinates are diagnostic only and cannot eliminate candidates.");
 }
@@ -3361,7 +3361,7 @@ int stafuSprM319Record2BoundaryAlternatives(const char* installed,const char* cd
 }
 
 int stafuSprM320Record2CrossRecordCandidates(const char* installed,const char* cd,const char* optional){
-    if(!m320Selftest()){std::fprintf(stderr,"SPR_M320_SELFTEST FAIL\\n");return 1;}
+    if(!m320Selftest()){std::fprintf(stderr,"SPR_M320_SELFTEST FAIL\n");return 1;}
     if(std::string(installed)=="__selftest__"){std::puts("SPR_M320_SELFTEST PASS");return 0;}
     m320Mode=true;
     const int result=stafuSprM293Record2ChainDependencies(installed,cd,optional);
