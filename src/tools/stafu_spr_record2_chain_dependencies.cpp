@@ -300,6 +300,7 @@ bool m316Mode=false;
 bool m317Mode=false;
 bool m318Mode=false;
 bool m319Mode=false;
+bool m320Mode=false;
 std::vector<Image> m308Records;
 size_t matchingFlank(const std::vector<uint8_t>& a,const std::vector<uint8_t>& b,
                      size_t baseA,size_t baseB,size_t nA,size_t nB,
@@ -1556,6 +1557,83 @@ bool m319Selftest(){
     const std::vector<uint8_t> a{0xA0},b{0x80};
     return m317Equal(a,0,b,0,1)&&!m317Equal(a,0,b,1,1);
 }
+
+bool m320Selftest(){
+    const std::string gap="011100111000";
+    size_t candidates=0;
+    for(char c:gap)if(c=='1')++candidates;
+    const std::vector<uint8_t> a{0xA5,0x5A},b{0xA5,0x5A};
+    return candidates==6&&m317Equal(a,0,b,0,16)&&!m317Equal(a,0,b,1,15);
+}
+void m320Compare(){
+    const Image *r4=nullptr,*r5=nullptr,*r6=nullptr,*r7=nullptr;
+    for(const auto& r:m308Records){
+        if(r.ordinal==4)r4=&r;
+        if(r.ordinal==5)r5=&r;
+        if(r.ordinal==6)r6=&r;
+        if(r.ordinal==7)r7=&r;
+    }
+    if(!r4||!r5||!r6||!r7){std::puts("SPR_M320_ERROR missing records 4-7");return;}
+    const auto& a=r5->data;const auto& b=r6->data;
+    const size_t sa=2557,sb=2621,ea=2545,eb=2620;
+    if(a.size()*8!=2808||b.size()*8!=2872||
+       !m317Equal(a,2445,b,2520,100)||!m317Equal(a,sa,b,sb,251)){
+        std::puts("SPR_M320_ERROR fixed M319 anchors failed");return;
+    }
+    const std::string gapA=bits(a,ea,sa-ea),gapB=bits(b,eb,sb-eb);
+    if(gapA!="011100111000"||gapB!="1"){
+        std::puts("SPR_M320_ERROR M319 gap content changed");return;
+    }
+    // Independently verify historical M310 cross-record intervals.
+    struct Cross {const Image* x;const Image* y;size_t px;size_t py;size_t n;const char* label;};
+    const Cross cross[]={
+        {r4,r6,1882,1934,934,"4_to_6"},
+        {r4,r7,1882,1885,934,"4_to_7"},
+        {r6,r7,1631,1582,1241,"6_to_7"}
+    };
+    bool all=true;
+    for(const auto& c:cross){
+        const bool ok=m317Equal(c.x->data,c.px,c.y->data,c.py,c.n);
+        all=all&&ok;
+        std::printf("SPR_M320_REFERENCE pair=%s startA=%zu startB=%zu length=%zu verified=%d\\n",
+            c.label,c.px,c.py,c.n,ok?1:0);
+    }
+    // The M310 common interval ends at bit 2868 in record 6.
+    // Candidate positions in record 5 are before its verified 5->6 suffix.
+    const size_t commonBegin6=std::max(size_t(1934),size_t(1631));
+    const size_t commonEnd6=std::min(size_t(2868),size_t(2872));
+    const size_t sharedBegin6=std::max(commonBegin6,sb);
+    const size_t sharedEnd6=std::min(commonEnd6,sb+251);
+    const bool intersection=all&&sharedEnd6>sharedBegin6&&
+        m317Equal(r4->data,sharedBegin6-52,r5->data,sharedBegin6-64,sharedEnd6-sharedBegin6)&&
+        m317Equal(r5->data,sharedBegin6-64,r6->data,sharedBegin6,sharedEnd6-sharedBegin6)&&
+        m317Equal(r6->data,sharedBegin6,r7->data,sharedBegin6-49,sharedEnd6-sharedBegin6);
+    std::printf("SPR_M320_FOUR_WAY record6Start=%zu record6End=%zu length=%zu verified=%d\\n",
+        sharedBegin6,sharedEnd6,sharedEnd6-sharedBegin6,intersection?1:0);
+    size_t candidates=0,covered=0;
+    for(size_t pos=ea;pos<sa;++pos){
+        if(bitAt(a,pos)!=bitAt(b,eb))continue;
+        ++candidates;
+        // Only the verified 5->6 terminal mapping licenses a 5->6 coordinate.
+        const bool in56=pos>=sa&&pos<sa+251;
+        const bool in4=in56&&(pos+64>=1934)&&(pos+64<2868);
+        const bool in7=in56&&(pos+64>=1631)&&(pos+64<2872);
+        if(in4&&in7)++covered;
+        // For visibility only, inspect a hypothetical extrapolation of the
+        // terminal offsets, without treating it as a verified correspondence.
+        const size_t q6=pos+64,q4=q6-52,q7=q6-49;
+        const bool valid=q4<r4->data.size()*8&&q6<r6->data.size()*8&&q7<r7->data.size()*8;
+        const int v4=valid?bitAt(r4->data,q4):-1;
+        const int v6=valid?bitAt(r6->data,q6):-1;
+        const int v7=valid?bitAt(r7->data,q7):-1;
+        std::printf("SPR_M320_CANDIDATE record5Bit=%zu value=1 verifiedCrossRecordCoverage=%d extrapolatedRecord4Bit=%zu extrapolatedRecord6Bit=%zu extrapolatedRecord7Bit=%zu extrapolatedValues=%d,%d,%d extrapolationIsEvidence=0\\n",
+            pos,(in4&&in7)?1:0,q4,q6,q7,v4,v6,v7);
+    }
+    std::printf("SPR_M320_SUMMARY candidates=%zu independentlyCoveredCandidates=%zu eliminatedByVerifiedCrossRecordEvidence=0 fourWayVerified=%d uniqueRetained=0 inference=none\\n",
+        candidates,covered,intersection?1:0);
+    std::puts("SPR_M320_NOTE Records 4/7 independently verify the terminal overlap, but that overlap begins AFTER all six record-5 gap candidates. Extrapolated coordinates are diagnostic only and cannot eliminate candidates.");
+}
+
 void m319Compare(){
     const Image *a=nullptr,*b=nullptr;
     for(const auto& r:m308Records){if(r.ordinal==5)a=&r;if(r.ordinal==6)b=&r;}
@@ -2637,6 +2715,8 @@ void bitGap(const char* name,size_t oa,size_t ob,size_t gap,
         if(m318Mode && std::string(mode)=="leave_one_out" && parameter==9 && std::string(name)=="BRDGRIKR.SPR" && oa==5 && ob==6 && gap==0){
             m318Compare();
         }
+        if(m320Mode && std::string(mode)=="leave_one_out" && parameter==9 && std::string(name)=="BRDGRIKR.SPR" && oa==5 && ob==6 && gap==0)
+            m320Compare();
         if(m319Mode && std::string(mode)=="leave_one_out" && parameter==9 && std::string(name)=="BRDGRIKR.SPR" && oa==5 && ob==6 && gap==0)
             m319Compare();
         if(m316Mode&&std::string(mode)=="leave_one_out"&&parameter==9&&
@@ -2876,7 +2956,7 @@ bool survey(reluva::stafu::ResourceManager& manager,const char* name,Totals& tot
         }
         ++ordinal;
     }
-    if((m308Mode||m309Mode||m310Mode||m311Mode||m312Mode||m313Mode||m314Mode||m315Mode||m316Mode||m317Mode||m318Mode||m319Mode)&&std::string(name)=="BRDGRIKR.SPR")m308Records=direct;
+    if((m308Mode||m309Mode||m310Mode||m311Mode||m312Mode||m313Mode||m314Mode||m315Mode||m316Mode||m317Mode||m318Mode||m319Mode||m320Mode)&&std::string(name)=="BRDGRIKR.SPR")m308Records=direct;
     Totals local;
     for(size_t k=1;k<direct.size();++k){
         const auto& a=direct[k-1];const auto& b=direct[k];
@@ -3277,5 +3357,15 @@ int stafuSprM319Record2BoundaryAlternatives(const char* installed,const char* cd
     m319Mode=false;
     m308Records.clear();
     if(result==0)std::puts("SPR_M319_NOTE Enumerates minimum-cost bit edit scripts for fixed gaps only; alternatives do not establish codec semantics.");
+    return result;
+}
+
+int stafuSprM320Record2CrossRecordCandidates(const char* installed,const char* cd,const char* optional){
+    if(!m320Selftest()){std::fprintf(stderr,"SPR_M320_SELFTEST FAIL\\n");return 1;}
+    if(std::string(installed)=="__selftest__"){std::puts("SPR_M320_SELFTEST PASS");return 0;}
+    m320Mode=true;
+    const int result=stafuSprM293Record2ChainDependencies(installed,cd,optional);
+    m320Mode=false;
+    m308Records.clear();
     return result;
 }
