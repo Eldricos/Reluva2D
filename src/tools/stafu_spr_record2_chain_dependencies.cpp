@@ -299,6 +299,7 @@ bool m315Mode=false;
 bool m316Mode=false;
 bool m317Mode=false;
 bool m318Mode=false;
+bool m319Mode=false;
 std::vector<Image> m308Records;
 size_t matchingFlank(const std::vector<uint8_t>& a,const std::vector<uint8_t>& b,
                      size_t baseA,size_t baseB,size_t nA,size_t nB,
@@ -1550,6 +1551,75 @@ bool m318Selftest(){
     const std::vector<uint8_t> a{0xA0},b{0x80};
     return m317Equal(a,0,b,0,1)&&!m317Equal(a,0,b,1,1);
 }
+
+bool m319Selftest(){
+    const std::vector<uint8_t> a{0xA0},b{0x80};
+    return m317Equal(a,0,b,0,1)&&!m317Equal(a,0,b,1,1);
+}
+void m319Compare(){
+    const Image *a=nullptr,*b=nullptr;
+    for(const auto& r:m308Records){if(r.ordinal==5)a=&r;if(r.ordinal==6)b=&r;}
+    if(!a||!b){std::puts("SPR_M319_ERROR missing records 5 or 6");return;}
+    const auto& x=a->data;const auto& y=b->data;
+    const size_t na=x.size()*8,nb=y.size()*8,tail=m313CommonSuffix(x,y);
+    const size_t sa=na-tail,sb=nb-tail,ia=2445,ib=2520,len=100;
+    if(!m317Equal(x,ia,y,ib,len)||!m317Equal(x,sa,y,sb,tail)||ia+len>sa||ib+len>sb){
+        std::puts("SPR_M319_ERROR reference interval verification failed");return;
+    }
+    const size_t ea=ia+len,eb=ib+len,ga=sa-ea,gb=sb-eb;
+    std::string ax=bits(x,ea,ga),by=bits(y,eb,gb);
+    std::printf("SPR_M319_BOUNDARIES priorLastA=%zu priorLastB=%zu suffixFirstA=%zu suffixFirstB=%zu gapA=%zu gapB=%zu\n",
+        ea-1,eb-1,sa,sb,ga,gb);
+    std::printf("SPR_M319_BITS record5=%s record6=%s\n",ax.c_str(),by.c_str());
+    // Global unit-cost edit alignment of only the intervening bits.
+    // Count and enumerate ALL optimal scripts (bounded to avoid exponential output).
+    std::vector<std::vector<size_t>> dp(ga+1,std::vector<size_t>(gb+1,0));
+    for(size_t i=0;i<=ga;++i)dp[i][0]=i;
+    for(size_t j=0;j<=gb;++j)dp[0][j]=j;
+    for(size_t i=1;i<=ga;++i)for(size_t j=1;j<=gb;++j)
+        dp[i][j]=std::min({dp[i-1][j]+1,dp[i][j-1]+1,
+            dp[i-1][j-1]+(ax[i-1]==by[j-1]?0u:1u)});
+    struct Path {std::string ops;std::vector<size_t> retained;};
+    std::vector<Path> paths;
+    const size_t cap=100000;
+    auto visit=[&](auto&& self,size_t i,size_t j,std::string rev,std::vector<size_t> kept)->void{
+        if(paths.size()>=cap)return;
+        if(!i&&!j){
+            std::reverse(rev.begin(),rev.end());
+            std::reverse(kept.begin(),kept.end());
+            paths.push_back({rev,kept});return;
+        }
+        if(i&&j&&dp[i][j]==dp[i-1][j-1]+(ax[i-1]==by[j-1]?0u:1u)){
+            auto k=kept;
+            if(ax[i-1]==by[j-1])k.push_back(i-1);
+            self(self,i-1,j-1,rev+(ax[i-1]==by[j-1]?'M':'S'),std::move(k));
+        }
+        if(i&&dp[i][j]==dp[i-1][j]+1)self(self,i-1,j,rev+'D',kept);
+        if(j&&dp[i][j]==dp[i][j-1]+1)self(self,i,j-1,rev+'I',kept);
+    };
+    visit(visit,ga,gb,"",{});
+    std::vector<size_t> keptCounts(ga,0);
+    for(size_t n=0;n<paths.size();++n){
+        const auto& path=paths[n];
+        for(size_t k:path.retained)++keptCounts[k];
+        std::printf("SPR_M319_OPTIMAL index=%zu ops=%s retainedA=",n,path.ops.c_str());
+        if(path.retained.empty())std::printf("none");
+        for(size_t j=0;j<path.retained.size();++j)
+            std::printf("%s%zu",j?",":"",ea+path.retained[j]);
+        std::printf("\n");
+    }
+    size_t possible=0,forced=0;
+    for(size_t i=0;i<ga;++i)if(keptCounts[i]){
+        ++possible;if(keptCounts[i]==paths.size()&&paths.size()<cap)++forced;
+        std::printf("SPR_M319_RETAIN_CANDIDATE record5Bit=%zu value=%c optimalPaths=%zu totalEnumerated=%zu\n",
+            ea+i,ax[i],keptCounts[i],paths.size());
+    }
+    const bool complete=paths.size()<cap;
+    std::printf("SPR_M319_SUMMARY distance=%zu optimalEnumerated=%zu enumerationComplete=%d possibleRetainedPositions=%zu forcedRetainedPositions=%zu uniqueRetained=%d inference=none\n",
+        dp[ga][gb],paths.size(),complete?1:0,possible,forced,
+        complete&&possible==1&&forced==1?1:0);
+}
+
 void m318Compare(){
     const Image *a=nullptr,*b=nullptr;
     for(const auto& r:m308Records){if(r.ordinal==5)a=&r;if(r.ordinal==6)b=&r;}
@@ -2566,6 +2636,8 @@ void bitGap(const char* name,size_t oa,size_t ob,size_t gap,
             m317Compare();
         if(m318Mode && std::string(mode)=="leave_one_out" && parameter==9 && std::string(name)=="BRDGRIKR.SPR" && oa==5 && ob==6 && gap==0){
             m318Compare();
+        if(m319Mode && std::string(mode)=="leave_one_out" && parameter==9 && std::string(name)=="BRDGRIKR.SPR" && oa==5 && ob==6 && gap==0)
+            m319Compare();
         }
         if(m316Mode&&std::string(mode)=="leave_one_out"&&parameter==9&&
            std::string(name)=="BRDGRIKR.SPR"&&oa==5&&ob==6&&gap==0)
@@ -2804,7 +2876,7 @@ bool survey(reluva::stafu::ResourceManager& manager,const char* name,Totals& tot
         }
         ++ordinal;
     }
-    if((m308Mode||m309Mode||m310Mode||m311Mode||m312Mode||m313Mode||m314Mode||m315Mode||m316Mode||m317Mode||m318Mode)&&std::string(name)=="BRDGRIKR.SPR")m308Records=direct;
+    if((m308Mode||m309Mode||m310Mode||m311Mode||m312Mode||m313Mode||m314Mode||m315Mode||m316Mode||m317Mode||m318Mode||m319Mode)&&std::string(name)=="BRDGRIKR.SPR")m308Records=direct;
     Totals local;
     for(size_t k=1;k<direct.size();++k){
         const auto& a=direct[k-1];const auto& b=direct[k];
@@ -3194,5 +3266,16 @@ int stafuSprM318Record2GapAlignment(const char* installed,const char* cd,const c
     m318Mode=false;
     m308Records.clear();
     if(result==0)std::puts("SPR_M318_NOTE Gap edit scripts and intermediate shifts are observational, not evidence of insertion/deletion operations or codec semantics.");
+    return result;
+}
+
+int stafuSprM319Record2BoundaryAlternatives(const char* installed,const char* cd,const char* optional){
+    if(!m319Selftest()){std::fprintf(stderr,"SPR_M319_SELFTEST FAIL\n");return 1;}
+    if(std::string(installed)=="__selftest__"){std::puts("SPR_M319_SELFTEST PASS");return 0;}
+    m319Mode=true;
+    const int result=stafuSprM293Record2ChainDependencies(installed,cd,optional);
+    m319Mode=false;
+    m308Records.clear();
+    if(result==0)std::puts("SPR_M319_NOTE Enumerates minimum-cost bit edit scripts for fixed gaps only; alternatives do not establish codec semantics.");
     return result;
 }
