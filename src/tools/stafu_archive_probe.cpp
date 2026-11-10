@@ -32,6 +32,7 @@ int stafuSprM321Record2PreOverlapBoundary(const char*,const char*,const char*);
 int stafuSprM323Record2IndependentAlignment(const char*,const char*,const char*);
 int stafuSprM324Record2StructuralTransition(const char*,const char*,const char*);
 int stafuSprM325RecordStructure(const char*,const char*,const char*);
+int stafuSprM326ImageHeaderInventory(const char*,const char*,const char*);
 int stafuSprM322Record2CandidateContext(const char*,const char*,const char*);
 int stafuSprM304Record2ExactExtension(const char*,const char*,const char*);
 int stafuSprM297Record2BoundaryNormalized(const char*,const char*,const char*);
@@ -283,6 +284,8 @@ int stafuToolMain(int argc, char** argv) {
         return stafuSprMaximalSpans(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-span-reconcile") == 0)
         return stafuSprSpanReconcile(argv[3],argv[4],argc == 6 ? argv[5] : nullptr);
+    if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-m326-image-header-inventory") == 0)
+        return stafuSprM326ImageHeaderInventory(argv[3],argv[4],argc==6?argv[5]:nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-m325-record-structure") == 0)
         return stafuSprM325RecordStructure(argv[3],argv[4],argc==6?argv[5]:nullptr);
     if ((argc == 5 || argc == 6) && std::strcmp(argv[2], "spr-m324-record2-structural-transition") == 0)
