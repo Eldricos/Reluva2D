@@ -513,6 +513,7 @@ if(RELUVA_BUILD_TESTS)
     add_test(NAME stafu_spr_m323_independent_alignment COMMAND reluva-tool -stafu spr-m323-record2-independent-alignment __selftest__ unused)
     add_test(NAME stafu_spr_m324_structural_transition COMMAND reluva-tool -stafu spr-m324-record2-structural-transition __selftest__ unused)
     add_test(NAME stafu_spr_m325_record_structure COMMAND reluva-tool -stafu spr-m325-record-structure __selftest__ unused)
+    add_test(NAME stafu_spr_m326_image_header_inventory COMMAND reluva-tool -stafu spr-m326-image-header-inventory __selftest__ unused)
 
     add_executable(reluva_stafu_spr_gif_structure_tests tests/test_stafu_spr_gif_structure.cpp)
     target_link_libraries(reluva_stafu_spr_gif_structure_tests PRIVATE reluva_engines reluva_warnings)
