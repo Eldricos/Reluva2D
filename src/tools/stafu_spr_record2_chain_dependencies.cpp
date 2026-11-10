@@ -3725,3 +3725,75 @@ int stafuSprM324Record2StructuralTransition(const char* installed,const char* cd
     m308Records.clear();
     return result;
 }
+
+namespace {
+bool m325Selftest(){
+    const size_t chunk=100,payload=chunk+8,image=payload+12,bit=2546;
+    const size_t byte=bit/8;
+    return image==120&&byte==318&&bit%8==2&&
+           image+byte==438&&((2553/8)==319);
+}
+bool m325Survey(reluva::stafu::ResourceManager& manager,const char* name){
+    std::vector<uint8_t> bytes;std::string error;
+    if(!manager.read(name,bytes,error)){
+        std::fprintf(stderr,"SPR_M325_ERROR resource=%s %s\n",name,error.c_str());return false;
+    }
+    reluva::stafu::SprSequenceIndex index;
+    if(!index.build(bytes,error)){
+        std::fprintf(stderr,"SPR_M325_ERROR resource=%s %s\n",name,error.c_str());return false;
+    }
+    std::printf("SPR_M325_RESOURCE resource=%s fileBytes=%zu records=%zu\n",
+                name,bytes.size(),index.records().size());
+    for(size_t ri=0;ri<index.records().size();++ri){
+        const auto& record=index.records()[ri];
+        std::printf("SPR_M325_RECORD resource=%s record=%zu start=%zu end=%zu bytes=%zu chunks=%zu\n",
+                    name,ri,record.start,record.end,record.end-record.start,record.events.size());
+        if(ri!=2)continue;
+        size_t ordinal=0,direct=0,refs=0;
+        for(size_t ei=0;ei<record.events.size();++ei){
+            const auto& e=record.events[ei];
+            std::printf("SPR_M325_CHUNK resource=%s record=2 event=%zu tag=%s chunkOffset=%zu chunkBytes=%u payloadOffset=%zu payloadBytes=%zu imageHeader=%d headerA=%u headerB=%u marker=0x%08X imageDataOffset=%zu imageDataBytes=%zu\n",
+                        name,ei,e.tag.c_str(),e.chunkOffset,e.chunkSize,e.payloadOffset,e.payloadSize,
+                        e.hasImageHeader?1:0,e.headerA,e.headerB,e.marker,e.imageDataOffset,e.imageDataSize);
+            if(e.tag!="PMOC"&&e.tag!="MOCS")continue;
+            reluva::stafu::SprImagePayloadAccessor::View v;
+            if(!reluva::stafu::SprImagePayloadAccessor::get(bytes,e,v)){
+                std::fprintf(stderr,"SPR_M325_ERROR invalid image resource=%s ordinal=%zu\n",name,ordinal);return false;
+            }
+            const bool ref=isRef(v);
+            if(ref)++refs;else ++direct;
+            std::printf("SPR_M325_IMAGE resource=%s ordinal=%zu event=%zu kind=%s headerA=%u headerB=%u marker=0x%08X dataOffset=%zu dataBytes=%zu chunkEnd=%zu\n",
+                        name,ordinal,ei,ref?"reference":"direct",v.headerA,v.headerB,v.marker,
+                        v.offset,v.size,e.chunkOffset+e.chunkSize);
+            if(std::string(name)=="BRDGRIKR.SPR"&&ordinal>=4&&ordinal<=7&&!ref){
+                const size_t positions[]={2445,2545,2546,2547,2548,2551,2552,2553,2557,2620,2621};
+                for(size_t bit:positions){
+                    if(bit>=v.size*8)continue;
+                    const size_t byteIndex=bit/8;
+                    std::printf("SPR_M325_POSITION ordinal=%zu bit=%zu payloadByte=%zu absoluteByte=%zu bitInByte=%zu byteValue=0x%02X value=%u byteWithinChunk=%zu\n",
+                                ordinal,bit,byteIndex,v.offset+byteIndex,bit%8,
+                                static_cast<unsigned>(v.data[byteIndex]),
+                                static_cast<unsigned>((v.data[byteIndex]>>(7-(bit%8)))&1u),
+                                v.offset+byteIndex-e.chunkOffset);
+                }
+            }
+            ++ordinal;
+        }
+        std::printf("SPR_M325_RECORD2_SUMMARY resource=%s images=%zu direct=%zu references=%zu\n",
+                    name,ordinal,direct,refs);
+    }
+    return true;
+}
+}
+int stafuSprM325RecordStructure(const char* installed,const char* cd,const char*){
+    if(!m325Selftest()){std::fprintf(stderr,"SPR_M325_SELFTEST FAIL\n");return 1;}
+    if(std::string(installed)=="__selftest__"){std::puts("SPR_M325_SELFTEST PASS");return 0;}
+    reluva::stafu::ResourceManager manager;std::string error;
+    if(!manager.open(installed,cd,error)){
+        std::fprintf(stderr,"SPR_M325_ERROR %s\n",error.c_str());return 1;
+    }
+    const char* names[]={"BRDGPICA.SPR","BRDGDATA.SPR","BRDGRIKR.SPR","BRDGTROI.SPR","BRDGWORF.SPR"};
+    for(const char* name:names)if(!m325Survey(manager,name))return 1;
+    std::puts("SPR_M325_NOTE Chunk offsets and declared sizes are parsed container facts. Image header values and bit positions have no inferred codec meaning. The six record-5 candidates remain unresolved.");
+    return 0;
+}
