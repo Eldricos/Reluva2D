@@ -3797,3 +3797,92 @@ int stafuSprM325RecordStructure(const char* installed,const char* cd,const char*
     std::puts("SPR_M325_NOTE Chunk offsets and declared sizes are parsed container facts. Image header values and bit positions have no inferred codec meaning. The six record-5 candidates remain unresolved.");
     return 0;
 }
+
+namespace {
+struct M326Group {
+    uint32_t a=0,b=0,marker=0;
+    size_t count=0,minBytes=0,maxBytes=0,totalBytes=0,files=0;
+};
+bool m326Selftest(){
+    const uint32_t a=20,b=24;
+    const uint64_t area=uint64_t(a)*b;
+    return area==480 && 351*100/area==73 && (uint64_t(65536)*65536)>uint64_t(0xffffffff);
+}
+bool m326Survey(reluva::stafu::ResourceManager& manager,const char* name,
+                std::vector<M326Group>& groups){
+    std::vector<uint8_t> bytes;std::string error;
+    if(!manager.read(name,bytes,error)){
+        std::fprintf(stderr,"SPR_M326_ERROR resource=%s %s\n",name,error.c_str());return false;
+    }
+    reluva::stafu::SprSequenceIndex index;
+    if(!index.build(bytes,error)){
+        std::fprintf(stderr,"SPR_M326_ERROR resource=%s %s\n",name,error.c_str());return false;
+    }
+    size_t direct=0,references=0,invalid=0;
+    std::vector<size_t> touched;
+    for(size_t ri=0;ri<index.records().size();++ri){
+        const auto& record=index.records()[ri];
+        size_t ordinal=0;
+        for(const auto& e:record.events){
+            if(e.tag!="PMOC"&&e.tag!="MOCS")continue;
+            reluva::stafu::SprImagePayloadAccessor::View v;
+            if(!reluva::stafu::SprImagePayloadAccessor::get(bytes,e,v)){
+                ++invalid;continue;
+            }
+            const bool ref=isRef(v);
+            if(ref){++references;++ordinal;continue;}
+            ++direct;
+            const uint64_t product=uint64_t(v.headerA)*v.headerB;
+            const bool hasArea=product>0;
+            const unsigned long long percent=hasArea?
+                static_cast<unsigned long long>((uint64_t(v.size)*100)/product):0;
+            std::printf("SPR_M326_IMAGE resource=%s record=%zu ordinal=%zu tag=%s headerA=%u headerB=%u marker=0x%08X dataBytes=%zu product=%llu dataPercentOfProduct=%llu productDefined=%d\n",
+                name,ri,ordinal,e.tag.c_str(),v.headerA,v.headerB,v.marker,v.size,
+                static_cast<unsigned long long>(product),percent,hasArea?1:0);
+            size_t groupIndex=groups.size();
+            for(size_t i=0;i<groups.size();++i){
+                if(groups[i].a==v.headerA&&groups[i].b==v.headerB&&groups[i].marker==v.marker){
+                    groupIndex=i;break;
+                }
+            }
+            if(groupIndex==groups.size())groups.push_back({v.headerA,v.headerB,v.marker,0,v.size,v.size,0,0});
+            auto& group=groups[groupIndex];
+            ++group.count;
+            group.minBytes=std::min(group.minBytes,v.size);
+            group.maxBytes=std::max(group.maxBytes,v.size);
+            group.totalBytes+=v.size;
+            if(std::find(touched.begin(),touched.end(),groupIndex)==touched.end()){
+                touched.push_back(groupIndex);++group.files;
+            }
+            ++ordinal;
+        }
+    }
+    std::printf("SPR_M326_RESOURCE resource=%s records=%zu direct=%zu references=%zu invalidImageViews=%zu\n",
+        name,index.records().size(),direct,references,invalid);
+    return invalid==0;
+}
+}
+int stafuSprM326ImageHeaderInventory(const char* installed,const char* cd,const char*){
+    if(!m326Selftest()){std::fprintf(stderr,"SPR_M326_SELFTEST FAIL\n");return 1;}
+    if(std::string(installed)=="__selftest__"){std::puts("SPR_M326_SELFTEST PASS");return 0;}
+    reluva::stafu::ResourceManager manager;std::string error;
+    if(!manager.open(installed,cd,error)){
+        std::fprintf(stderr,"SPR_M326_ERROR %s\n",error.c_str());return 1;
+    }
+    // Start with the five known present bridge resources; examine every record,
+    // rather than just record 2 as in M325.
+    const char* names[]={"BRDGPICA.SPR","BRDGDATA.SPR","BRDGRIKR.SPR","BRDGTROI.SPR","BRDGWORF.SPR"};
+    std::vector<M326Group> groups;
+    for(const char* name:names)if(!m326Survey(manager,name,groups))return 1;
+    size_t images=0;
+    for(const auto& g:groups){
+        images+=g.count;
+        std::printf("SPR_M326_GROUP headerA=%u headerB=%u marker=0x%08X count=%zu files=%zu minDataBytes=%zu maxDataBytes=%zu meanDataBytes=%zu product=%llu\n",
+            g.a,g.b,g.marker,g.count,g.files,g.minBytes,g.maxBytes,g.totalBytes/g.count,
+            static_cast<unsigned long long>(uint64_t(g.a)*g.b));
+    }
+    std::printf("SPR_M326_SUMMARY resources=5 directImages=%zu distinctHeaderTriples=%zu semanticsVerified=0 codecInference=none\n",
+        images,groups.size());
+    std::puts("SPR_M326_NOTE Header product is an arithmetic hypothesis, not verified dimensions; payload-to-product ratio is not a compression ratio. Marker groups are observations, not proven formats.");
+    return 0;
+}
