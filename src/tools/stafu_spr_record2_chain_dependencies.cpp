@@ -304,6 +304,7 @@ bool m320Mode=false;
 bool m321Mode=false;
 bool m322Mode=false;
 bool m323Mode=false;
+bool m324Mode=false;
 std::vector<Image> m308Records;
 size_t matchingFlank(const std::vector<uint8_t>& a,const std::vector<uint8_t>& b,
                      size_t baseA,size_t baseB,size_t nA,size_t nB,
@@ -1589,6 +1590,77 @@ std::vector<M323Hit> m323Search(const std::vector<uint8_t>& a,const std::vector<
     });
     return hits;
 }
+
+struct M324Transition {
+    size_t leftRemoved=0,rightRemoved=0;
+    long long beforeShift=0,atShift=0,afterShift=0;
+    bool ordered=false,conserved=false,centralEqual=false;
+};
+M324Transition m324Transition(size_t candidate,size_t leftEnd,size_t rightBegin,
+                               size_t otherGap,size_t otherLeftEnd,size_t otherRightBegin){
+    M324Transition t;
+    if(candidate<leftEnd||candidate>=rightBegin||otherGap<otherLeftEnd||otherGap>=otherRightBegin)return t;
+    t.leftRemoved=candidate-leftEnd;
+    t.rightRemoved=rightBegin-candidate-1;
+    t.beforeShift=static_cast<long long>(otherLeftEnd)-static_cast<long long>(leftEnd);
+    t.atShift=static_cast<long long>(otherGap)-static_cast<long long>(candidate);
+    t.afterShift=static_cast<long long>(otherRightBegin)-static_cast<long long>(rightBegin);
+    t.ordered=true;
+    t.conserved=(t.leftRemoved+t.rightRemoved+1==rightBegin-leftEnd) &&
+        (t.atShift-t.beforeShift==-static_cast<long long>(t.leftRemoved)) &&
+        (t.afterShift-t.atShift==-static_cast<long long>(t.rightRemoved));
+    return t;
+}
+bool m324Selftest(){
+    const auto first=m324Transition(2546,2545,2557,2620,2620,2621);
+    const auto last=m324Transition(2553,2545,2557,2620,2620,2621);
+    const auto invalid=m324Transition(2544,2545,2557,2620,2620,2621);
+    return first.ordered&&first.conserved&&first.leftRemoved==1&&first.rightRemoved==10&&
+           first.beforeShift==75&&first.atShift==74&&first.afterShift==64&&
+           last.conserved&&last.leftRemoved==8&&last.rightRemoved==3&&
+           last.atShift==67&&!invalid.ordered;
+}
+void m324Compare(){
+    const Image *r4=nullptr,*r5=nullptr,*r6=nullptr,*r7=nullptr;
+    for(const auto& r:m308Records){
+        if(r.ordinal==4)r4=&r;
+        if(r.ordinal==5)r5=&r;
+        if(r.ordinal==6)r6=&r;
+        if(r.ordinal==7)r7=&r;
+    }
+    if(!r4||!r5||!r6||!r7){std::puts("SPR_M324_ERROR missing records 4-7");return;}
+    const auto& a=r5->data;const auto& b=r6->data;
+    const bool verified=m317Equal(a,2445,b,2520,100)&&
+        m317Equal(a,2557,b,2621,251)&&
+        m317Equal(r4->data,1882,b,1934,934)&&
+        m317Equal(r4->data,1882,r7->data,1885,934)&&
+        m317Equal(b,1631,r7->data,1582,1241);
+    if(!verified||bits(a,2545,12)!="011100111000"||bitAt(b,2620)!=1){
+        std::puts("SPR_M324_ERROR reference validation failed");return;
+    }
+    const auto candidates=m322Candidates(a,2545,2557,1);
+    const bool crossGap=(bitAt(r4->data,2568)==bitAt(b,2620))&&
+                        (bitAt(r7->data,2571)==bitAt(b,2620));
+    std::printf("SPR_M324_REFERENCE verifiedAnchors=1 left5End=2545 left6End=2620 right5Start=2557 right6Start=2621 gap5=12 gap6=1 shiftBefore=75 shiftAfter=64 crossRecordGapBitsAgree=%d candidates=%zu\n",
+                crossGap?1:0,candidates.size());
+    size_t valid=0,distinct=0;
+    long long previousShift=-1;
+    for(size_t pos:candidates){
+        auto t=m324Transition(pos,2545,2557,2620,2620,2621);
+        t.centralEqual=bitAt(a,pos)==bitAt(b,2620);
+        const bool structural=t.ordered&&t.conserved&&t.centralEqual;
+        valid+=structural?1u:0u;
+        if(previousShift!=t.atShift){++distinct;previousShift=t.atShift;}
+        std::printf("SPR_M324_CANDIDATE record5Bit=%zu leftUnpaired=%zu rightUnpaired=%zu totalUnpaired=%zu shiftBefore=%lld shiftAtCandidate=%lld shiftAfter=%lld firstShiftChange=%lld secondShiftChange=%lld conserved=%d centralBitEqual=%d structurallyConsistent=%d independentlyVerified=0 eliminated=0\n",
+            pos,t.leftRemoved,t.rightRemoved,t.leftRemoved+t.rightRemoved,
+            t.beforeShift,t.atShift,t.afterShift,t.atShift-t.beforeShift,
+            t.afterShift-t.atShift,t.conserved?1:0,t.centralEqual?1:0,structural?1:0);
+    }
+    std::printf("SPR_M324_SUMMARY candidates=%zu structurallyConsistent=%zu distinctIntermediateShifts=%zu independentlyVerifiedTransitions=0 eliminatedByStructure=0 uniqueRetained=0 inference=none\n",
+                candidates.size(),valid,distinct);
+    std::puts("SPR_M324_NOTE Candidate-specific intermediate shifts and unpaired-bit partitions are arithmetic consequences of a hypothetical single retained bit. Verified flank geometry constrains total displacement but not the location of its transition. Cross-record agreement on the isolated bit does not anchor record-5 candidates. No codec interpretation or decoder change.");
+}
+
 bool m323Selftest(){
     const std::vector<uint8_t> a{0xA5,0x5A,0xC3},b{0x00,0xA5,0x5A,0xC3,0x00};
     const auto hits=m323Search(a,b,8,16,8,16);
@@ -2951,6 +3023,8 @@ void bitGap(const char* name,size_t oa,size_t ob,size_t gap,
         if(m318Mode && std::string(mode)=="leave_one_out" && parameter==9 && std::string(name)=="BRDGRIKR.SPR" && oa==5 && ob==6 && gap==0){
             m318Compare();
         }
+        if(m324Mode && std::string(mode)=="leave_one_out" && parameter==9 && std::string(name)=="BRDGRIKR.SPR" && oa==5 && ob==6 && gap==0)
+            m324Compare();
         if(m323Mode && std::string(mode)=="leave_one_out" && parameter==9 && std::string(name)=="BRDGRIKR.SPR" && oa==5 && ob==6 && gap==0)
             m323Compare();
         if(m322Mode && std::string(mode)=="leave_one_out" && parameter==9 && std::string(name)=="BRDGRIKR.SPR" && oa==5 && ob==6 && gap==0)
@@ -3198,7 +3272,7 @@ bool survey(reluva::stafu::ResourceManager& manager,const char* name,Totals& tot
         }
         ++ordinal;
     }
-    if((m308Mode||m309Mode||m310Mode||m311Mode||m312Mode||m313Mode||m314Mode||m315Mode||m316Mode||m317Mode||m318Mode||m319Mode||m320Mode||m321Mode||m322Mode||m323Mode)&&std::string(name)=="BRDGRIKR.SPR")m308Records=direct;
+    if((m308Mode||m309Mode||m310Mode||m311Mode||m312Mode||m313Mode||m314Mode||m315Mode||m316Mode||m317Mode||m318Mode||m319Mode||m320Mode||m321Mode||m322Mode||m323Mode||m324Mode)&&std::string(name)=="BRDGRIKR.SPR")m308Records=direct;
     Totals local;
     for(size_t k=1;k<direct.size();++k){
         const auto& a=direct[k-1];const auto& b=direct[k];
@@ -3638,6 +3712,16 @@ int stafuSprM323Record2IndependentAlignment(const char* installed,const char* cd
     m323Mode=true;
     const int result=stafuSprM293Record2ChainDependencies(installed,cd,optional);
     m323Mode=false;
+    m308Records.clear();
+    return result;
+}
+
+int stafuSprM324Record2StructuralTransition(const char* installed,const char* cd,const char* optional){
+    if(!m324Selftest()){std::fprintf(stderr,"SPR_M324_SELFTEST FAIL\n");return 1;}
+    if(std::string(installed)=="__selftest__"){std::puts("SPR_M324_SELFTEST PASS");return 0;}
+    m324Mode=true;
+    const int result=stafuSprM293Record2ChainDependencies(installed,cd,optional);
+    m324Mode=false;
     m308Records.clear();
     return result;
 }
