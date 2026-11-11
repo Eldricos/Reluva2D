@@ -103,7 +103,7 @@ def main():
         # internal 32-bit target form observed in M350. A matching source
         # offset alone does not prove a record boundary.
         for i in range(max(0,len(records)-8)):
-            if records[i:i+2] != b"\\x07\\x10":
+            if records[i:i+2] != bytes((7, 16)):
                 continue
             source=u16(records,i+2)
             if source is None or not offset <= source < offset+28 or (source-offset)%4:
