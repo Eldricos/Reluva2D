@@ -50,7 +50,7 @@ def main():
                 ins=insn(pc)
                 if ins is None or pc+ins.size>hi:break
                 seen.add(pc)
-                for _,start,end in REGIONS:
+                for _,start,end,_ in REGIONS:
                     if pc<end and pc+ins.size>start:overlap.append((pc,pc+ins.size,ins.mnemonic,seed))
                 isjump=ins.group(CS_GRP_JUMP);iscall=ins.group(CS_GRP_CALL)
                 dst=target(ins)
