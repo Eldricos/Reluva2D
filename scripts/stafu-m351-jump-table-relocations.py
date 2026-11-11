@@ -123,7 +123,7 @@ def main():
                 chain=[]
                 for j in range(7):
                     at=pos+j*9
-                    found=[(k,t) for k,t in matches.get((index-j)%7,[]) if k==at]
+                    found=[(k,target_obj,target_rva) for k,target_obj,target_rva in matches.get((index-j)%7,[]) if k==at]
                     if not found:
                         break
                     chain.append(((index-j)%7,at,found[0][1]))
