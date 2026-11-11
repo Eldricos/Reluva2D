@@ -41,8 +41,9 @@ def main():
     fixpage = LE+dword(b, LE+0x68)
     fixrecord = LE+dword(b, LE+0x6c)
     totalpages = dword(b, LE+0x14)
-    # LE data-pages offset is an absolute file offset (not header-relative).
-    datastart = datapages_field
+    # This embedded LE image stores its data-pages offset relative to the LE header.
+    # M349's known physical layout places the first data page at 503700.
+    datastart = LE + datapages_field
     print(f"M350_LAYOUT objectCount={count} pageSize={pagesize} pageTablePhysical={pagetab} dataPagesHeaderValue={fmt(datapages_field)} dataStartPhysical={datastart} fixupPagePhysical={fixpage} fixupRecordPhysical={fixrecord} totalPages={totalpages}")
     objects = []
     for i in range(min(count, 32)):
