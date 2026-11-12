@@ -23,7 +23,7 @@ def main():
  for j,(size,base,first,np) in enumerate(objs,1):
   print(f"M382_OBJECT number={j} size=0x{size:x} preferredBase=0x{base:x} firstPage={first} pageCount={np}")
  records=[]
- for logical in range(1,pages+1):
+ for logical in (18,19,20,21):
   p=fr+ix[logical-1];end=fr+ix[logical]
   while p<end:
    at=p
@@ -41,7 +41,7 @@ def main():
    target=int.from_bytes(b[p:p+width],"little");p+=width
    records.append((logical,at,src,obj,target,flags,width))
   if p!=end:raise ValueError("page parse incomplete")
- print(f"M382_PARSED records={len(records)}")
+ print(f"M382_PARSED auditedPages=18,19,20,21 records={len(records)}")
  for logical in (18,19,20,21):
   rs=[r for r in records if r[0]==logical]
   print(f"M382_PAGE page={logical} count={len(rs)}")
@@ -67,5 +67,5 @@ def main():
    xs=[r for r in rs if r[6]==width]
    if xs:
     print(f"M382_WIDTH page={logical} width={width} count={len(xs)} encodedObjects={dict(sorted(collections.Counter(r[3] for r in xs).items()))}")
- print("M382_LIMITATIONS noRuntimeLoader=1 noObservedSelector=1 alternativeModelsNotProof=1")
+ print("M382_LIMITATIONS auditedPagesOnly=1 noRuntimeLoader=1 noObservedSelector=1 alternativeModelsNotProof=1")
 if __name__=="__main__":main()
