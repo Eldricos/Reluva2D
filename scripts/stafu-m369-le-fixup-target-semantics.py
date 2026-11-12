@@ -39,18 +39,22 @@ def main():
   pos=0;records=[];covered=set()
   while pos<len(blob):
    start=pos
-   if pos+9>len(blob):raise SystemExit("M369_ERROR truncated record")
+   if pos+7>len(blob):raise SystemExit("M369_ERROR truncated record")
    src,flags=blob[pos],blob[pos+1];pos+=2
-   if src!=7 or flags!=0x10:
+   if src!=7 or flags not in (0x00,0x10):
     raise SystemExit("M369_UNSUPPORTED name=%s pos=%d src=0x%x flags=0x%x"%(name,start,src,flags))
-   off=u16(blob,pos);pos+=2;obj=blob[pos];pos+=1;target=u32(blob,pos);pos+=4
+   off=u16(blob,pos);pos+=2;obj=blob[pos];pos+=1
+   target_width=4 if flags&0x10 else 2
+   if pos+target_width>len(blob):raise SystemExit("M369_ERROR truncated target")
+   target=u32(blob,pos) if target_width==4 else u16(blob,pos)
+   pos+=target_width
    if obj not in (1,2) or off+4>ps or target>=objs[obj-1][0] or any(x in covered for x in range(off,off+4)):
     raise SystemExit("M369_ERROR invalid fixup name=%s record=%d"%(name,start))
    covered.update(range(off,off+4))
    value=objs[obj-1][1]+target
    relocated[off:off+4]=struct.pack("<I",value)
    records.append((start,off,obj,target,value))
-  print("M369_PAGE name=%s logical=%d records=%d bytes=%d allSource07Flags10=1 overlap=0"%(name,logical,len(records),len(blob)))
+  print("M369_PAGE name=%s logical=%d records=%d bytes=%d allSource07SupportedWidths=1 overlap=0"%(name,logical,len(records),len(blob)))
   bysource={off:(start,obj,target,value) for start,off,obj,target,value in records}
   pagebase=(logical-objs[0][2])*ps
   for i in range(7):
@@ -58,7 +62,7 @@ def main():
    if source not in bysource:raise SystemExit("M369_ERROR missing table fixup")
    rec,obj,target,value=bysource[source]
    print("M369_RECORD name=%s state=%d record=%d sourcePageOffset=0x%x sourceBytes=%s object=%d targetField=0x%x preferredLinear=0x%x"%
-         (name,state,rec,source,blob[rec:rec+9].hex(),obj,target,value))
+         (name,state,rec,source,blob[rec:rec+(9 if blob[rec+1]&0x10 else 7)].hex(),obj,target,value))
    # Test offset as object RVA, linear absolute, or relative to preferred base.
    for interpretation,rva in (("object_rva",target),("linear_absolute",target-objs[0][1]),("base_added_twice",target+objs[0][1])):
     inobj=0<=rva<objs[0][0];inpage=pagebase<=rva<pagebase+ps
@@ -82,5 +86,5 @@ def main():
    print("M369_TARGET_OVERLAP name=%s state=%d targetRva=0x%x targetInFixup=%d next16FixupBytes=%d"%
          (name,state,target,int(off in covered),sum(x in covered for x in range(off,off+16))))
   print("M369_PAGE_END name=%s"%name)
- print("M369_LIMITATIONS grammarRestrictedTo07_10=1 alternativesHeuristic=1 originalBytesForBoundaryScan=1 noExternalLESpecValidation=1 noRuntimeSelectorVerification=1 noReachabilityProof=1 SPRDecoderUnverified=1")
+ print("M369_LIMITATIONS grammarRestrictedTo07_00_07_10=1 alternativesHeuristic=1 originalBytesForBoundaryScan=1 noExternalLESpecValidation=1 noRuntimeSelectorVerification=1 noReachabilityProof=1 SPRDecoderUnverified=1")
 if __name__=="__main__":main()
