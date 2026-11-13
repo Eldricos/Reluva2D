@@ -45,7 +45,7 @@ def decode(b,at):
             disp=u16(b,p);p+=2
             value="[%04xh]"%disp
         else:
-            value=BASE[rm]
+            value=("[bp]" if rm==6 else BASE[rm])
             if mod==1:
                 if p>=LIMIT:raise ValueError()
                 disp=s8(b[p]);p+=1
