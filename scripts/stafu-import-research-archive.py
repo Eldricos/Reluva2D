@@ -35,7 +35,7 @@ def main():
                 return 2
         for name in sorted(names):
             dest = root / name
-            if dest.exists():
+            if dest.exists() and name != PREFIX + "m447-evidence.md":
                 print(f"Refusing to overwrite existing file: {dest}")
                 return 2
         for name in sorted(names):
