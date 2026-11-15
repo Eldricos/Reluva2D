@@ -1,0 +1,1105 @@
+{
+  "scope": "M326-M447",
+  "source_count": 122,
+  "full_raw_outputs_included": false,
+  "files": [
+    {
+      "milestone": 326,
+      "filename": "m326-image-header-inventory.txt",
+      "bytes": 53140,
+      "sha256": "94993ac67f459daf6a5b5a4acd371ae66a4d654cd02433af11a7c0bba731fc76",
+      "encoding": "utf-16",
+      "lines": 158,
+      "selected_summary_lines": 35
+    },
+    {
+      "milestone": 327,
+      "filename": "m327-spr-callpath-candidates.txt",
+      "bytes": 6396,
+      "sha256": "9819f098b1a999b6d7435624927a5a5d1266df49804f411516ff685dbb216224",
+      "encoding": "utf-16",
+      "lines": 43,
+      "selected_summary_lines": 5
+    },
+    {
+      "milestone": 328,
+      "filename": "m328-spr-tag-references.txt",
+      "bytes": 17868,
+      "sha256": "b6407eca25c401bc1879006c11c31833ce28a9a3606a54aba4fbfc51d988e227",
+      "encoding": "utf-16",
+      "lines": 127,
+      "selected_summary_lines": 35
+    },
+    {
+      "milestone": 329,
+      "filename": "m329-spr-callsite-disassembly.txt",
+      "bytes": 146928,
+      "sha256": "1d36b58ee88691262e566cdea65d6d949291d14767c77689a6aa62f6f9af7735",
+      "encoding": "utf-16",
+      "lines": 850,
+      "selected_summary_lines": 35
+    },
+    {
+      "milestone": 330,
+      "filename": "m330-spr-processing-path.txt",
+      "bytes": 143394,
+      "sha256": "089a078201301e572ee60e4162563bdd56b0f5d867c668efd753e2ed2a3ddf27",
+      "encoding": "utf-16",
+      "lines": 423,
+      "selected_summary_lines": 13
+    },
+    {
+      "milestone": 331,
+      "filename": "m331-spr-state-field-trace.txt",
+      "bytes": 136184,
+      "sha256": "7ff5250b41d2343bc4d3f7e29749acbbc93acea0c4e3e371c8ea5eab827d5468",
+      "encoding": "utf-16",
+      "lines": 845,
+      "selected_summary_lines": 35
+    },
+    {
+      "milestone": 332,
+      "filename": "m332-spr-state84-consumer.txt",
+      "bytes": 71646,
+      "sha256": "9ac39d9ccd70e4361e91637c5ffe892e4f67e5f3cf68b4c28690f4c52cf8eed0",
+      "encoding": "utf-16",
+      "lines": 418,
+      "selected_summary_lines": 21
+    },
+    {
+      "milestone": 333,
+      "filename": "m333-spr-processing-callees.txt",
+      "bytes": 355840,
+      "sha256": "c20d8589412bd30bbb6032842c449dfdebf97f5acb08751070c08b882de3ae07",
+      "encoding": "utf-16",
+      "lines": 1723,
+      "selected_summary_lines": 12
+    },
+    {
+      "milestone": 334,
+      "filename": "m334-spr-caller-lifecycle.txt",
+      "bytes": 288614,
+      "sha256": "24f7688a5ee89c390f140db55ea0a61f5ae1690ae8368649ac08bad2034e59ab",
+      "encoding": "utf-16",
+      "lines": 1212,
+      "selected_summary_lines": 35
+    },
+    {
+      "milestone": 335,
+      "filename": "m335-spr-handle-ownership.txt",
+      "bytes": 449806,
+      "sha256": "1da1a80b19ceec633d438f6a9a51940ef3ac18a4ff27526caff90eaa2e653b8c",
+      "encoding": "utf-16",
+      "lines": 2598,
+      "selected_summary_lines": 5
+    },
+    {
+      "milestone": 336,
+      "filename": "m336-spr-constructor-layout.txt",
+      "bytes": 83310,
+      "sha256": "a713804a140ee9762a76f83fb4ef7ebd457d40495f101ab5e7f10893b3b2c60e",
+      "encoding": "utf-16",
+      "lines": 425,
+      "selected_summary_lines": 22
+    },
+    {
+      "milestone": 337,
+      "filename": "m337-spr-embedded-data-trace.txt",
+      "bytes": 78398,
+      "sha256": "a224f271665b828dbad35b960bef31c0fde479415cbd0b5378d5c7cbde641e24",
+      "encoding": "utf-16",
+      "lines": 415,
+      "selected_summary_lines": 20
+    },
+    {
+      "milestone": 338,
+      "filename": "m338-spr-buffer-consumer-survey.txt",
+      "bytes": 337862,
+      "sha256": "4b6d9e18cc11f2eb2f575165e1824c79e130120d6bc74d975fffb29b9f85cb63",
+      "encoding": "utf-16",
+      "lines": 1771,
+      "selected_summary_lines": 7
+    },
+    {
+      "milestone": 339,
+      "filename": "m339-spr-buffer-dataflow.txt",
+      "bytes": 176046,
+      "sha256": "daffe5cf7ba9b2ced901b8bf809a62995161e80bcf34c2b2622ec8da7370c3a3",
+      "encoding": "utf-16",
+      "lines": 745,
+      "selected_summary_lines": 1
+    },
+    {
+      "milestone": 340,
+      "filename": "m340-spr-object-consumer-trace.txt",
+      "bytes": 65486,
+      "sha256": "dc2e8a73ba2e8c67edfe1552a8a8454998a4e5453b692e0f4e70a5570824619e",
+      "encoding": "utf-16",
+      "lines": 436,
+      "selected_summary_lines": 20
+    },
+    {
+      "milestone": 341,
+      "filename": "m341-resource-object-consumers.txt",
+      "bytes": 26132,
+      "sha256": "8cef93062c3b1f5b9ea2306ec34ac98a9348e74f5fe8fa227b9b56715c5ce1b0",
+      "encoding": "utf-16",
+      "lines": 121,
+      "selected_summary_lines": 9
+    },
+    {
+      "milestone": 342,
+      "filename": "m342-resource-data-access.txt",
+      "bytes": 40772,
+      "sha256": "dbc979a005f2ed7708db8367073a3db2add60cc4b59cea9950e4edef4276d8ce",
+      "encoding": "utf-16",
+      "lines": 368,
+      "selected_summary_lines": 7
+    },
+    {
+      "milestone": 343,
+      "filename": "m343-resource-io-wrappers.txt",
+      "bytes": 72152,
+      "sha256": "27c9e54fd6d88d35f7268969e48f3d4ea6d47a154dfcb1f4c8d373f7c87197c6",
+      "encoding": "utf-16",
+      "lines": 740,
+      "selected_summary_lines": 23
+    },
+    {
+      "milestone": 344,
+      "filename": "m344-stream-read-implementation.txt",
+      "bytes": 40404,
+      "sha256": "8fd2ff0f91977dda0f1001f7c16e1af3c06330420a7b1930b34c9d51aa0b2e39",
+      "encoding": "utf-16",
+      "lines": 300,
+      "selected_summary_lines": 35
+    },
+    {
+      "milestone": 345,
+      "filename": "m345-stream-to-spr-dataflow.txt",
+      "bytes": 46626,
+      "sha256": "ca0f9d354e1788fe3876802713d5de59878646192e3fdc7b070c3c209ee64586",
+      "encoding": "utf-16",
+      "lines": 349,
+      "selected_summary_lines": 35
+    },
+    {
+      "milestone": 346,
+      "filename": "m346-post-read-buffer-processing.txt",
+      "bytes": 66276,
+      "sha256": "9d39534d24625eb3dddaf095d047e1e5bab27ae27545b1371ab9672b1ea56f4c",
+      "encoding": "utf-16",
+      "lines": 502,
+      "selected_summary_lines": 29
+    },
+    {
+      "milestone": 347,
+      "filename": "m347-resource-object-read-path.txt",
+      "bytes": 75348,
+      "sha256": "efe909226f3228e9a2f28371cd46101d30eab0173f25d68b3d842bda720553d3",
+      "encoding": "utf-16",
+      "lines": 553,
+      "selected_summary_lines": 35
+    },
+    {
+      "milestone": 348,
+      "filename": "m348-resource-state-dispatcher.txt",
+      "bytes": 37614,
+      "sha256": "8e6f8aab3e3a67ba75ee6e6b4c19303c6bca8f52f030b0dbd33ef76f9d602f60",
+      "encoding": "utf-16",
+      "lines": 262,
+      "selected_summary_lines": 18
+    },
+    {
+      "milestone": 349,
+      "filename": "m349-le-object-fixup-mapping.txt",
+      "bytes": 14322,
+      "sha256": "a1b8b3e7d75afebe0af6d95add354cf7447c3d5b0e8d991f002a91228238e86d",
+      "encoding": "utf-16",
+      "lines": 61,
+      "selected_summary_lines": 18
+    },
+    {
+      "milestone": 350,
+      "filename": "m350-corrected-le-page-mapping.txt",
+      "bytes": 30846,
+      "sha256": "e0680a93d5edabe902d022089ea4aef23dd1cd4835fd98da0a0866168cd4500a",
+      "encoding": "utf-16",
+      "lines": 117,
+      "selected_summary_lines": 16
+    },
+    {
+      "milestone": 351,
+      "filename": "m351-jump-table-relocations.txt",
+      "bytes": 50204,
+      "sha256": "dede88820a69428b5ed0552fe6b07e3a1303a1fe12dd5f4093b101cc88f1af1c",
+      "encoding": "utf-16",
+      "lines": 219,
+      "selected_summary_lines": 35
+    },
+    {
+      "milestone": 352,
+      "filename": "m352-handler-address-validation.txt",
+      "bytes": 308142,
+      "sha256": "856361660d54c2ab7609628591d874bc3b02ec8eb142976145a87b021784e231",
+      "encoding": "utf-16",
+      "lines": 1019,
+      "selected_summary_lines": 35
+    },
+    {
+      "milestone": 353,
+      "filename": "m353-le-fixup-audit.txt",
+      "bytes": 17392,
+      "sha256": "48fbf5afdb08c057c916c64cb7ceec18e4a2124021a66f9a5ed34ce5531fc06e",
+      "encoding": "utf-16",
+      "lines": 64,
+      "selected_summary_lines": 17
+    },
+    {
+      "milestone": 354,
+      "filename": "m354-fixup-record-verification.txt",
+      "bytes": 20362,
+      "sha256": "51360fb4dbfeb3b53f880cd6429feacc3bc38265c8f1f562b829ddf5a7b7dfdf",
+      "encoding": "utf-16",
+      "lines": 67,
+      "selected_summary_lines": 35
+    },
+    {
+      "milestone": 355,
+      "filename": "m355-dispatch-operand-validation.txt",
+      "bytes": 38956,
+      "sha256": "b633a9c2b47dcb51972e789839ccc824c530a8f69adb9301bfaeebd122659ded",
+      "encoding": "utf-16",
+      "lines": 177,
+      "selected_summary_lines": 35
+    },
+    {
+      "milestone": 356,
+      "filename": "m356-le-segment-address-resolution.txt",
+      "bytes": 26134,
+      "sha256": "0cc607d1383a752a654a6ed259268ec044078e08705ecdb8b73fd6b8b6815765",
+      "encoding": "utf-16",
+      "lines": 107,
+      "selected_summary_lines": 34
+    },
+    {
+      "milestone": 357,
+      "filename": "m357-relocated-jump-table-reconstruction.txt",
+      "bytes": 36868,
+      "sha256": "19119dbd2e2df3b7cbdc39beefb9ec9e6cdb44675ea7c62c50b4b396fb82c77d",
+      "encoding": "utf-16",
+      "lines": 165,
+      "selected_summary_lines": 35
+    },
+    {
+      "milestone": 358,
+      "filename": "m358-le-fixup-grammar-audit.txt",
+      "bytes": 7486,
+      "sha256": "e2ce4cb1f52f67b483d7cae3938833c5074976bfc3e5102e2ecbf2b4ee13c0e6",
+      "encoding": "utf-16",
+      "lines": 39,
+      "selected_summary_lines": 8
+    },
+    {
+      "milestone": 359,
+      "filename": "m359-le-page-address-consistency.txt",
+      "bytes": 11338,
+      "sha256": "e082b8e9e22e89d0754af340c8dc172ac8738753ffe1aeed839dc7dfd9f20f6e",
+      "encoding": "utf-16",
+      "lines": 39,
+      "selected_summary_lines": 10
+    },
+    {
+      "milestone": 360,
+      "filename": "m360-fixup-source-instruction-audit.txt",
+      "bytes": 56694,
+      "sha256": "ec96834aaf795d5a255b05b41ccab6763de3d0b4219de276ba87fbbd4ec91399",
+      "encoding": "utf-16",
+      "lines": 274,
+      "selected_summary_lines": 6
+    },
+    {
+      "milestone": 361,
+      "filename": "m361-le-fixup-page-index-verification.txt",
+      "bytes": 19464,
+      "sha256": "2fe8a50e3d54ccf8f85ec637e371c800c3e0205fd0d1e222330ab16abf57ca11",
+      "encoding": "utf-16",
+      "lines": 78,
+      "selected_summary_lines": 35
+    },
+    {
+      "milestone": 362,
+      "filename": "m362-le-fixup-semantics-audit.txt",
+      "bytes": 15996,
+      "sha256": "f6f48ea58676addd3fdba2ea0fa9726cec343a990577a2ec086e7bc5bf116bf3",
+      "encoding": "utf-16",
+      "lines": 48,
+      "selected_summary_lines": 16
+    },
+    {
+      "milestone": 363,
+      "filename": "m363-dispatcher-selector-address-space.txt",
+      "bytes": 7702,
+      "sha256": "acff2fdc0e4fd877ab049d99b476be237836a872b50288beb7d874c395f96bb2",
+      "encoding": "utf-16",
+      "lines": 34,
+      "selected_summary_lines": 12
+    },
+    {
+      "milestone": 364,
+      "filename": "m364-le-selector-fixup-crosscheck.txt",
+      "bytes": 12674,
+      "sha256": "3c6a2f7f82ba799add25d16b21997fc6b2f7dfc7bf2b8e71f029d6a4c0e4ba9f",
+      "encoding": "utf-16",
+      "lines": 37,
+      "selected_summary_lines": 13
+    },
+    {
+      "milestone": 365,
+      "filename": "m365-relocation-source-reachability.txt",
+      "bytes": 2938,
+      "sha256": "16f1b4570a1cce07c55bfffdc0142419d7999afced24073768a1b6c2c320c0d6",
+      "encoding": "utf-16",
+      "lines": 15,
+      "selected_summary_lines": 10
+    },
+    {
+      "milestone": 366,
+      "filename": "m366-local-call-seeded-cfg.txt",
+      "bytes": 19420,
+      "sha256": "cadf4a5fd45feb7c43cc355f6a905eb505e8b27bfd57d505185058ff98580733",
+      "encoding": "utf-16",
+      "lines": 99,
+      "selected_summary_lines": 15
+    },
+    {
+      "milestone": 367,
+      "filename": "m367-le-full-page-relocation.txt",
+      "bytes": 11092,
+      "sha256": "311afa1be6a2c9b604b7367efe13f93796361e77a31dc5ed718ed0f98fac7b01",
+      "encoding": "utf-16",
+      "lines": 41,
+      "selected_summary_lines": 10
+    },
+    {
+      "milestone": 368,
+      "filename": "m368-relocated-handler-boundaries.txt",
+      "bytes": 36098,
+      "sha256": "32ca6677441c57ee341fd975c6cfa1336535832a96ce9267a00df8caedba1008",
+      "encoding": "utf-16",
+      "lines": 136,
+      "selected_summary_lines": 17
+    },
+    {
+      "milestone": 369,
+      "filename": "m369-le-fixup-target-semantics.txt",
+      "bytes": 56076,
+      "sha256": "9d1866c6cd127fa4b6314930df6b726ef33eb2d17b05303aa471f2549bcea001",
+      "encoding": "utf-16",
+      "lines": 202,
+      "selected_summary_lines": 35
+    },
+    {
+      "milestone": 370,
+      "filename": "m370-dispatcher-operand-consistency.txt",
+      "bytes": 9416,
+      "sha256": "65f2bb9ca4d2847029e0085985a1338c456f8a75ae0cbc9ac238d8882ae0c389",
+      "encoding": "utf-16",
+      "lines": 34,
+      "selected_summary_lines": 10
+    },
+    {
+      "milestone": 371,
+      "filename": "m371-le-spec-target-validation.txt",
+      "bytes": 41224,
+      "sha256": "8e43b0b0b6276acf16da2cca9b49c3334b8abfc586d30c3fda4da7bedf18292b",
+      "encoding": "utf-16",
+      "lines": 106,
+      "selected_summary_lines": 33
+    },
+    {
+      "milestone": 372,
+      "filename": "m372-relocation-source-classification.txt",
+      "bytes": 86010,
+      "sha256": "c4ff35361c9b1c56fa2f92fdd5c6f4b9c672232c70d1d0d0aadbb4e0edb10206",
+      "encoding": "utf-16",
+      "lines": 160,
+      "selected_summary_lines": 35
+    },
+    {
+      "milestone": 373,
+      "filename": "m373-le-source-offset-semantics.txt",
+      "bytes": 14146,
+      "sha256": "93857b5e0f11c788da62fa8e5d0f0014206eb720a198183ce5ca96ae019dca2a",
+      "encoding": "utf-16",
+      "lines": 52,
+      "selected_summary_lines": 35
+    },
+    {
+      "milestone": 374,
+      "filename": "m374-le-independent-mapping-audit.txt",
+      "bytes": 14870,
+      "sha256": "0e7bfb72739a68dc1e7bef4d4ec468f26e27ab0153ce0b21e3e834dd584f3e49",
+      "encoding": "utf-16",
+      "lines": 59,
+      "selected_summary_lines": 35
+    },
+    {
+      "milestone": 375,
+      "filename": "m375-le-relocation-application-semantics.txt",
+      "bytes": 70782,
+      "sha256": "e582796c355b124d537ca9940619023898918e91424eb84037599076a15af7dd",
+      "encoding": "utf-16",
+      "lines": 297,
+      "selected_summary_lines": 35
+    },
+    {
+      "milestone": 376,
+      "filename": "m376-dispatcher-address-space-consistency.txt",
+      "bytes": 23028,
+      "sha256": "f3ae6856e16cd4079709b0113f2d2eb60968366bbd2369623b83c859d2819988",
+      "encoding": "utf-16",
+      "lines": 69,
+      "selected_summary_lines": 23
+    },
+    {
+      "milestone": 377,
+      "filename": "m377-le-fixup-grammar-audit.txt",
+      "bytes": 14112,
+      "sha256": "056d47a46ddaafb1b23be2d0594a81c4ff3d00a2a7f3494626294842d905cd60",
+      "encoding": "utf-16",
+      "lines": 63,
+      "selected_summary_lines": 27
+    },
+    {
+      "milestone": 378,
+      "filename": "m378-le-object-address-model.txt",
+      "bytes": 13484,
+      "sha256": "374cff16885c84d9263b7e3ce2f81f9f0f28340d06612acf4289d3b7875afe5f",
+      "encoding": "utf-16",
+      "lines": 39,
+      "selected_summary_lines": 11
+    },
+    {
+      "milestone": 379,
+      "filename": "m379-dispatcher-control-flow-audit.txt",
+      "bytes": 47894,
+      "sha256": "dde0d97bb0cb6ed6f67710dc85e6b913672d5fc54f81f8ecd981d52e6c761c8f",
+      "encoding": "utf-16",
+      "lines": 299,
+      "selected_summary_lines": 35
+    },
+    {
+      "milestone": 380,
+      "filename": "m380-function-anchored-cfg.txt",
+      "bytes": 19128,
+      "sha256": "d9b144ffd353dd94753166c2a46ca29d02d4518bcb42dbe4491f3a1505c28d5d",
+      "encoding": "utf-16",
+      "lines": 76,
+      "selected_summary_lines": 12
+    },
+    {
+      "milestone": 381,
+      "filename": "m381-le-relocation-semantics-audit.txt",
+      "bytes": 13488,
+      "sha256": "000a57571b1185df0d75d8b3f86c1b2a036e22cb80e95f3548c6f83f53f2d9f0",
+      "encoding": "utf-16",
+      "lines": 40,
+      "selected_summary_lines": 6
+    },
+    {
+      "milestone": 382,
+      "filename": "m382-fixup-target-range-audit.txt",
+      "bytes": 6246,
+      "sha256": "afefface8a4d9a218a3694856fc8a0a5087403aba8f25a25774a26edf000a4b9",
+      "encoding": "utf-16",
+      "lines": 41,
+      "selected_summary_lines": 30
+    },
+    {
+      "milestone": 383,
+      "filename": "m383-le-source-page-runtime-mapping.txt",
+      "bytes": 13060,
+      "sha256": "3cdaa776d6bbef1ac736e58d3fc8e295e4a3f8883db0bddf5acf0f3ffe958c9d",
+      "encoding": "utf-16",
+      "lines": 38,
+      "selected_summary_lines": 16
+    },
+    {
+      "milestone": 384,
+      "filename": "m384-le-spec-fixup-audit.txt",
+      "bytes": 7438,
+      "sha256": "823d2219011e84abef702370c31622451feecc1bcd319187b6f7bf59f1feb754",
+      "encoding": "utf-16",
+      "lines": 25,
+      "selected_summary_lines": 5
+    },
+    {
+      "milestone": 385,
+      "filename": "m385-dos-extender-loader-inventory.txt",
+      "bytes": 17886,
+      "sha256": "664a3df1aa051e657ce88d5ec132eeb629bffe414201a8a6b709496c219db6ec",
+      "encoding": "utf-16",
+      "lines": 107,
+      "selected_summary_lines": 25
+    },
+    {
+      "milestone": 386,
+      "filename": "m386-dos4gw-loader-region-audit.txt",
+      "bytes": 32928,
+      "sha256": "b40b4a7caae510201ad96704557837ea255a40ac1f039825135b9904a4b355f0",
+      "encoding": "utf-16",
+      "lines": 194,
+      "selected_summary_lines": 10
+    },
+    {
+      "milestone": 387,
+      "filename": "m387-dos4gw-loader-table-references.txt",
+      "bytes": 29050,
+      "sha256": "49907f0fbb070e2f87dc41d81b0d388a3f00a94e869e049d7a0dbdf5902f8d14",
+      "encoding": "utf-16",
+      "lines": 158,
+      "selected_summary_lines": 24
+    },
+    {
+      "milestone": 388,
+      "filename": "m388-dos4gw-internal-address-mapping.txt",
+      "bytes": 39126,
+      "sha256": "600c5c741efda88db9defb297f04015a5d055778d147b464716e09c1feeb0678",
+      "encoding": "utf-16",
+      "lines": 271,
+      "selected_summary_lines": 5
+    },
+    {
+      "milestone": 389,
+      "filename": "m389-loader-entry-string-validation.txt",
+      "bytes": 39958,
+      "sha256": "e5312d5eb1dbd54540ae5d20783b98266dd29d15b62b03f24e5051e3390ff73b",
+      "encoding": "utf-16",
+      "lines": 206,
+      "selected_summary_lines": 6
+    },
+    {
+      "milestone": 390,
+      "filename": "m390-loader-code-address-translation.txt",
+      "bytes": 70888,
+      "sha256": "80da3b8cc2f52e4f36daf97e418f60a04f7918f8c98e63be00af4f04b69cdbc0",
+      "encoding": "utf-16",
+      "lines": 258,
+      "selected_summary_lines": 4
+    },
+    {
+      "milestone": 391,
+      "filename": "m391-dos-mz-segment-mapping.txt",
+      "bytes": 25234,
+      "sha256": "4225f1730afa99ddef8d40cac847d77af1e7588e14a3780094f78a30bc623e84",
+      "encoding": "utf-16",
+      "lines": 91,
+      "selected_summary_lines": 8
+    },
+    {
+      "milestone": 392,
+      "filename": "m392-loader-table-provenance.txt",
+      "bytes": 38526,
+      "sha256": "184f186994b1578fba5b5fa0d6ae0a41d5586e1d6ecd5d5ffc75b421465a282c",
+      "encoding": "utf-16",
+      "lines": 164,
+      "selected_summary_lines": 35
+    },
+    {
+      "milestone": 393,
+      "filename": "m393-loader-module-descriptor.txt",
+      "bytes": 38532,
+      "sha256": "e9c4992026cea715a0a751fa5661c8bb9cec525be0e062b4e3ca7b3b2331403e",
+      "encoding": "utf-16",
+      "lines": 176,
+      "selected_summary_lines": 10
+    },
+    {
+      "milestone": 394,
+      "filename": "m394-loader-registration-comparison.txt",
+      "bytes": 57126,
+      "sha256": "c592debbe11d2f248e147ed5c4f45b5b89af9c0356fdba87722da1c6464033a1",
+      "encoding": "utf-16",
+      "lines": 280,
+      "selected_summary_lines": 5
+    },
+    {
+      "milestone": 395,
+      "filename": "m395-packed-loader-descriptor.txt",
+      "bytes": 22988,
+      "sha256": "a406adf013fd0cfbc0d0b01c67fe7945847f3962d638e6a44df7fc478af29769",
+      "encoding": "utf-16",
+      "lines": 111,
+      "selected_summary_lines": 5
+    },
+    {
+      "milestone": 396,
+      "filename": "m396-export-group-boundaries.txt",
+      "bytes": 14946,
+      "sha256": "04e51f74d6464c280c07705e8786ee752c20ac8b9143946d214b71688b5d23dd",
+      "encoding": "utf-16",
+      "lines": 78,
+      "selected_summary_lines": 16
+    },
+    {
+      "milestone": 397,
+      "filename": "m397-loader-descriptor-discovery.txt",
+      "bytes": 6790,
+      "sha256": "af3684757a7a2c32bef604ae9d2e5faf9da529758ddcf241f6c5799c1dd1f47e",
+      "encoding": "utf-16",
+      "lines": 30,
+      "selected_summary_lines": 7
+    },
+    {
+      "milestone": 398,
+      "filename": "m398-loader-registration-references.txt",
+      "bytes": 6504,
+      "sha256": "34dda09485ab3b48d7151aa92de991b223a0912375391833a9c5b7230c3ea872",
+      "encoding": "utf-16",
+      "lines": 31,
+      "selected_summary_lines": 16
+    },
+    {
+      "milestone": 399,
+      "filename": "m399-loader-name-array-xrefs.txt",
+      "bytes": 9016,
+      "sha256": "16a603907d71a0255cdaf891be4b82c3a46d6695af4b77757245713c5869102c",
+      "encoding": "utf-16",
+      "lines": 43,
+      "selected_summary_lines": 22
+    },
+    {
+      "milestone": 400,
+      "filename": "m400-segmented-table-access.txt",
+      "bytes": 20880,
+      "sha256": "3eeb48fe52a30952b96a3e31b9f393136876842fdbc3e419d1cf60e9b7bf8472",
+      "encoding": "utf-16",
+      "lines": 89,
+      "selected_summary_lines": 0
+    },
+    {
+      "milestone": 401,
+      "filename": "m401-segment-init-table-consumers.txt",
+      "bytes": 8666,
+      "sha256": "3319ba4bcb4d5c3d7dd354f40c6f040743fc91bd8346ecd88d4d99bdbfd2f4ba",
+      "encoding": "utf-16",
+      "lines": 32,
+      "selected_summary_lines": 4
+    },
+    {
+      "milestone": 402,
+      "filename": "m402-loader-consumer-targets.txt",
+      "bytes": 15038,
+      "sha256": "cfc38bb49a15cad7caca8f24702ab59fccbb3bc20184eeca0cface23520a3464",
+      "encoding": "utf-16",
+      "lines": 48,
+      "selected_summary_lines": 4
+    },
+    {
+      "milestone": 403,
+      "filename": "m403-shared-far-service.txt",
+      "bytes": 29940,
+      "sha256": "06d33144cf87e0e6432eb2fbe44c138e0a94004b25a360d28a33900dbcfce19a",
+      "encoding": "utf-16",
+      "lines": 147,
+      "selected_summary_lines": 35
+    },
+    {
+      "milestone": 404,
+      "filename": "m404-paired-loader-services.txt",
+      "bytes": 57966,
+      "sha256": "b9e1e7bd764c8eefbd52279cc1ebdb5d4e6b7d5a24489068697a879c245e3630",
+      "encoding": "utf-16",
+      "lines": 208,
+      "selected_summary_lines": 2
+    },
+    {
+      "milestone": 405,
+      "filename": "m405-module-export-correlation.txt",
+      "bytes": 26402,
+      "sha256": "4ed4eacad8253aa94603f085db177fa70b14e725aa84ec391e604380ec9e4925",
+      "encoding": "utf-16",
+      "lines": 138,
+      "selected_summary_lines": 25
+    },
+    {
+      "milestone": 406,
+      "filename": "m406-export-pointer-storage.txt",
+      "bytes": 28298,
+      "sha256": "79185bd3c285a8c9bf13ce1fd591f2deaacac96d3d95df832e9a5f7c72d37422",
+      "encoding": "utf-16",
+      "lines": 132,
+      "selected_summary_lines": 35
+    },
+    {
+      "milestone": 407,
+      "filename": "m407-indirect-export-call-validation.txt",
+      "bytes": 25858,
+      "sha256": "c489308e67ddfae8d92d8ffffca3f6f9c25a0431b1eac987b0f80fbaee1e3f4a",
+      "encoding": "utf-16",
+      "lines": 123,
+      "selected_summary_lines": 13
+    },
+    {
+      "milestone": 408,
+      "filename": "m408-boundary-aware-indirect-calls.txt",
+      "bytes": 36962,
+      "sha256": "7635eebc7b06eb720cb40a2374110e1a6b98f8492d0513d387fa3ffb4c088c5b",
+      "encoding": "utf-16",
+      "lines": 229,
+      "selected_summary_lines": 2
+    },
+    {
+      "milestone": 409,
+      "filename": "m409-corrected-indirect-call-decoder.txt",
+      "bytes": 39812,
+      "sha256": "1af1aeffce21c404c0d6c6904eb42ca2798dcda242cd8345f6aa78b9868d14e0",
+      "encoding": "utf-16",
+      "lines": 239,
+      "selected_summary_lines": 1
+    },
+    {
+      "milestone": 410,
+      "filename": "m410-segment-prefixed-export-calls.txt",
+      "bytes": 24198,
+      "sha256": "064869ba3f53a461c1a673b3d13d1e684f03f1d25fc91ecd69db9cce09c85913",
+      "encoding": "utf-16",
+      "lines": 135,
+      "selected_summary_lines": 18
+    },
+    {
+      "milestone": 411,
+      "filename": "m411-interleaved-export-arguments.txt",
+      "bytes": 36604,
+      "sha256": "bd43f12673188812c151a4549dd41b463d87748adc9e2f889f7de4a74be9cb38",
+      "encoding": "utf-16",
+      "lines": 188,
+      "selected_summary_lines": 0
+    },
+    {
+      "milestone": 412,
+      "filename": "m412-call-boundary-stack-lifetime.txt",
+      "bytes": 42094,
+      "sha256": "b20b9d7d884005c4f8ed20abe361e871e575f14d60b06cf32912e2f2b82537e2",
+      "encoding": "utf-16",
+      "lines": 202,
+      "selected_summary_lines": 6
+    },
+    {
+      "milestone": 413,
+      "filename": "m413-decoder-width-control-flow.txt",
+      "bytes": 11324,
+      "sha256": "8eb44b7221f94f5512984d0dce13e74cc0a1028b15c9e522a31659d50318ef52",
+      "encoding": "utf-16",
+      "lines": 63,
+      "selected_summary_lines": 4
+    },
+    {
+      "milestone": 414,
+      "filename": "m414-helper-return-branch-verification.txt",
+      "bytes": 8572,
+      "sha256": "e9694e432b04f13218c03a5280b4e8451d893782509b63d8ab35b2fa186bcbe4",
+      "encoding": "utf-16",
+      "lines": 43,
+      "selected_summary_lines": 2
+    },
+    {
+      "milestone": 415,
+      "filename": "m415-helper-argument-provenance.txt",
+      "bytes": 6446,
+      "sha256": "01bd40750feff166db36fb1273f924e916191b3a5ccee4f4f2bd8a8d0edb0daf",
+      "encoding": "utf-16",
+      "lines": 40,
+      "selected_summary_lines": 3
+    },
+    {
+      "milestone": 416,
+      "filename": "m416-indirect-slot-crossrefs.txt",
+      "bytes": 7756,
+      "sha256": "cc6702ccb1cde35cc535707209c6ed9bb6a8357028e624834d56d2376d9106ad",
+      "encoding": "utf-16",
+      "lines": 44,
+      "selected_summary_lines": 15
+    },
+    {
+      "milestone": 417,
+      "filename": "m417-export-name-resolution.txt",
+      "bytes": 8596,
+      "sha256": "a5215d0d7ecf4aac2aac72190d9dcfaab97590501db82f576ca42c9861a7a406",
+      "encoding": "utf-16",
+      "lines": 25,
+      "selected_summary_lines": 2
+    },
+    {
+      "milestone": 418,
+      "filename": "m418-resolver-argument-return-flow.txt",
+      "bytes": 8294,
+      "sha256": "fec02b11410d7f6d45aa83b4d4ab0bd8157abf305b12d384d614696a5934fd43",
+      "encoding": "utf-16",
+      "lines": 45,
+      "selected_summary_lines": 5
+    },
+    {
+      "milestone": 419,
+      "filename": "m419-internal-resolver-control-flow.txt",
+      "bytes": 8198,
+      "sha256": "4c2e7a573346c842429443e9724ae6c1d88cb6294d806b9b24b600c443435880",
+      "encoding": "utf-16",
+      "lines": 54,
+      "selected_summary_lines": 6
+    },
+    {
+      "milestone": 420,
+      "filename": "m420-spr-callsite-recon.txt",
+      "bytes": 8436,
+      "sha256": "8c8950d8fdef2de90d88f3b0bce083fe4a06eb1f7e40b4865486e2c8e7622bcd",
+      "encoding": "utf-16",
+      "lines": 61,
+      "selected_summary_lines": 7
+    },
+    {
+      "milestone": 421,
+      "filename": "m421-resource-name-table-structure.txt",
+      "bytes": 47654,
+      "sha256": "a0ecd66421e970a1ddcf4218614d2010bb991208bdf72fccfef524a952fa2825",
+      "encoding": "utf-16",
+      "lines": 90,
+      "selected_summary_lines": 17
+    },
+    {
+      "milestone": 422,
+      "filename": "m422-object2-table-validation.txt",
+      "bytes": 8688,
+      "sha256": "5ff897f975cf4f96b388fc906ec41e64613003b6dcabea6bbfefaece02696ce7",
+      "encoding": "utf-16",
+      "lines": 20,
+      "selected_summary_lines": 6
+    },
+    {
+      "milestone": 423,
+      "filename": "m423-object2-contiguous-triples.txt",
+      "bytes": 41990,
+      "sha256": "52d2446329a1e8663d468352050e1a49f1bab81ccae69272fcfaede4342b586a",
+      "encoding": "utf-16",
+      "lines": 213,
+      "selected_summary_lines": 35
+    },
+    {
+      "milestone": 424,
+      "filename": "m424-object2-table-consumers.txt",
+      "bytes": 8476,
+      "sha256": "4cd25e7f5ad5e7b12591331382cbb53d003a44adaf14bb8ad718692c9fe9b356",
+      "encoding": "utf-16",
+      "lines": 42,
+      "selected_summary_lines": 19
+    },
+    {
+      "milestone": 425,
+      "filename": "m425-spr-resource-path.txt",
+      "bytes": 8932,
+      "sha256": "d674f9f8e35e7763b496bbd3fd2b95d819e2cc1a8a73ea627674ff4d258b42a0",
+      "encoding": "utf-16",
+      "lines": 55,
+      "selected_summary_lines": 35
+    },
+    {
+      "milestone": 426,
+      "filename": "m426-spr-callsite-target.txt",
+      "bytes": 5528,
+      "sha256": "69897cbc36da152b41e3b2d76243ab6d753536db676202a1e51979824256b401",
+      "encoding": "utf-16",
+      "lines": 19,
+      "selected_summary_lines": 9
+    },
+    {
+      "milestone": 427,
+      "filename": "m427-spr-callee-control-flow.txt",
+      "bytes": 47398,
+      "sha256": "0116beaf021bb5f44012383466453247ebefa2fa0205176aa29c3630a528763e",
+      "encoding": "utf-16",
+      "lines": 267,
+      "selected_summary_lines": 17
+    },
+    {
+      "milestone": 428,
+      "filename": "m428-resource-helper-callers.txt",
+      "bytes": 3798,
+      "sha256": "f6eaf0bb1e57fce7583880aa09df5a77176d0a2b299ef8c97efafaaaf3404420",
+      "encoding": "utf-16",
+      "lines": 16,
+      "selected_summary_lines": 7
+    },
+    {
+      "milestone": 429,
+      "filename": "m429-resource-helper-rel32-callers.txt",
+      "bytes": 330652,
+      "sha256": "e1781e4baf523ece573660dfec41380775045a5f2cae234b88762d7c895f4007",
+      "encoding": "utf-16",
+      "lines": 1555,
+      "selected_summary_lines": 35
+    },
+    {
+      "milestone": 430,
+      "filename": "m430-resource-read-caller-ranking.txt",
+      "bytes": 261466,
+      "sha256": "6954a9ea41cc0cb740a6daf8b214a998c7e9cc1d70c1d13c5fb0be8992cf7193",
+      "encoding": "utf-16",
+      "lines": 1692,
+      "selected_summary_lines": 6
+    },
+    {
+      "milestone": 431,
+      "filename": "m431-helper-semantics.txt",
+      "bytes": 88406,
+      "sha256": "316358c4ba751466937e55782569c9554f5bbc1c30af9eed7cf44e00a941b6e0",
+      "encoding": "utf-16",
+      "lines": 621,
+      "selected_summary_lines": 35
+    },
+    {
+      "milestone": 432,
+      "filename": "m432-resource-data-boundaries.txt",
+      "bytes": 211254,
+      "sha256": "34bf9252eca04e62edaffe44078d0f3a34f7d973fedf89dde3f7ddec6fe40ede",
+      "encoding": "utf-16",
+      "lines": 813,
+      "selected_summary_lines": 35
+    },
+    {
+      "milestone": 433,
+      "filename": "m433-resource-cleanup-callback-provenance.txt",
+      "bytes": 195830,
+      "sha256": "eba487952d8d0232c963cb3a8923a3eaa4d89a1dcf13422364140918d96a03fd",
+      "encoding": "utf-16",
+      "lines": 1146,
+      "selected_summary_lines": 29
+    },
+    {
+      "milestone": 434,
+      "filename": "m434-allocator-indirect-call.txt",
+      "bytes": 153462,
+      "sha256": "311fc0a99407e5841a4983305b8979299896adf8980daf8455ae4fc2a38ff818",
+      "encoding": "utf-16",
+      "lines": 855,
+      "selected_summary_lines": 35
+    },
+    {
+      "milestone": 435,
+      "filename": "m435-list-node-lifecycle.txt",
+      "bytes": 57732,
+      "sha256": "bde04b3d2937d6545f7643eeb4ef7e10c35571688e78754f3376fff2397d759a",
+      "encoding": "utf-16",
+      "lines": 312,
+      "selected_summary_lines": 9
+    },
+    {
+      "milestone": 436,
+      "filename": "m436-resource-lower-level-trace.txt",
+      "bytes": 142612,
+      "sha256": "b3ab7a9b83b8f798bb91a4792a693b1fdceea42a2928bef8486917cbd50b3148",
+      "encoding": "utf-16",
+      "lines": 691,
+      "selected_summary_lines": 16
+    },
+    {
+      "milestone": 437,
+      "filename": "m437-stream-io-provenance.txt",
+      "bytes": 62094,
+      "sha256": "d65f94b46270e3a48376ce960fe564b2f142c7654f2da0fa6a1d9f49d248f2b5",
+      "encoding": "utf-16",
+      "lines": 439,
+      "selected_summary_lines": 13
+    },
+    {
+      "milestone": 438,
+      "filename": "m438-stream-buffer-provenance.txt",
+      "bytes": 72398,
+      "sha256": "688d22abeac33dcfacee01c8c651d0707168b4edb0a56f448b71733e4623d96f",
+      "encoding": "utf-16",
+      "lines": 523,
+      "selected_summary_lines": 21
+    },
+    {
+      "milestone": 439,
+      "filename": "m439-read-and-alternate-path.txt",
+      "bytes": 131280,
+      "sha256": "8d7532bccd58e220b0fa9f277b74c51ab20e3c414d4c8d48374597293c7bb624",
+      "encoding": "utf-16",
+      "lines": 1202,
+      "selected_summary_lines": 6
+    },
+    {
+      "milestone": 440,
+      "filename": "m440-dos-read-caller-provenance.txt",
+      "bytes": 141596,
+      "sha256": "ba9eb67516092b42705dabd51cac57354739ad457dcc7cc2a0c4a48c23dc214e",
+      "encoding": "utf-16",
+      "lines": 1063,
+      "selected_summary_lines": 35
+    },
+    {
+      "milestone": 441,
+      "filename": "m441-stream-read-consumers.txt",
+      "bytes": 22892,
+      "sha256": "782e555eca897b19dc2b1e0abd26b8e2281d107ff5ceee83c06dc9b5d360cc30",
+      "encoding": "utf-16",
+      "lines": 173,
+      "selected_summary_lines": 7
+    },
+    {
+      "milestone": 442,
+      "filename": "m442-buffered-reader-consumers.txt",
+      "bytes": 352416,
+      "sha256": "8be489da06247cdef8278d84d263f6e26488820fa57630054a401f7fc9207408",
+      "encoding": "utf-16",
+      "lines": 2769,
+      "selected_summary_lines": 25
+    },
+    {
+      "milestone": 443,
+      "filename": "m443-stream-transfer-provenance.txt",
+      "bytes": 71864,
+      "sha256": "1a37881c5f1a5d2f3897718714a92abf7a953060de3f97ba7acb9eb403c8abcf",
+      "encoding": "utf-16",
+      "lines": 455,
+      "selected_summary_lines": 5
+    },
+    {
+      "milestone": 444,
+      "filename": "m444-buffered-control-semantics.txt",
+      "bytes": 147622,
+      "sha256": "1e8151ac5f760a15c9b2b75ee81fd60cbffaf9940939ad7afebe687bceef3afd",
+      "encoding": "utf-16",
+      "lines": 960,
+      "selected_summary_lines": 35
+    },
+    {
+      "milestone": 445,
+      "filename": "m445-buffered-byte-consumers.txt",
+      "bytes": 151216,
+      "sha256": "4307b8be2150613acb6bc23acf8515e30e005e3c6db1dc1105f290976b823512",
+      "encoding": "utf-16",
+      "lines": 1116,
+      "selected_summary_lines": 13
+    },
+    {
+      "milestone": 446,
+      "filename": "m446-buffered-transfer-caller-semantics.txt",
+      "bytes": 214672,
+      "sha256": "6d03be501a32d767959468bc199d2a1f11a868a5b702c5c784bbcb0eb0c7ebad",
+      "encoding": "utf-16",
+      "lines": 1733,
+      "selected_summary_lines": 35
+    },
+    {
+      "milestone": 447,
+      "filename": "m447-buffered-control-helper-classification.txt",
+      "bytes": 64380,
+      "sha256": "c611d9250e4ccb037f7a28b168dfa32efffc8aea776421f894ae734bcd37729e",
+      "encoding": "utf-16",
+      "lines": 515,
+      "selected_summary_lines": 19
+    }
+  ]
+}
