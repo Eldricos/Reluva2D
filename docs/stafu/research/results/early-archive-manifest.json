@@ -1,0 +1,2077 @@
+{
+  "source_archive": "ResearchArchive.zip",
+  "source_sha256": "0440872e7e60d5db4c7f5487010e7d2d4402d5889b4f6400918ac5041beab51a",
+  "file_count": 207,
+  "entries": [
+    {
+      "filename": "bridge-format-output.txt",
+      "milestone": null,
+      "bytes": 18240,
+      "sha256": "3bd8a3b8d2c064abb92a762cd0a8a88e4f51d3846c65c56dbd7ff583d79f352b",
+      "encoding": "utf-16-le",
+      "lines": 180,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/bridge-format-output.md"
+    },
+    {
+      "filename": "bridge-inventory-output.txt",
+      "milestone": null,
+      "bytes": 3280,
+      "sha256": "f9a6eeabfe5badabc2a9c0a422c8f00dba85fe097c29bf939b83f12735911ac8",
+      "encoding": "utf-16-le",
+      "lines": 52,
+      "selected_lines": 52,
+      "evidence_path": "docs/stafu/research/results/early/bridge-inventory-output.md"
+    },
+    {
+      "filename": "computer-boundaries-output.txt",
+      "milestone": null,
+      "bytes": 8216,
+      "sha256": "00647a59bdc8dbcf804225fcdea404259e1b1021792822f0783faa1b1fcc03e7",
+      "encoding": "utf-16-le",
+      "lines": 87,
+      "selected_lines": 77,
+      "evidence_path": "docs/stafu/research/results/early/computer-boundaries-output.md"
+    },
+    {
+      "filename": "computer-content-audit-output.txt",
+      "milestone": null,
+      "bytes": 22812,
+      "sha256": "a40a82810c312b19ae26cffcd53fb9b414c4fb124cd7ff0e770c8f0ef67c657c",
+      "encoding": "utf-16-le",
+      "lines": 87,
+      "selected_lines": 83,
+      "evidence_path": "docs/stafu/research/results/early/computer-content-audit-output.md"
+    },
+    {
+      "filename": "computer-hierarchy-output.txt",
+      "milestone": null,
+      "bytes": 48106,
+      "sha256": "24bed2c8df4a4b13d5af4c44c5ae389b6703ed296e4107d3ba8a86457e86433f",
+      "encoding": "utf-16-le",
+      "lines": 353,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/computer-hierarchy-output.md"
+    },
+    {
+      "filename": "computer-navigation-output.txt",
+      "milestone": null,
+      "bytes": 52516,
+      "sha256": "69f58e77066c7c80d49c4d4b9b7aaf817c26733f17a8d38ba3123ec1ec2d2099",
+      "encoding": "utf-16-le",
+      "lines": 350,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/computer-navigation-output.md"
+    },
+    {
+      "filename": "computer-rejected-fields-output.txt",
+      "milestone": null,
+      "bytes": 125376,
+      "sha256": "74f524ddf95746413b01e50a0187b0898537b362e88371c74c2c7386780a9efe",
+      "encoding": "utf-16-le",
+      "lines": 663,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/computer-rejected-fields-output.md"
+    },
+    {
+      "filename": "computer-strings-complete.txt",
+      "milestone": null,
+      "bytes": 428688,
+      "sha256": "bfb84698fc438fab83b899b51f3a34215e68dbbb59bae11272417bed5e1b8d7f",
+      "encoding": "utf-16-le",
+      "lines": 2145,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/computer-strings-complete.md"
+    },
+    {
+      "filename": "computer-strings-multiline.txt",
+      "milestone": null,
+      "bytes": 427036,
+      "sha256": "eb1e0b841032d9530ea8ade61f558dced09889f2122fa4fb2953ab1499a0079e",
+      "encoding": "utf-16-le",
+      "lines": 2134,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/computer-strings-multiline.md"
+    },
+    {
+      "filename": "computer-strings-output.txt",
+      "milestone": null,
+      "bytes": 247970,
+      "sha256": "00d02b172074c8bb09b1827ec2a86c87685603656344342fb11919edf9883641",
+      "encoding": "utf-16-le",
+      "lines": 1386,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/computer-strings-output.md"
+    },
+    {
+      "filename": "computer-structure-output.txt",
+      "milestone": null,
+      "bytes": 68888,
+      "sha256": "40fc77b73a869cefc9d34d66c42cc3cc4dc0b4641e28c3b84a9e570b302b430a",
+      "encoding": "utf-16-le",
+      "lines": 624,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/computer-structure-output.md"
+    },
+    {
+      "filename": "computer-text-headers-output.txt",
+      "milestone": null,
+      "bytes": 16568,
+      "sha256": "b4c53b21ef4ddfce9c3d89534651d335936dac7fddd4b3e10b0e83cfce5cd93a",
+      "encoding": "utf-16-le",
+      "lines": 189,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/computer-text-headers-output.md"
+    },
+    {
+      "filename": "m243-all.txt",
+      "milestone": 243,
+      "bytes": 82080,
+      "sha256": "14dc09710f4aa98bf25606ba5a288ef2fbe61ae5b4cbe17860ee0f7acd0c1e1f",
+      "encoding": "utf-16-le",
+      "lines": 218,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/m243-all.md"
+    },
+    {
+      "filename": "m243-data.txt",
+      "milestone": 243,
+      "bytes": 10666,
+      "sha256": "8663ec80e92db9e2be13a34f2b198ccfe7f7c9708eeeb09c14f7d7fd3c893e0a",
+      "encoding": "utf-16-le",
+      "lines": 29,
+      "selected_lines": 18,
+      "evidence_path": "docs/stafu/research/results/early/m243-data.md"
+    },
+    {
+      "filename": "m243-picard.txt",
+      "milestone": 243,
+      "bytes": 33648,
+      "sha256": "e18f5e0e826590566e22010db1c126be51dafec7e50636031d62aa6fd1e3eeef",
+      "encoding": "utf-16-le",
+      "lines": 82,
+      "selected_lines": 25,
+      "evidence_path": "docs/stafu/research/results/early/m243-picard.md"
+    },
+    {
+      "filename": "m243-troi.txt",
+      "milestone": 243,
+      "bytes": 11776,
+      "sha256": "c4a966a8868868be43bcb5453557e6ae3379a8cacdec766b58f45e098feaf0aa",
+      "encoding": "utf-16-le",
+      "lines": 33,
+      "selected_lines": 23,
+      "evidence_path": "docs/stafu/research/results/early/m243-troi.md"
+    },
+    {
+      "filename": "m243-worf.txt",
+      "milestone": 243,
+      "bytes": 18102,
+      "sha256": "65a78668e44b524010efee9ef6de8ca7d8126510dab203cc14080bf1bc094af0",
+      "encoding": "utf-16-le",
+      "lines": 47,
+      "selected_lines": 23,
+      "evidence_path": "docs/stafu/research/results/early/m243-worf.md"
+    },
+    {
+      "filename": "m244-all.txt",
+      "milestone": 244,
+      "bytes": 83200,
+      "sha256": "68981af38355235bc4313ac973f0d071795fb58d2c9e6060a8449fdf122e5a1a",
+      "encoding": "utf-16-le",
+      "lines": 260,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/m244-all.md"
+    },
+    {
+      "filename": "m244-data.txt",
+      "milestone": 244,
+      "bytes": 7518,
+      "sha256": "8d1aa8178e37f1f575e19f5a1c9ee62f1931e980b9f00bbb269f126623da2a5d",
+      "encoding": "utf-16-le",
+      "lines": 26,
+      "selected_lines": 26,
+      "evidence_path": "docs/stafu/research/results/early/m244-data.md"
+    },
+    {
+      "filename": "m244-picard.txt",
+      "milestone": 244,
+      "bytes": 36326,
+      "sha256": "b8e6eb959f90fbc035a3a4800381830e3e5ac1092774a15f9ab23d43299ae4ba",
+      "encoding": "utf-16-le",
+      "lines": 102,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/m244-picard.md"
+    },
+    {
+      "filename": "m244-riker.txt",
+      "milestone": 244,
+      "bytes": 7152,
+      "sha256": "46e152fa45d01b4a50efcab717edaf651497a5d5641aae80999d8f2722388d35",
+      "encoding": "utf-16-le",
+      "lines": 31,
+      "selected_lines": 31,
+      "evidence_path": "docs/stafu/research/results/early/m244-riker.md"
+    },
+    {
+      "filename": "m244-worf.txt",
+      "milestone": 244,
+      "bytes": 20860,
+      "sha256": "8f309bb6a08f3b0163a900f0971fc2b73892c05cc8de6d722472b5b6d306b862",
+      "encoding": "utf-16-le",
+      "lines": 62,
+      "selected_lines": 62,
+      "evidence_path": "docs/stafu/research/results/early/m244-worf.md"
+    },
+    {
+      "filename": "m245-all.txt",
+      "milestone": 245,
+      "bytes": 82038,
+      "sha256": "f81188ff092aef2e4060bb4e74409c7f8a7e8f25049e2b983dda9a144287700b",
+      "encoding": "utf-16-le",
+      "lines": 223,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/m245-all.md"
+    },
+    {
+      "filename": "m245-data.txt",
+      "milestone": 245,
+      "bytes": 14748,
+      "sha256": "3a021e8e8a916c37e3c93f07a5083b95ea36185ce0db6dbca8f134ee3a8b25c3",
+      "encoding": "utf-16-le",
+      "lines": 36,
+      "selected_lines": 36,
+      "evidence_path": "docs/stafu/research/results/early/m245-data.md"
+    },
+    {
+      "filename": "m245-picard.txt",
+      "milestone": 245,
+      "bytes": 42222,
+      "sha256": "acf6ddc068a0b3bdca4dfac369486645d902d18a18a62ad14a21a60e7681dd0c",
+      "encoding": "utf-16-le",
+      "lines": 96,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/m245-picard.md"
+    },
+    {
+      "filename": "m245-worf.txt",
+      "milestone": 245,
+      "bytes": 15004,
+      "sha256": "d702ba61dd17b154af9cb2fcbfed6a14a0d69daaacf50e6e19e5ae6861e5f9a0",
+      "encoding": "utf-16-le",
+      "lines": 41,
+      "selected_lines": 41,
+      "evidence_path": "docs/stafu/research/results/early/m245-worf.md"
+    },
+    {
+      "filename": "m246-all.txt",
+      "milestone": 246,
+      "bytes": 94294,
+      "sha256": "5b6934e0ce107f8a8e2213e652e5f7394c7488eac5f2c1c4fef01044d01551a7",
+      "encoding": "utf-16-le",
+      "lines": 236,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/m246-all.md"
+    },
+    {
+      "filename": "m246-data.txt",
+      "milestone": 246,
+      "bytes": 7332,
+      "sha256": "670ecbd3818a6f8e364fb8186d7264edd9835d5e8b9897e44f64dfb92d0c4471",
+      "encoding": "utf-16-le",
+      "lines": 23,
+      "selected_lines": 23,
+      "evidence_path": "docs/stafu/research/results/early/m246-data.md"
+    },
+    {
+      "filename": "m246-picard.txt",
+      "milestone": 246,
+      "bytes": 52050,
+      "sha256": "4d72e53d9b5244f04abbca82868660337d3726f9eb2f3fe6f205f90ad38943f4",
+      "encoding": "utf-16-le",
+      "lines": 107,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/m246-picard.md"
+    },
+    {
+      "filename": "m246-worf.txt",
+      "milestone": 246,
+      "bytes": 18782,
+      "sha256": "a055b93bc3b7227aa10e9373b1f3332d4a3dc69f23ba109a942e6810ff183fbb",
+      "encoding": "utf-16-le",
+      "lines": 46,
+      "selected_lines": 46,
+      "evidence_path": "docs/stafu/research/results/early/m246-worf.md"
+    },
+    {
+      "filename": "m247-all.txt",
+      "milestone": 247,
+      "bytes": 107852,
+      "sha256": "f472929bf6fe450824fa2e8ac7b0edf060b4f6445898b553756d295e74fadb97",
+      "encoding": "utf-16-le",
+      "lines": 312,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/m247-all.md"
+    },
+    {
+      "filename": "m247-data.txt",
+      "milestone": 247,
+      "bytes": 10214,
+      "sha256": "d4624129a88cb1a7fc8995916c9f8b23fda9f4ed54c5495d3ebe30cd423f8496",
+      "encoding": "utf-16-le",
+      "lines": 36,
+      "selected_lines": 36,
+      "evidence_path": "docs/stafu/research/results/early/m247-data.md"
+    },
+    {
+      "filename": "m247-picard.txt",
+      "milestone": 247,
+      "bytes": 53656,
+      "sha256": "7ece95ee01c02f28842192ed58e6d32ec3871a29e810addfdf2112af7b1eecb8",
+      "encoding": "utf-16-le",
+      "lines": 120,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/m247-picard.md"
+    },
+    {
+      "filename": "m247-worf.txt",
+      "milestone": 247,
+      "bytes": 18662,
+      "sha256": "25c4420f3e02d2cacc3d57e4721c65c4dee17935cf6372b30a51c94f86ca23b6",
+      "encoding": "utf-16-le",
+      "lines": 56,
+      "selected_lines": 56,
+      "evidence_path": "docs/stafu/research/results/early/m247-worf.md"
+    },
+    {
+      "filename": "m248-all.txt",
+      "milestone": 248,
+      "bytes": 95736,
+      "sha256": "cc184d82dc24bb67bdac8b9b3323da72df3b1076478f4eebcdf1dbb64cd82353",
+      "encoding": "utf-16-le",
+      "lines": 312,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/m248-all.md"
+    },
+    {
+      "filename": "m248-data.txt",
+      "milestone": 248,
+      "bytes": 9374,
+      "sha256": "4bf1feed6b5d0679f63b66165575de13f9174288a18017ada994a9f7b248058c",
+      "encoding": "utf-16-le",
+      "lines": 36,
+      "selected_lines": 36,
+      "evidence_path": "docs/stafu/research/results/early/m248-data.md"
+    },
+    {
+      "filename": "m248-picard.txt",
+      "milestone": 248,
+      "bytes": 46748,
+      "sha256": "8a51cf9a98088ace947d5976d261f31463374de6a6d4796bd00dfe2c65949a86",
+      "encoding": "utf-16-le",
+      "lines": 120,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/m248-picard.md"
+    },
+    {
+      "filename": "m248-worf.txt",
+      "milestone": 248,
+      "bytes": 16758,
+      "sha256": "ff32ed05f10184c8c0b99435394de98b07b378f9db0489e5c20a886b4554772d",
+      "encoding": "utf-16-le",
+      "lines": 56,
+      "selected_lines": 56,
+      "evidence_path": "docs/stafu/research/results/early/m248-worf.md"
+    },
+    {
+      "filename": "m249-all.txt",
+      "milestone": 249,
+      "bytes": 128536,
+      "sha256": "4228e7d815665e7f50ada44b4a39c196dd45668e3497fc83a960d6671219f6a5",
+      "encoding": "utf-16-le",
+      "lines": 312,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/m249-all.md"
+    },
+    {
+      "filename": "m249-data.txt",
+      "milestone": 249,
+      "bytes": 12528,
+      "sha256": "576a5986f7f3c5d6b17ece5386893feb90de38469885e10eb7370ec41be3aeeb",
+      "encoding": "utf-16-le",
+      "lines": 36,
+      "selected_lines": 36,
+      "evidence_path": "docs/stafu/research/results/early/m249-data.md"
+    },
+    {
+      "filename": "m249-picard.txt",
+      "milestone": 249,
+      "bytes": 62242,
+      "sha256": "acc4c085812bdedbc0ebb7e571ef4e41ad90da691bf1be0934193fa0dafe9ddf",
+      "encoding": "utf-16-le",
+      "lines": 120,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/m249-picard.md"
+    },
+    {
+      "filename": "m249-worf.txt",
+      "milestone": 249,
+      "bytes": 22366,
+      "sha256": "88e4fe4dbdf9e260edcc615809cf3b917367c583dc5d99274f0cdc588882b2e5",
+      "encoding": "utf-16-le",
+      "lines": 56,
+      "selected_lines": 56,
+      "evidence_path": "docs/stafu/research/results/early/m249-worf.md"
+    },
+    {
+      "filename": "m250-data.txt",
+      "milestone": 250,
+      "bytes": 6992,
+      "sha256": "0a93e097310f9f39027c8e234df97b72ed1640ff4a2ac5bf840fd9a4b4ea470b",
+      "encoding": "utf-16-le",
+      "lines": 28,
+      "selected_lines": 28,
+      "evidence_path": "docs/stafu/research/results/early/m250-data.md"
+    },
+    {
+      "filename": "m250-picard.txt",
+      "milestone": 250,
+      "bytes": 11446,
+      "sha256": "03e7b961d8290e0b84a238e33d6aedbd23243bed0e87c335a004d976ecee8ca6",
+      "encoding": "utf-16-le",
+      "lines": 47,
+      "selected_lines": 47,
+      "evidence_path": "docs/stafu/research/results/early/m250-picard.md"
+    },
+    {
+      "filename": "m251-data.txt",
+      "milestone": 251,
+      "bytes": 3628,
+      "sha256": "e382aaf7eb81f394b7e2231cb2ec334a6dd7af542e12b49e6b3223d044ebb815",
+      "encoding": "utf-16-le",
+      "lines": 10,
+      "selected_lines": 10,
+      "evidence_path": "docs/stafu/research/results/early/m251-data.md"
+    },
+    {
+      "filename": "m251-picard.txt",
+      "milestone": 251,
+      "bytes": 8342,
+      "sha256": "ca365edd1966712435eb9a9d463024ce66b8452bb2a5b7547413b6852d10c022",
+      "encoding": "utf-16-le",
+      "lines": 22,
+      "selected_lines": 22,
+      "evidence_path": "docs/stafu/research/results/early/m251-picard.md"
+    },
+    {
+      "filename": "m252-picard.txt",
+      "milestone": 252,
+      "bytes": 3342,
+      "sha256": "a6e58788b797099d9046433fedeaf26431903efa4fb75756f0d9f55039b106e1",
+      "encoding": "utf-16-le",
+      "lines": 19,
+      "selected_lines": 19,
+      "evidence_path": "docs/stafu/research/results/early/m252-picard.md"
+    },
+    {
+      "filename": "m253-picard.txt",
+      "milestone": 253,
+      "bytes": 5536,
+      "sha256": "dad98322266cffb28406e5ce0e9877bc8d7cbf8ec82fea303b5fb21e752afd85",
+      "encoding": "utf-16-le",
+      "lines": 17,
+      "selected_lines": 17,
+      "evidence_path": "docs/stafu/research/results/early/m253-picard.md"
+    },
+    {
+      "filename": "m254-picard.txt",
+      "milestone": 254,
+      "bytes": 10886,
+      "sha256": "616f21146261f17acd71eb07ec3e57e41ebb1d72e16e79a3d492d3fc98b7e10b",
+      "encoding": "utf-16-le",
+      "lines": 53,
+      "selected_lines": 53,
+      "evidence_path": "docs/stafu/research/results/early/m254-picard.md"
+    },
+    {
+      "filename": "m255-picard.txt",
+      "milestone": 255,
+      "bytes": 14202,
+      "sha256": "9c53a5953780e380c1b1927e9308c48367891b83cece1edec5e7b7c612849a9e",
+      "encoding": "utf-16-le",
+      "lines": 40,
+      "selected_lines": 32,
+      "evidence_path": "docs/stafu/research/results/early/m255-picard.md"
+    },
+    {
+      "filename": "m256-data.txt",
+      "milestone": 256,
+      "bytes": 3704,
+      "sha256": "2a53459fbd14ea277f39a82f744b6617d029846a758c2cbc7488887624e159c2",
+      "encoding": "utf-16-le",
+      "lines": 10,
+      "selected_lines": 10,
+      "evidence_path": "docs/stafu/research/results/early/m256-data.md"
+    },
+    {
+      "filename": "m256-picard.txt",
+      "milestone": 256,
+      "bytes": 6568,
+      "sha256": "a0c11619562ad0bd48a42cc30886e09f318b985a02d966f8e2365a3ee0d36d33",
+      "encoding": "utf-16-le",
+      "lines": 19,
+      "selected_lines": 19,
+      "evidence_path": "docs/stafu/research/results/early/m256-picard.md"
+    },
+    {
+      "filename": "m257-data.txt",
+      "milestone": 257,
+      "bytes": 8280,
+      "sha256": "bbd7a7ce27ca644606ab423f136ee386bb330e0869bfd9e9ea861163184da2f5",
+      "encoding": "utf-16-le",
+      "lines": 16,
+      "selected_lines": 8,
+      "evidence_path": "docs/stafu/research/results/early/m257-data.md"
+    },
+    {
+      "filename": "m257-picard.txt",
+      "milestone": 257,
+      "bytes": 15200,
+      "sha256": "227ae8146d1182b607e2ddf856528b03c7b631e8a809ee461419d4eb2fc49527",
+      "encoding": "utf-16-le",
+      "lines": 30,
+      "selected_lines": 16,
+      "evidence_path": "docs/stafu/research/results/early/m257-picard.md"
+    },
+    {
+      "filename": "m258-boundaries.txt",
+      "milestone": 258,
+      "bytes": 24614,
+      "sha256": "ea87f4c0d961bbd27ba8ecab778f43f6eb66755ed491cfdb816ae3484f1098ca",
+      "encoding": "utf-16-le",
+      "lines": 129,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/m258-boundaries.md"
+    },
+    {
+      "filename": "m259-boundaries.txt",
+      "milestone": 259,
+      "bytes": 2670,
+      "sha256": "1f1a4fd4383737b34367d27b33837841e0d9b76ad13d1d36700d54deb56276fc",
+      "encoding": "utf-16-le",
+      "lines": 14,
+      "selected_lines": 14,
+      "evidence_path": "docs/stafu/research/results/early/m259-boundaries.md"
+    },
+    {
+      "filename": "m260-transitions.txt",
+      "milestone": 260,
+      "bytes": 9738,
+      "sha256": "172b9044baba34fa1265c4d292ff3b3359788fe6c8d17911e8749019244232ef",
+      "encoding": "utf-16-le",
+      "lines": 34,
+      "selected_lines": 34,
+      "evidence_path": "docs/stafu/research/results/early/m260-transitions.md"
+    },
+    {
+      "filename": "m261-intervals.txt",
+      "milestone": 261,
+      "bytes": 11028,
+      "sha256": "2fc5460e158bf5abda966e716f1a0608fcb6f318f7cced6200a8713e2d9a8a8f",
+      "encoding": "utf-16-le",
+      "lines": 36,
+      "selected_lines": 32,
+      "evidence_path": "docs/stafu/research/results/early/m261-intervals.md"
+    },
+    {
+      "filename": "m262-alignment.txt",
+      "milestone": 262,
+      "bytes": 25530,
+      "sha256": "44b7b22a7f94d55f5c7978ffb40d9dbe968589cd103b1f3ae8d04d4c3fa62464",
+      "encoding": "utf-16-le",
+      "lines": 105,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/m262-alignment.md"
+    },
+    {
+      "filename": "m263-stability.txt",
+      "milestone": 263,
+      "bytes": 27834,
+      "sha256": "d8761aa37922280eec3be856ed7100d28572cf05c6986dc399bed3ceae13e9d0",
+      "encoding": "utf-16-le",
+      "lines": 84,
+      "selected_lines": 84,
+      "evidence_path": "docs/stafu/research/results/early/m263-stability.md"
+    },
+    {
+      "filename": "m264-anchors.txt",
+      "milestone": 264,
+      "bytes": 31412,
+      "sha256": "7da780648950cda03d3f1b211e0b9b9690f4176988b5aed6ef93dc59e7ff8902",
+      "encoding": "utf-16-le",
+      "lines": 106,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/m264-anchors.md"
+    },
+    {
+      "filename": "m265-boundaries.txt",
+      "milestone": 265,
+      "bytes": 3634,
+      "sha256": "1bc006f4c5164f969220ba6742c7d4bfc5156a6572d4e974540745472a52f15f",
+      "encoding": "utf-16-le",
+      "lines": 16,
+      "selected_lines": 16,
+      "evidence_path": "docs/stafu/research/results/early/m265-boundaries.md"
+    },
+    {
+      "filename": "m266-short-matches.txt",
+      "milestone": 266,
+      "bytes": 4378,
+      "sha256": "931509804247e284cc2bf554a091785b0dcd5a09133acbc2ed82fa3c49a93143",
+      "encoding": "utf-16-le",
+      "lines": 16,
+      "selected_lines": 16,
+      "evidence_path": "docs/stafu/research/results/early/m266-short-matches.md"
+    },
+    {
+      "filename": "m267-correspondence.txt",
+      "milestone": 267,
+      "bytes": 7032,
+      "sha256": "71ada712554389dcfa9a9d38535092f442ff8a323ad955ec93dc30e08da592be",
+      "encoding": "utf-16-le",
+      "lines": 33,
+      "selected_lines": 33,
+      "evidence_path": "docs/stafu/research/results/early/m267-correspondence.md"
+    },
+    {
+      "filename": "m268-segments.txt",
+      "milestone": 268,
+      "bytes": 14946,
+      "sha256": "3d0deda23559fc5f8ce3137cecd02e6c08a535ee6479cc9f3c8716d044d986c9",
+      "encoding": "utf-16-le",
+      "lines": 61,
+      "selected_lines": 56,
+      "evidence_path": "docs/stafu/research/results/early/m268-segments.md"
+    },
+    {
+      "filename": "m269-edit-paths.txt",
+      "milestone": 269,
+      "bytes": 36454,
+      "sha256": "d97c3895688c4ed0e2e31d5f56150084b9cb88e8769310e31677cc11bf11ff23",
+      "encoding": "utf-16-le",
+      "lines": 172,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/m269-edit-paths.md"
+    },
+    {
+      "filename": "m270-anchor-sensitivity.txt",
+      "milestone": 270,
+      "bytes": 8272,
+      "sha256": "4007db1dd9515c22364dd326bfa154c3f5d02ea21f1b40e1cc8339abd538061b",
+      "encoding": "utf-16-le",
+      "lines": 29,
+      "selected_lines": 29,
+      "evidence_path": "docs/stafu/research/results/early/m270-anchor-sensitivity.md"
+    },
+    {
+      "filename": "m271-gap-cost-sensitivity.txt",
+      "milestone": 271,
+      "bytes": 15914,
+      "sha256": "2893c71d3c8675a9e1aebb1a5be9b56bde0342fe668b9df03445b3766f9b0db4",
+      "encoding": "utf-16-le",
+      "lines": 53,
+      "selected_lines": 53,
+      "evidence_path": "docs/stafu/research/results/early/m271-gap-cost-sensitivity.md"
+    },
+    {
+      "filename": "m272-anchor-context.txt",
+      "milestone": 272,
+      "bytes": 3960,
+      "sha256": "a45578aa42fe2a48aff379c86f86cbea1a6e06dd0029565491229edbc2769a04",
+      "encoding": "utf-16-le",
+      "lines": 13,
+      "selected_lines": 13,
+      "evidence_path": "docs/stafu/research/results/early/m272-anchor-context.md"
+    },
+    {
+      "filename": "m273-cross-interval-context.txt",
+      "milestone": 273,
+      "bytes": 3030,
+      "sha256": "e6b26ddc611effdc3ac2b759561a7f075dc792d7ac28ec18574f90eb9450e921",
+      "encoding": "utf-16-le",
+      "lines": 10,
+      "selected_lines": 10,
+      "evidence_path": "docs/stafu/research/results/early/m273-cross-interval-context.md"
+    },
+    {
+      "filename": "m274-alternative-chain-inspection.txt",
+      "milestone": 274,
+      "bytes": 4924,
+      "sha256": "0333d38fde041f7242c5d3e219f254d25f955b38855b41d6d0a905c7688607a8",
+      "encoding": "utf-16-le",
+      "lines": 13,
+      "selected_lines": 13,
+      "evidence_path": "docs/stafu/research/results/early/m274-alternative-chain-inspection.md"
+    },
+    {
+      "filename": "m275-full-output.txt",
+      "milestone": 275,
+      "bytes": 4996,
+      "sha256": "8cdb40265b62d2fe21aa05b794a618790af5e66c042a1a3d05e72a04c9ad0b29",
+      "encoding": "utf-16-le",
+      "lines": 24,
+      "selected_lines": 23,
+      "evidence_path": "docs/stafu/research/results/early/m275-full-output.md"
+    },
+    {
+      "filename": "m275-payload-structural-survey.txt",
+      "milestone": 275,
+      "bytes": 10898,
+      "sha256": "a1f86da9b2abbd8a253cae39df5c42326e938ceee93b856b735ffec083cae966",
+      "encoding": "utf-16-le",
+      "lines": 45,
+      "selected_lines": 45,
+      "evidence_path": "docs/stafu/research/results/early/m275-payload-structural-survey.md"
+    },
+    {
+      "filename": "m276-direct-payload-prefix-classification.txt",
+      "milestone": 276,
+      "bytes": 27796,
+      "sha256": "4d27c4c4e31dd58df2e9968c71cfe441541ab9f3fbec0fa48e730ab96b4428e7",
+      "encoding": "utf-16-le",
+      "lines": 85,
+      "selected_lines": 85,
+      "evidence_path": "docs/stafu/research/results/early/m276-direct-payload-prefix-classification.md"
+    },
+    {
+      "filename": "m277-record2-common-prefix-structure.txt",
+      "milestone": 277,
+      "bytes": 53352,
+      "sha256": "4749b54c4df419b4328b20c454731282f4eea97deaebecb9cb3867d00f76429f",
+      "encoding": "utf-16-le",
+      "lines": 181,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/m277-record2-common-prefix-structure.md"
+    },
+    {
+      "filename": "m278-record2-shared-region-mapping.txt",
+      "milestone": 278,
+      "bytes": 30760,
+      "sha256": "be500fc08485270bd73d01c8c2238806d3a5e3e5c65368fd246b2d68c849ccfe",
+      "encoding": "utf-16-le",
+      "lines": 46,
+      "selected_lines": 46,
+      "evidence_path": "docs/stafu/research/results/early/m278-record2-shared-region-mapping.md"
+    },
+    {
+      "filename": "m279-record2-shifted-region-correspondence.txt",
+      "milestone": 279,
+      "bytes": 21166,
+      "sha256": "d59872b87ded7a21d1ba0e7fdfdef265d934562774da17a95ad9d95a3083b202",
+      "encoding": "utf-16-le",
+      "lines": 76,
+      "selected_lines": 76,
+      "evidence_path": "docs/stafu/research/results/early/m279-record2-shifted-region-correspondence.md"
+    },
+    {
+      "filename": "m280-record2-shifted-match-boundary-analysis.txt",
+      "milestone": 280,
+      "bytes": 42248,
+      "sha256": "9518cb68e07cb2bc4cf86d17717a8c492f2d8067ec8c4a6d9d9bf9146b763cd8",
+      "encoding": "utf-16-le",
+      "lines": 142,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/m280-record2-shifted-match-boundary-analysis.md"
+    },
+    {
+      "filename": "m281-record2-unmatched-interval-bit-analysis.txt",
+      "milestone": 281,
+      "bytes": 46426,
+      "sha256": "2d992fecf2be19415e6f6253259927bba1fed3ad2720bdd27f9528274ba84cdd",
+      "encoding": "utf-16-le",
+      "lines": 152,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/m281-record2-unmatched-interval-bit-analysis.md"
+    },
+    {
+      "filename": "m282-record2-bit-match-uniqueness-alignment.txt",
+      "milestone": 282,
+      "bytes": 65110,
+      "sha256": "a519363640dcf809853e8077281d617e416066be8ce7644292c3435ae4e15b78",
+      "encoding": "utf-16-le",
+      "lines": 211,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/m282-record2-bit-match-uniqueness-alignment.md"
+    },
+    {
+      "filename": "m283-record2-bit-chain-transition-analysis.txt",
+      "milestone": 283,
+      "bytes": 68948,
+      "sha256": "54bbad40e9fcf6447c3181889486a58914a4f62e04bcab50ee294121eae9db0c",
+      "encoding": "utf-16-le",
+      "lines": 200,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/m283-record2-bit-chain-transition-analysis.md"
+    },
+    {
+      "filename": "m284-record2-bit-chain-local-realignment.txt",
+      "milestone": 284,
+      "bytes": 76476,
+      "sha256": "e81392b17417c3cf46615bbb1ae78ebc496d5ac6308b522b7a431e964e3f68cf",
+      "encoding": "utf-16-le",
+      "lines": 271,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/m284-record2-bit-chain-local-realignment.md"
+    },
+    {
+      "filename": "m285-record2-global-bit-chain-optimization.txt",
+      "milestone": 285,
+      "bytes": 121592,
+      "sha256": "91b6c8d3909327e877c95f446818f17c8198fd6b03c375e1e0d07113ee3d9262",
+      "encoding": "utf-16-le",
+      "lines": 399,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/m285-record2-global-bit-chain-optimization.md"
+    },
+    {
+      "filename": "m286-record2-anchor-preserving-global-chain.txt",
+      "milestone": 286,
+      "bytes": 199290,
+      "sha256": "b4606aabf31aca59ac546bf76e5b56733ef1ed58e6bdce074719e68d917daf88",
+      "encoding": "utf-16-le",
+      "lines": 670,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/m286-record2-anchor-preserving-global-chain.md"
+    },
+    {
+      "filename": "m287-record2-anchor-conflict-interval-analysis.txt",
+      "milestone": 287,
+      "bytes": 67518,
+      "sha256": "7155e35d26d958f6020d10ed8796d7541cd2e10ec8f35ff279dca91b0fb2e585",
+      "encoding": "utf-16-le",
+      "lines": 218,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/m287-record2-anchor-conflict-interval-analysis.md"
+    },
+    {
+      "filename": "m288-record2-competing-alignment-validation.txt",
+      "milestone": 288,
+      "bytes": 83174,
+      "sha256": "95fb456c5f35c79603152123476bf2c086157d93c82ac038791d7f7098a3404a",
+      "encoding": "utf-16-le",
+      "lines": 275,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/m288-record2-competing-alignment-validation.md"
+    },
+    {
+      "filename": "m289-record2-anchor-reliability-scoring.txt",
+      "milestone": 289,
+      "bytes": 95806,
+      "sha256": "7ae80abdf6980b7fc542a20e2d958a6a082b49633d388133f9a0bfc8514718e6",
+      "encoding": "utf-16-le",
+      "lines": 315,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/m289-record2-anchor-reliability-scoring.md"
+    },
+    {
+      "filename": "m290-record2-weighted-global-chain.txt",
+      "milestone": 290,
+      "bytes": 107864,
+      "sha256": "f7cb1c30245c8c687ffd0e527bf87c1ec0fe688efc475b27ade526ee04cf10b9",
+      "encoding": "utf-16-le",
+      "lines": 357,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/m290-record2-weighted-global-chain.md"
+    },
+    {
+      "filename": "m291-record2-chain-sensitivity.txt",
+      "milestone": 291,
+      "bytes": 122022,
+      "sha256": "7394f069b26122af758214ae4bd580610f5ef1fc915cdd37576e4fe1e9b0a033",
+      "encoding": "utf-16-le",
+      "lines": 404,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/m291-record2-chain-sensitivity.md"
+    },
+    {
+      "filename": "m292-record2-pool-robustness.txt",
+      "milestone": 292,
+      "bytes": 147362,
+      "sha256": "a528e757224731ac6106729e070036c0a9dd2aaab8abf288437e0f87f2659463",
+      "encoding": "utf-16-le",
+      "lines": 465,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/m292-record2-pool-robustness.md"
+    },
+    {
+      "filename": "m293-record2-chain-dependencies.txt",
+      "milestone": 293,
+      "bytes": 235030,
+      "sha256": "a2593957e64c54ea66b9e5a612f76475b5238e7b724eb95507e4be3bb2fbd2ff",
+      "encoding": "utf-16-le",
+      "lines": 687,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/m293-record2-chain-dependencies.md"
+    },
+    {
+      "filename": "m294-record2-alternative-transitions.txt",
+      "milestone": 294,
+      "bytes": 276356,
+      "sha256": "6a6330027a42af900a2590f6f619a8590f2fd7f7fcc363e4d0d80357017a91c2",
+      "encoding": "utf-16-le",
+      "lines": 764,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/m294-record2-alternative-transitions.md"
+    },
+    {
+      "filename": "m295-record2-boundary-evidence.txt",
+      "milestone": 295,
+      "bytes": 300278,
+      "sha256": "35dde4e0a15942c8c1590903a20dad4ee3891217d060edb3edcd336a56da310b",
+      "encoding": "utf-16-le",
+      "lines": 798,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/m295-record2-boundary-evidence.md"
+    },
+    {
+      "filename": "m296-record2-evidence-ranking.txt",
+      "milestone": 296,
+      "bytes": 297116,
+      "sha256": "5d4f92ff2c409a936076aa490f280faffd700d94241ce17d98bbed7d3d870b08",
+      "encoding": "utf-16-le",
+      "lines": 798,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/m296-record2-evidence-ranking.md"
+    },
+    {
+      "filename": "m297-record2-boundary-normalized.txt",
+      "milestone": 297,
+      "bytes": 350038,
+      "sha256": "e913171b4dbedd1e040397b2ac4b9e7d2842c3e3767b470d2f40f9a78feb0077",
+      "encoding": "utf-16-le",
+      "lines": 997,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/m297-record2-boundary-normalized.md"
+    },
+    {
+      "filename": "m298-record2-boundary-sensitivity.txt",
+      "milestone": 298,
+      "bytes": 289722,
+      "sha256": "505fa142f103a003c1b8804cf44edce424b5fc133ac5e5040ae7ee724fcf77e4",
+      "encoding": "utf-16-le",
+      "lines": 758,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/m298-record2-boundary-sensitivity.md"
+    },
+    {
+      "filename": "m299-record2-segment9-discrimination.txt",
+      "milestone": 299,
+      "bytes": 237658,
+      "sha256": "a1cf42d8d27cc1299fe98adfaff91db45545a0dabb36c561542d75c6d3c4df3c",
+      "encoding": "utf-16-le",
+      "lines": 688,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/m299-record2-segment9-discrimination.md"
+    },
+    {
+      "filename": "m300-record2-unmatched-patterns.txt",
+      "milestone": 300,
+      "bytes": 237706,
+      "sha256": "efb1d63599823aaacca9ed1adf5578f9316be4708eb6d0e15cd55270303ebff9",
+      "encoding": "utf-16-le",
+      "lines": 693,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/m300-record2-unmatched-patterns.md"
+    },
+    {
+      "filename": "m301-record2-offset-robustness.txt",
+      "milestone": 301,
+      "bytes": 251408,
+      "sha256": "50432ec0a306b7b1d7de334df404a26d882f168bd7fb9417d84913e1ce3b54a1",
+      "encoding": "utf-16-le",
+      "lines": 688,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/m301-record2-offset-robustness.md"
+    },
+    {
+      "filename": "m302-record2-offset-significance.txt",
+      "milestone": 302,
+      "bytes": 255686,
+      "sha256": "c18cc0b6a5686dc3172c3829dabaa0fb9a2a3e20b1416154f18bccffb4ac513b",
+      "encoding": "utf-16-le",
+      "lines": 720,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/m302-record2-offset-significance.md"
+    },
+    {
+      "filename": "m303-record2-structure-controls.txt",
+      "milestone": 303,
+      "bytes": 301170,
+      "sha256": "21b3873153a19ff32051e3cde5641e24647895c57612f664952b29dd32fd57e4",
+      "encoding": "utf-16-le",
+      "lines": 780,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/m303-record2-structure-controls.md"
+    },
+    {
+      "filename": "m304-record2-exact-extension.txt",
+      "milestone": 304,
+      "bytes": 243066,
+      "sha256": "2bc8c9ea202c5361f1bc1bfee0287e12c6ef31f46dc7b358dd7174d9831dcedb",
+      "encoding": "utf-16-le",
+      "lines": 688,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/m304-record2-exact-extension.md"
+    },
+    {
+      "filename": "m305-record2-anchor-constrained.txt",
+      "milestone": 305,
+      "bytes": 242536,
+      "sha256": "e453393a203c0635c5d60b37fb8851c80289b6d004e94b49ce8f58a82b2421e9",
+      "encoding": "utf-16-le",
+      "lines": 688,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/m305-record2-anchor-constrained.md"
+    },
+    {
+      "filename": "m306-record2-fixed-offset-specificity.txt",
+      "milestone": 306,
+      "bytes": 267710,
+      "sha256": "dac01754f881dda55ea75554c52cf81dae50d5502c179d1bdf40fe8f513e4f2b",
+      "encoding": "utf-16-le",
+      "lines": 688,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/m306-record2-fixed-offset-specificity.md"
+    },
+    {
+      "filename": "m307-record2-wide-matched-controls.txt",
+      "milestone": 307,
+      "bytes": 313796,
+      "sha256": "51b8ab7f0d995239b1c8e5cfe711d2358a26edd76ac18aed1b621a3346c37cfc",
+      "encoding": "utf-16-le",
+      "lines": 1121,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/m307-record2-wide-matched-controls.md"
+    },
+    {
+      "filename": "m308-record2-motif-census.txt",
+      "milestone": 308,
+      "bytes": 239586,
+      "sha256": "df06f7015ba9242e1e52fc58ad15681527a979364be989ad687a4d94e4f8bc2b",
+      "encoding": "utf-16-le",
+      "lines": 738,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/m308-record2-motif-census.md"
+    },
+    {
+      "filename": "m309-record2-motif-context.txt",
+      "milestone": 309,
+      "bytes": 423142,
+      "sha256": "08ef5eb4be69bcd44f7ca7256cc6f5734e04ac0a91ab1bbcc94aa305ab348aba",
+      "encoding": "utf-16-le",
+      "lines": 1297,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/m309-record2-motif-context.md"
+    },
+    {
+      "filename": "m310-record2-perfect-context-chains.txt",
+      "milestone": 310,
+      "bytes": 245262,
+      "sha256": "d7fb37db80c9c62d7a82f7cd3ed2ce9348b210b8bda27ee18dfa86a1aad7aaa7",
+      "encoding": "utf-16-le",
+      "lines": 714,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/m310-record2-perfect-context-chains.md"
+    },
+    {
+      "filename": "m311-record2-unique-exact-intervals.txt",
+      "milestone": 311,
+      "bytes": 244456,
+      "sha256": "d4b10aebb846d8184ec807bbe8ad80bf7670b3f464c0096e5e230c7fa02e4229",
+      "encoding": "utf-16-le",
+      "lines": 711,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/m311-record2-unique-exact-intervals.md"
+    },
+    {
+      "filename": "m312-record2-shift-boundary-analysis.txt",
+      "milestone": 312,
+      "bytes": 248692,
+      "sha256": "0cff1c5e6891bde06611313bd21201892cd645b43efdebfcce368abce622d0dd",
+      "encoding": "utf-16-le",
+      "lines": 724,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/m312-record2-shift-boundary-analysis.md"
+    },
+    {
+      "filename": "m313-record2-suffix-structure.txt",
+      "milestone": 313,
+      "bytes": 240156,
+      "sha256": "a0638191e9ade73ebd078f22bbbaa5b76639611189f048aa5b77c3a97b6cdd85",
+      "encoding": "utf-16-le",
+      "lines": 688,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/m313-record2-suffix-structure.md"
+    },
+    {
+      "filename": "m314-record2-suffix-boundary.txt",
+      "milestone": 314,
+      "bytes": 238618,
+      "sha256": "fdb888fc0928a80dbaf7b80bfa45c0a5b5aa96df7102212693600c9cf9b021fd",
+      "encoding": "utf-16-le",
+      "lines": 699,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/m314-record2-suffix-boundary.md"
+    },
+    {
+      "filename": "m315-record2-common-terminal.txt",
+      "milestone": 315,
+      "bytes": 240846,
+      "sha256": "1836dbea31446c113a97a0e299d36845948815ea6c85e6a9dc3eb826fba456e1",
+      "encoding": "utf-16-le",
+      "lines": 696,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/m315-record2-common-terminal.md"
+    },
+    {
+      "filename": "m316-record2-terminal-context.txt",
+      "milestone": 316,
+      "bytes": 239690,
+      "sha256": "c76acf8f5a47b3a296027da6672c6de266f39e5060d074533c83dffa57989149",
+      "encoding": "utf-16-le",
+      "lines": 694,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/m316-record2-terminal-context.md"
+    },
+    {
+      "filename": "m317-record2-terminal-transition.txt",
+      "milestone": 317,
+      "bytes": 237700,
+      "sha256": "b11210400f4b974a4bea71cba969647af43d6fee439efa7acb378d7e49be8c24",
+      "encoding": "utf-16-le",
+      "lines": 699,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/m317-record2-terminal-transition.md"
+    },
+    {
+      "filename": "m318-record2-gap-alignment.txt",
+      "milestone": 318,
+      "bytes": 239222,
+      "sha256": "d1aacff6b5cca93729be13e3490f00260edb9d550a95f32f2c5495b668cfcdbc",
+      "encoding": "utf-16-le",
+      "lines": 707,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/m318-record2-gap-alignment.md"
+    },
+    {
+      "filename": "m319-record2-boundary-alternatives.txt",
+      "milestone": 319,
+      "bytes": 237598,
+      "sha256": "a336ed1c49934b380937baa5f14df9d47f3550434af85ce0b99c405c304c9729",
+      "encoding": "utf-16-le",
+      "lines": 703,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/m319-record2-boundary-alternatives.md"
+    },
+    {
+      "filename": "m320-record2-cross-record-candidates.txt",
+      "milestone": 320,
+      "bytes": 238892,
+      "sha256": "29b13ae859015dc05c8cf8053420cc44a25e1e68e148fb27c0e993413b549ed6",
+      "encoding": "utf-16-le",
+      "lines": 699,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/m320-record2-cross-record-candidates.md"
+    },
+    {
+      "filename": "m321-record2-pre-overlap-boundary.txt",
+      "milestone": 321,
+      "bytes": 240948,
+      "sha256": "836012baec535b8d34d056c831af9e488dae38f382a62a0f9bbc83d9fd70daa9",
+      "encoding": "utf-16-le",
+      "lines": 711,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/m321-record2-pre-overlap-boundary.md"
+    },
+    {
+      "filename": "m322-record2-candidate-context.txt",
+      "milestone": 322,
+      "bytes": 246750,
+      "sha256": "7d70fc7ca7082ba5906bec26febdb1ec9fc80c206eae5b4b1fce79b85f80eb4f",
+      "encoding": "utf-16-le",
+      "lines": 726,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/m322-record2-candidate-context.md"
+    },
+    {
+      "filename": "m323-record2-independent-alignment.txt",
+      "milestone": 323,
+      "bytes": 263846,
+      "sha256": "568ea274c1b70c41658af234cd054bae87a14c4632e3e6ffa1234b8de50d549f",
+      "encoding": "utf-16-le",
+      "lines": 804,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/m323-record2-independent-alignment.md"
+    },
+    {
+      "filename": "m324-record2-structural-transition.txt",
+      "milestone": 324,
+      "bytes": 239676,
+      "sha256": "c8119ed18047b83c09d9d06cac30d4537cc7d1083943f5a4422acbe34fc8751a",
+      "encoding": "utf-16-le",
+      "lines": 696,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/m324-record2-structural-transition.md"
+    },
+    {
+      "filename": "m325-record-structure.txt",
+      "milestone": 325,
+      "bytes": 83248,
+      "sha256": "131e08912ac942e7a9b6560194f17e63f2270747d0a19821e67ef91969073612",
+      "encoding": "utf-16-le",
+      "lines": 242,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/m325-record-structure.md"
+    },
+    {
+      "filename": "spr-align-all.txt",
+      "milestone": null,
+      "bytes": 38614,
+      "sha256": "21b100a229e5ea09fbb378d0e7bd06a653650ef6eb328cddcf3dc3f2f6eb0689",
+      "encoding": "utf-16-le",
+      "lines": 112,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/spr-align-all.md"
+    },
+    {
+      "filename": "spr-align-picard.txt",
+      "milestone": null,
+      "bytes": 9204,
+      "sha256": "3808a613e98a71d992ed46aaca2b84d40a178c4bd34eccbc401be629b94387f7",
+      "encoding": "utf-16-le",
+      "lines": 27,
+      "selected_lines": 27,
+      "evidence_path": "docs/stafu/research/results/early/spr-align-picard.md"
+    },
+    {
+      "filename": "spr-bits-all.txt",
+      "milestone": null,
+      "bytes": 6150,
+      "sha256": "ad58b82c09a340ec91effd9389b752983ddbcd5847bcccb1735bcb0880860d64",
+      "encoding": "utf-8",
+      "lines": 59,
+      "selected_lines": 59,
+      "evidence_path": "docs/stafu/research/results/early/spr-bits-all.md"
+    },
+    {
+      "filename": "spr-bits-picard.txt",
+      "milestone": null,
+      "bytes": 9158,
+      "sha256": "511581a439cf17dfedd2b0d02f153ddea86c8701b3cc190073df3347cd35ef2f",
+      "encoding": "utf-16-le",
+      "lines": 32,
+      "selected_lines": 32,
+      "evidence_path": "docs/stafu/research/results/early/spr-bits-picard.md"
+    },
+    {
+      "filename": "spr-bits-riker.txt",
+      "milestone": null,
+      "bytes": 5270,
+      "sha256": "b61343659a19a28dc1337ef663604bf11d8d84cbadea5cef788cf5047ddda90d",
+      "encoding": "utf-16-le",
+      "lines": 19,
+      "selected_lines": 19,
+      "evidence_path": "docs/stafu/research/results/early/spr-bits-riker.md"
+    },
+    {
+      "filename": "spr-bits-troi.txt",
+      "milestone": null,
+      "bytes": 3088,
+      "sha256": "d34db99b1b9217898755186dbe70e54dfc0a71dc9a5f3b8a62ca06253ea81f11",
+      "encoding": "utf-16-le",
+      "lines": 13,
+      "selected_lines": 13,
+      "evidence_path": "docs/stafu/research/results/early/spr-bits-troi.md"
+    },
+    {
+      "filename": "spr-blocks-all.txt",
+      "milestone": null,
+      "bytes": 122304,
+      "sha256": "5ed1b061d88b8d2b28ed4c15c64eb735b8592083fc226b1bad59e5c445e449e9",
+      "encoding": "utf-16-le",
+      "lines": 479,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/spr-blocks-all.md"
+    },
+    {
+      "filename": "spr-blocks-data.txt",
+      "milestone": null,
+      "bytes": 12522,
+      "sha256": "a6c6242789538a6471e944b9b27302aa71d0bb827350cf17bc0047c9e2ed4c18",
+      "encoding": "utf-16-le",
+      "lines": 48,
+      "selected_lines": 48,
+      "evidence_path": "docs/stafu/research/results/early/spr-blocks-data.md"
+    },
+    {
+      "filename": "spr-blocks-picard.txt",
+      "milestone": null,
+      "bytes": 34364,
+      "sha256": "1eb7b3c13a842046526ffb3023641b2b745d03aa3dc480f8f9353f09f02c9ea5",
+      "encoding": "utf-16-le",
+      "lines": 136,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/spr-blocks-picard.md"
+    },
+    {
+      "filename": "spr-coherence-all.txt",
+      "milestone": null,
+      "bytes": 174112,
+      "sha256": "9c357bd273921bcc68855ef6f1d5156d534b31ba6f5a8cc63a3dc9e5d460190a",
+      "encoding": "utf-16-le",
+      "lines": 475,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/spr-coherence-all.md"
+    },
+    {
+      "filename": "spr-coherence-data.txt",
+      "milestone": null,
+      "bytes": 17090,
+      "sha256": "cae64e1eccf83a6d464b340f5a41b486222744b3bb1322e79a1d9b5940a79a66",
+      "encoding": "utf-16-le",
+      "lines": 47,
+      "selected_lines": 47,
+      "evidence_path": "docs/stafu/research/results/early/spr-coherence-data.md"
+    },
+    {
+      "filename": "spr-coherence-riker.txt",
+      "milestone": null,
+      "bytes": 31976,
+      "sha256": "d234de103e01d55746f3245bbcfd751acf0d0a190c2a5f73538b761b590956e1",
+      "encoding": "utf-16-le",
+      "lines": 86,
+      "selected_lines": 86,
+      "evidence_path": "docs/stafu/research/results/early/spr-coherence-riker.md"
+    },
+    {
+      "filename": "spr-context-all.txt",
+      "milestone": null,
+      "bytes": 10346,
+      "sha256": "ae8ffa9fe882ee5300b598ca0e3fbe2dc86b462b1c1376c2fa043d2ceaac8638",
+      "encoding": "utf-16-le",
+      "lines": 19,
+      "selected_lines": 19,
+      "evidence_path": "docs/stafu/research/results/early/spr-context-all.md"
+    },
+    {
+      "filename": "spr-context-riker.txt",
+      "milestone": null,
+      "bytes": 6294,
+      "sha256": "3deeb612a2374071ac1ec7898a67bc018578915dd560c2a2872c46ffe3e599de",
+      "encoding": "utf-16-le",
+      "lines": 11,
+      "selected_lines": 11,
+      "evidence_path": "docs/stafu/research/results/early/spr-context-riker.md"
+    },
+    {
+      "filename": "spr-context-troi.txt",
+      "milestone": null,
+      "bytes": 2596,
+      "sha256": "c511a5d6eafb9ab3cf40c74be666c1431730f22ebb788c169ebdf7bfeed00c62",
+      "encoding": "utf-16-le",
+      "lines": 5,
+      "selected_lines": 5,
+      "evidence_path": "docs/stafu/research/results/early/spr-context-troi.md"
+    },
+    {
+      "filename": "spr-coverage-all.txt",
+      "milestone": null,
+      "bytes": 226594,
+      "sha256": "b12dbbefa7c8d60d22904ce731830e2ab5ded7f2e9f6c31805729ad271db8183",
+      "encoding": "utf-16-le",
+      "lines": 475,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/spr-coverage-all.md"
+    },
+    {
+      "filename": "spr-coverage-data.txt",
+      "milestone": null,
+      "bytes": 24740,
+      "sha256": "319d627d2ea974a92e1d1f6731dcbe8f7d9b463b6317fbe37d282e77b341eb68",
+      "encoding": "utf-16-le",
+      "lines": 47,
+      "selected_lines": 32,
+      "evidence_path": "docs/stafu/research/results/early/spr-coverage-data.md"
+    },
+    {
+      "filename": "spr-coverage-riker.txt",
+      "milestone": null,
+      "bytes": 46112,
+      "sha256": "30444ec03d203d50220dbc2bf4bccda6d095fe522805af1e8eeabf44155adf1e",
+      "encoding": "utf-16-le",
+      "lines": 86,
+      "selected_lines": 58,
+      "evidence_path": "docs/stafu/research/results/early/spr-coverage-riker.md"
+    },
+    {
+      "filename": "spr-divergence-all.txt",
+      "milestone": null,
+      "bytes": 73266,
+      "sha256": "18827580b4bb945b1cb1ee0f74202f3a83dd3bb3e40d1e8e49a1569617eef464",
+      "encoding": "utf-16-le",
+      "lines": 111,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/spr-divergence-all.md"
+    },
+    {
+      "filename": "spr-divergence-picard.txt",
+      "milestone": null,
+      "bytes": 16676,
+      "sha256": "ac43783925249021c1e0405ea44a3fcbecdbafbab42c63b1a1315d2f1ccf7671",
+      "encoding": "utf-16-le",
+      "lines": 26,
+      "selected_lines": 26,
+      "evidence_path": "docs/stafu/research/results/early/spr-divergence-picard.md"
+    },
+    {
+      "filename": "spr-encoding-all.txt",
+      "milestone": null,
+      "bytes": 54690,
+      "sha256": "d1f57ee277748a85e7571dec08257ab5d2a3c6967502afbfdc91460f458ab527",
+      "encoding": "utf-16-le",
+      "lines": 156,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/spr-encoding-all.md"
+    },
+    {
+      "filename": "spr-encoding-picard.txt",
+      "milestone": null,
+      "bytes": 12968,
+      "sha256": "cbc9d0f1565db51cccfd680a26ebaedf6c6c29405be91a740fbf3e9370017158",
+      "encoding": "utf-16-le",
+      "lines": 37,
+      "selected_lines": 37,
+      "evidence_path": "docs/stafu/research/results/early/spr-encoding-picard.md"
+    },
+    {
+      "filename": "spr-gaps-all.txt",
+      "milestone": null,
+      "bytes": 75614,
+      "sha256": "829768d295d01c0d75ccecfae0c3634fb2fef8921dbcd3fcc1e46f5a315ca328",
+      "encoding": "utf-16-le",
+      "lines": 147,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/spr-gaps-all.md"
+    },
+    {
+      "filename": "spr-gaps-data.txt",
+      "milestone": null,
+      "bytes": 8674,
+      "sha256": "b683d53be3ca3a23d6e4e8a443c5bcf38e5a540384b3d2077250d750bc51d017",
+      "encoding": "utf-16-le",
+      "lines": 19,
+      "selected_lines": 19,
+      "evidence_path": "docs/stafu/research/results/early/spr-gaps-data.md"
+    },
+    {
+      "filename": "spr-gaps-riker.txt",
+      "milestone": null,
+      "bytes": 19822,
+      "sha256": "d364855d16f124664005c6788a7c09c2471e71fa9028d82168db7e5467fc57c3",
+      "encoding": "utf-16-le",
+      "lines": 39,
+      "selected_lines": 39,
+      "evidence_path": "docs/stafu/research/results/early/spr-gaps-riker.md"
+    },
+    {
+      "filename": "spr-inspect-all.txt",
+      "milestone": null,
+      "bytes": 239982,
+      "sha256": "374ffcb6357904bea08759ef42c9b974ed718a31387666f6bca2865df9c71dd6",
+      "encoding": "utf-16-le",
+      "lines": 410,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/spr-inspect-all.md"
+    },
+    {
+      "filename": "spr-inspect-picard.txt",
+      "milestone": null,
+      "bytes": 105350,
+      "sha256": "a42617bdd38ac106a31be1cdf00bd41612f8f468203b5278eee31cf4307e22c7",
+      "encoding": "utf-16-le",
+      "lines": 174,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/spr-inspect-picard.md"
+    },
+    {
+      "filename": "spr-inspect-troi.txt",
+      "milestone": null,
+      "bytes": 25524,
+      "sha256": "f194795ac0bf4b741a67d0292978a52f7e9e6b3adb50f5abed9ed5f61281fd70",
+      "encoding": "utf-16-le",
+      "lines": 47,
+      "selected_lines": 12,
+      "evidence_path": "docs/stafu/research/results/early/spr-inspect-troi.md"
+    },
+    {
+      "filename": "spr-milestone31.txt",
+      "milestone": null,
+      "bytes": 89712,
+      "sha256": "8c553ef79fd97acf43b739047416ea85429ef829f0a4526ab57860595d86e9dc",
+      "encoding": "utf-16-le",
+      "lines": 232,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/spr-milestone31.md"
+    },
+    {
+      "filename": "spr-milestone32.txt",
+      "milestone": null,
+      "bytes": 50986,
+      "sha256": "b7bed24a78adf20ab447614377700b0751efeb22df0aaf522a1b383c17dd4635",
+      "encoding": "utf-16-le",
+      "lines": 143,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/spr-milestone32.md"
+    },
+    {
+      "filename": "spr-milestone33.txt",
+      "milestone": null,
+      "bytes": 72074,
+      "sha256": "15ade382c4ad0bce0e2e1670a5ae5a0c71fc16e5264877204d87d14b8887ce12",
+      "encoding": "utf-16-le",
+      "lines": 145,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/spr-milestone33.md"
+    },
+    {
+      "filename": "spr-milestone34.txt",
+      "milestone": null,
+      "bytes": 5054,
+      "sha256": "86fd2d1d286e6a05330bd26c6fef252be49d3ed8c290e84e2443a66afe9d8dae",
+      "encoding": "utf-16-le",
+      "lines": 19,
+      "selected_lines": 19,
+      "evidence_path": "docs/stafu/research/results/early/spr-milestone34.md"
+    },
+    {
+      "filename": "spr-milestone35.txt",
+      "milestone": null,
+      "bytes": 3220,
+      "sha256": "80161007f0716398e5e2d848f10badf47dafe285c807b3ef2081b0b1b9bc77bc",
+      "encoding": "utf-16-le",
+      "lines": 27,
+      "selected_lines": 27,
+      "evidence_path": "docs/stafu/research/results/early/spr-milestone35.md"
+    },
+    {
+      "filename": "spr-milestone36.txt",
+      "milestone": null,
+      "bytes": 5108,
+      "sha256": "04df432574247b0f181b4403d14d329289e8832e14b459b21d22f12ff48844b6",
+      "encoding": "utf-16-le",
+      "lines": 37,
+      "selected_lines": 37,
+      "evidence_path": "docs/stafu/research/results/early/spr-milestone36.md"
+    },
+    {
+      "filename": "spr-milestone37.txt",
+      "milestone": null,
+      "bytes": 18514,
+      "sha256": "b149c187881cc3a8021958c395f8763d1416217856e0b740ab34463663417d0a",
+      "encoding": "utf-16-le",
+      "lines": 138,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/spr-milestone37.md"
+    },
+    {
+      "filename": "spr-milestone38.txt",
+      "milestone": null,
+      "bytes": 21836,
+      "sha256": "24832d903d49f230730a6bb94ba6d805486f4897b4d2ebb973d92b12fd702bd8",
+      "encoding": "utf-16-le",
+      "lines": 65,
+      "selected_lines": 65,
+      "evidence_path": "docs/stafu/research/results/early/spr-milestone38.md"
+    },
+    {
+      "filename": "spr-milestone39.txt",
+      "milestone": null,
+      "bytes": 22968,
+      "sha256": "d6ef3e4470ce6cc10d2290a11f40492e0ad34315941919041667807966120a42",
+      "encoding": "utf-16-le",
+      "lines": 65,
+      "selected_lines": 65,
+      "evidence_path": "docs/stafu/research/results/early/spr-milestone39.md"
+    },
+    {
+      "filename": "spr-milestone40.txt",
+      "milestone": null,
+      "bytes": 118328,
+      "sha256": "4c2efda8500a484e0abc543a33e91f1ade301a65f039a598445a2445ef5d7a08",
+      "encoding": "utf-16-le",
+      "lines": 586,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/spr-milestone40.md"
+    },
+    {
+      "filename": "spr-milestone41.txt",
+      "milestone": null,
+      "bytes": 243224,
+      "sha256": "3f48aeb9dca7dfa5f0e50ba1307d0197ed89df9bc28047c449b5cb3362620c59",
+      "encoding": "utf-16-le",
+      "lines": 762,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/spr-milestone41.md"
+    },
+    {
+      "filename": "spr-milestone42.txt",
+      "milestone": null,
+      "bytes": 155376,
+      "sha256": "6ae70716fedfb19e4ba9915ac3dd884f5a7824eb41a2e204c1e427dfd8d9a81d",
+      "encoding": "utf-16-le",
+      "lines": 382,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/spr-milestone42.md"
+    },
+    {
+      "filename": "spr-milestone43.txt",
+      "milestone": null,
+      "bytes": 149080,
+      "sha256": "1437a3b6a0a441a0b8c8dc2d8a323df1454d8e1628ccdb6d46d0c797f2c235ce",
+      "encoding": "utf-16-le",
+      "lines": 538,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/spr-milestone43.md"
+    },
+    {
+      "filename": "spr-milestone44.txt",
+      "milestone": null,
+      "bytes": 58652,
+      "sha256": "0ce77ee13ec248725c661abd1086ca2fcb29e7fdad4c30e487f5dc1651c04343",
+      "encoding": "utf-16-le",
+      "lines": 183,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/spr-milestone44.md"
+    },
+    {
+      "filename": "spr-milestone45.txt",
+      "milestone": null,
+      "bytes": 15928,
+      "sha256": "205d3d0d2e337a1e66af35eeb5ff954dffe63a479c401198216024922454219a",
+      "encoding": "utf-16-le",
+      "lines": 90,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/spr-milestone45.md"
+    },
+    {
+      "filename": "spr-milestone46.txt",
+      "milestone": null,
+      "bytes": 1668,
+      "sha256": "a94fe45f173027e9032d80f6cc87bd371eadf5dc2a08a66daec3930e2db8697a",
+      "encoding": "utf-16-le",
+      "lines": 10,
+      "selected_lines": 10,
+      "evidence_path": "docs/stafu/research/results/early/spr-milestone46.md"
+    },
+    {
+      "filename": "spr-milestone47.txt",
+      "milestone": null,
+      "bytes": 27792,
+      "sha256": "fdb51d012380aad34ed030d78ae845fc49bde57180ad5c16d176c1019c6cf6f7",
+      "encoding": "utf-16-le",
+      "lines": 230,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/spr-milestone47.md"
+    },
+    {
+      "filename": "spr-milestone48.txt",
+      "milestone": null,
+      "bytes": 27322,
+      "sha256": "02e5b698e30442d2c3a522e70dada5c5d9801923485c884a01db1ad0cd5d2b71",
+      "encoding": "utf-16-le",
+      "lines": 103,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/spr-milestone48.md"
+    },
+    {
+      "filename": "spr-milestone49.txt",
+      "milestone": null,
+      "bytes": 24094,
+      "sha256": "b45d786da92b8b7bc0f4e0c44cd6cdf6430ed417a7b4d66f7dfcc7234395905e",
+      "encoding": "utf-16-le",
+      "lines": 142,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/spr-milestone49.md"
+    },
+    {
+      "filename": "spr-milestone50.txt",
+      "milestone": null,
+      "bytes": 23702,
+      "sha256": "dcf09af563a4441c5178fce6c40da30e29288ce9ba49ca4111436c82ca60cf31",
+      "encoding": "utf-16-le",
+      "lines": 126,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/spr-milestone50.md"
+    },
+    {
+      "filename": "spr-milestone51.txt",
+      "milestone": null,
+      "bytes": 4942,
+      "sha256": "f83bb15c54321d41f4b12091b528752bb6499ecfe2b34e4ab10abfe47e4d1d81",
+      "encoding": "utf-16-le",
+      "lines": 39,
+      "selected_lines": 39,
+      "evidence_path": "docs/stafu/research/results/early/spr-milestone51.md"
+    },
+    {
+      "filename": "spr-milestone52.txt",
+      "milestone": null,
+      "bytes": 1184,
+      "sha256": "db916b342577cfb241325257b8518cb71b2bf5014782e405883a07080a043e70",
+      "encoding": "utf-16-le",
+      "lines": 4,
+      "selected_lines": 4,
+      "evidence_path": "docs/stafu/research/results/early/spr-milestone52.md"
+    },
+    {
+      "filename": "spr-milestone53.txt",
+      "milestone": null,
+      "bytes": 904,
+      "sha256": "0a4de21a2c580105b7c855054b05a58a8e3910cd3f8fd2cd08869913864696ae",
+      "encoding": "utf-16-le",
+      "lines": 4,
+      "selected_lines": 4,
+      "evidence_path": "docs/stafu/research/results/early/spr-milestone53.md"
+    },
+    {
+      "filename": "spr-milestone54.txt",
+      "milestone": null,
+      "bytes": 792,
+      "sha256": "0a3ea67ea42975cb27e3ae70ad6bad5395023567d4f912835f294f0522209640",
+      "encoding": "utf-16-le",
+      "lines": 4,
+      "selected_lines": 4,
+      "evidence_path": "docs/stafu/research/results/early/spr-milestone54.md"
+    },
+    {
+      "filename": "spr-milestone57.txt",
+      "milestone": null,
+      "bytes": 1608,
+      "sha256": "7118475a15586a7b6cd2d818577f7a319366953a70cdef6d4c6ffba79e47d0b4",
+      "encoding": "utf-16-le",
+      "lines": 14,
+      "selected_lines": 12,
+      "evidence_path": "docs/stafu/research/results/early/spr-milestone57.md"
+    },
+    {
+      "filename": "spr-milestone58.txt",
+      "milestone": null,
+      "bytes": 7902,
+      "sha256": "7d7f6ce60a75334dafe6880b76e4ead3fbd4da4831cd13ab1efdebed3093486f",
+      "encoding": "utf-16-le",
+      "lines": 42,
+      "selected_lines": 42,
+      "evidence_path": "docs/stafu/research/results/early/spr-milestone58.md"
+    },
+    {
+      "filename": "spr-milestone59.txt",
+      "milestone": null,
+      "bytes": 2600,
+      "sha256": "b60e25dd5de536fa3b61882059058869c5909d642f89cf265e2ec6c7f731ac5e",
+      "encoding": "utf-16-le",
+      "lines": 19,
+      "selected_lines": 19,
+      "evidence_path": "docs/stafu/research/results/early/spr-milestone59.md"
+    },
+    {
+      "filename": "spr-offset-all.txt",
+      "milestone": null,
+      "bytes": 243088,
+      "sha256": "66b76f4ceb53f2717f737912cf1cd1ed5bdb636fc8582cfc932438d9765c3d8e",
+      "encoding": "utf-16-le",
+      "lines": 1190,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/spr-offset-all.md"
+    },
+    {
+      "filename": "spr-offset-picard.txt",
+      "milestone": null,
+      "bytes": 108248,
+      "sha256": "4f2e2ebcd805991f77445f1e0c2f9506c7fcb1fa210d5d6d93f17e5fc8fc56df",
+      "encoding": "utf-16-le",
+      "lines": 530,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/spr-offset-picard.md"
+    },
+    {
+      "filename": "spr-pattern-all.txt",
+      "milestone": null,
+      "bytes": 153748,
+      "sha256": "d456ae7fad446f049d570ef8629aa4d4bca9edbd55166fac68a1160449e491fb",
+      "encoding": "utf-16-le",
+      "lines": 329,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/spr-pattern-all.md"
+    },
+    {
+      "filename": "spr-pattern-data.txt",
+      "milestone": null,
+      "bytes": 38308,
+      "sha256": "7a0d48ce78a166cf3e0ca004eed6444d9edda9cb6349136fafff6a3ee7dc4e2f",
+      "encoding": "utf-16-le",
+      "lines": 84,
+      "selected_lines": 34,
+      "evidence_path": "docs/stafu/research/results/early/spr-pattern-data.md"
+    },
+    {
+      "filename": "spr-pattern-picard.txt",
+      "milestone": null,
+      "bytes": 63006,
+      "sha256": "55c021f39b641f3b01611cc0df786533efb80872056228ada04bfe4c86dbc674",
+      "encoding": "utf-16-le",
+      "lines": 132,
+      "selected_lines": 82,
+      "evidence_path": "docs/stafu/research/results/early/spr-pattern-picard.md"
+    },
+    {
+      "filename": "spr-pattern-worf.txt",
+      "milestone": null,
+      "bytes": 42132,
+      "sha256": "6e41efd4a0846124e3609fdff04a16f7c9700e259c089cbe232c600afabdd37d",
+      "encoding": "utf-16-le",
+      "lines": 90,
+      "selected_lines": 45,
+      "evidence_path": "docs/stafu/research/results/early/spr-pattern-worf.md"
+    },
+    {
+      "filename": "spr-patterns-all.txt",
+      "milestone": null,
+      "bytes": 93308,
+      "sha256": "cffd22ca56e85378ac0166b83961f0200a309089821ac4aa3e669828aada28f2",
+      "encoding": "utf-16-le",
+      "lines": 449,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/spr-patterns-all.md"
+    },
+    {
+      "filename": "spr-patterns-picard.txt",
+      "milestone": null,
+      "bytes": 42686,
+      "sha256": "c1bf43775c2a07c9ca469db457d9fd6629023b702657a51a71f9418cf31c9e52",
+      "encoding": "utf-16-le",
+      "lines": 201,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/spr-patterns-picard.md"
+    },
+    {
+      "filename": "spr-period-all.txt",
+      "milestone": null,
+      "bytes": 57136,
+      "sha256": "80cd0ebc5500a8c93bf4ecf92f7250956ca3354181ac6950d68bb3c8e991c82f",
+      "encoding": "utf-16-le",
+      "lines": 172,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/spr-period-all.md"
+    },
+    {
+      "filename": "spr-period-data.txt",
+      "milestone": null,
+      "bytes": 10454,
+      "sha256": "ef943ec537406522f3949f47f8d385b5b28d7dd7652e55e5884589e8843d4b57",
+      "encoding": "utf-16-le",
+      "lines": 31,
+      "selected_lines": 31,
+      "evidence_path": "docs/stafu/research/results/early/spr-period-data.md"
+    },
+    {
+      "filename": "spr-period-picard.txt",
+      "milestone": null,
+      "bytes": 18942,
+      "sha256": "18f0abc1b5b4a0bd9a826f719bc6d92299543a155dd304217eb6796501de537c",
+      "encoding": "utf-16-le",
+      "lines": 56,
+      "selected_lines": 56,
+      "evidence_path": "docs/stafu/research/results/early/spr-period-picard.md"
+    },
+    {
+      "filename": "spr-period-worf.txt",
+      "milestone": null,
+      "bytes": 19942,
+      "sha256": "ab9e963b19822e73fc90bad951c40419affa0054aec07b9b1bb8e5ec0e5a75ef",
+      "encoding": "utf-16-le",
+      "lines": 59,
+      "selected_lines": 59,
+      "evidence_path": "docs/stafu/research/results/early/spr-period-worf.md"
+    },
+    {
+      "filename": "spr-resolve-all.txt",
+      "milestone": null,
+      "bytes": 99212,
+      "sha256": "92557c4993a0805a97d465ea4aa8a03a09f6d816683b552317189d7d9993b38a",
+      "encoding": "utf-16-le",
+      "lines": 442,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/spr-resolve-all.md"
+    },
+    {
+      "filename": "spr-resolve-picard.txt",
+      "milestone": null,
+      "bytes": 40782,
+      "sha256": "88d48a9ca85c45eabe6023e69d6885b09523fdf5025856f646f37e83f4d10bf9",
+      "encoding": "utf-16-le",
+      "lines": 179,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/spr-resolve-picard.md"
+    },
+    {
+      "filename": "spr-short-results.txt",
+      "milestone": null,
+      "bytes": 141920,
+      "sha256": "92782b53c9fdf809060b38862e48d0ddc92a542bf18fec3c24a27989c9fceb0a",
+      "encoding": "utf-16-le",
+      "lines": 734,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/spr-short-results.md"
+    },
+    {
+      "filename": "spr-spacing-all.txt",
+      "milestone": null,
+      "bytes": 88732,
+      "sha256": "936184b6656245ca39fbfb85ad85cbb11376488086d83256c2a55a5278c55c0f",
+      "encoding": "utf-16-le",
+      "lines": 327,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/spr-spacing-all.md"
+    },
+    {
+      "filename": "spr-spacing-riker.txt",
+      "milestone": null,
+      "bytes": 21270,
+      "sha256": "a2b5aaaad2ab12e5f283f927f736d8298822099d45288849a42fe643d1df2d6f",
+      "encoding": "utf-16-le",
+      "lines": 78,
+      "selected_lines": 78,
+      "evidence_path": "docs/stafu/research/results/early/spr-spacing-riker.md"
+    },
+    {
+      "filename": "spr-spacing-troi.txt",
+      "milestone": null,
+      "bytes": 16954,
+      "sha256": "7c6574ee45e5a63e72e9e2bce90be094b0b40a56335db90bb60e728dffd03922",
+      "encoding": "utf-16-le",
+      "lines": 63,
+      "selected_lines": 63,
+      "evidence_path": "docs/stafu/research/results/early/spr-spacing-troi.md"
+    },
+    {
+      "filename": "spr-structure-all.txt",
+      "milestone": null,
+      "bytes": 48932,
+      "sha256": "8d0319a8b1cdf48fb1bbec5bdb47a1c7a50cacb4e0dd1572d7bf7d2b06dc6e68",
+      "encoding": "utf-16-le",
+      "lines": 91,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/spr-structure-all.md"
+    },
+    {
+      "filename": "spr-structure-picard.txt",
+      "milestone": null,
+      "bytes": 46698,
+      "sha256": "071a1670c03217ae6e935f857c077ba7cbc940b7728a8c3ec3f023454b25defe",
+      "encoding": "utf-16-le",
+      "lines": 82,
+      "selected_lines": 82,
+      "evidence_path": "docs/stafu/research/results/early/spr-structure-picard.md"
+    },
+    {
+      "filename": "spr-structure-troi.txt",
+      "milestone": null,
+      "bytes": 1290,
+      "sha256": "3f0c0dfead1ffb270f8f43b0478f9c057947a86d723eb5c7c5558e2ebc1f55df",
+      "encoding": "utf-16-le",
+      "lines": 4,
+      "selected_lines": 4,
+      "evidence_path": "docs/stafu/research/results/early/spr-structure-troi.md"
+    },
+    {
+      "filename": "spr-substitutions-all.txt",
+      "milestone": null,
+      "bytes": 38268,
+      "sha256": "a45fe40bbb6f6f9ab10425798b52e6164bd1faa751b4afde09441ec861cc6030",
+      "encoding": "utf-16-le",
+      "lines": 131,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/spr-substitutions-all.md"
+    },
+    {
+      "filename": "spr-substitutions-picard.txt",
+      "milestone": null,
+      "bytes": 7662,
+      "sha256": "e5cc96a87c396c188b961caa83df0bc7fa387797318f77aa455a1d1d76aa3f37",
+      "encoding": "utf-16-le",
+      "lines": 26,
+      "selected_lines": 26,
+      "evidence_path": "docs/stafu/research/results/early/spr-substitutions-picard.md"
+    },
+    {
+      "filename": "spr-substitutions-riker.txt",
+      "milestone": null,
+      "bytes": 12240,
+      "sha256": "5db103e54c04b49b0b4754ab606cee7bfada566a50e4a07bcc6d18b8835effe4",
+      "encoding": "utf-16-le",
+      "lines": 42,
+      "selected_lines": 42,
+      "evidence_path": "docs/stafu/research/results/early/spr-substitutions-riker.md"
+    },
+    {
+      "filename": "spr-targets-all.txt",
+      "milestone": null,
+      "bytes": 219952,
+      "sha256": "e45e53cc9fd56104b37b1bea0eef9d0b4a1afd8a80e70a1fef792977733ccbc7",
+      "encoding": "utf-16-le",
+      "lines": 464,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/spr-targets-all.md"
+    },
+    {
+      "filename": "spr-targets-picard.txt",
+      "milestone": null,
+      "bytes": 92838,
+      "sha256": "e773d1b875ebb53fbdd49450c24dbdfc4b44ef6139fba04318c47ab30932bbac",
+      "encoding": "utf-16-le",
+      "lines": 187,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/spr-targets-picard.md"
+    },
+    {
+      "filename": "spr-validate-all.txt",
+      "milestone": null,
+      "bytes": 160390,
+      "sha256": "dd0b01e10f3fabf4eb3c7b5af622efe1275fb5dbf2464253fe5b62383cbee675",
+      "encoding": "utf-16-le",
+      "lines": 356,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/spr-validate-all.md"
+    },
+    {
+      "filename": "spr-validate-picard.txt",
+      "milestone": null,
+      "bytes": 72944,
+      "sha256": "b056781a14ee4967dcd29fb43f07385c7efb1c346c13ebfd0a81c38926c241b9",
+      "encoding": "utf-16-le",
+      "lines": 161,
+      "selected_lines": 90,
+      "evidence_path": "docs/stafu/research/results/early/spr-validate-picard.md"
+    },
+    {
+      "filename": "stafu-bridge-inventory.txt",
+      "milestone": null,
+      "bytes": 3280,
+      "sha256": "e06974cb833b97204e38000e5a4e36439537d2b5f0003491b0a6fdcdc32afa77",
+      "encoding": "utf-16-le",
+      "lines": 52,
+      "selected_lines": 52,
+      "evidence_path": "docs/stafu/research/results/early/stafu-bridge-inventory.md"
+    }
+  ]
+}

@@ -1,0 +1,100 @@
+# m243-all.txt — curated observations
+
+**Source:** `ResearchArchive.zip` / `m243-all.txt`. **Evidence type:** selected lines from a diagnostic output, not a complete raw-output backup. No original game bytes are included.
+
+**Source SHA256:** `14dc09710f4aa98bf25606ba5a288ef2fbe61ae5b4cbe17860ee0f7acd0c1e1f`; **encoding:** `utf-16-le`; **original lines:** 218; **selected lines:** 90.
+
+**Interpretation:** diagnostic observations only. Field names and candidate matches do not establish decoding semantics or runtime behavior.
+
+```text
+SPR_ANCHOR_PAIR resource=BRDGDATA.SPR record=0 imageA=0 imageB=1 regionsA=18 regionsB=21 uniqueOrderedMatches=8 ambiguousNew=4 unmatchedA=10 unmatchedB=9
+SPR_ANCHOR_PAIR resource=BRDGDATA.SPR record=0 imageA=1 imageB=2 regionsA=21 regionsB=3 uniqueOrderedMatches=1 ambiguousNew=0 unmatchedA=20 unmatchedB=2
+SPR_ANCHOR_PAIR resource=BRDGDATA.SPR record=0 imageA=2 imageB=3 regionsA=3 regionsB=3 uniqueOrderedMatches=2 ambiguousNew=0 unmatchedA=1 unmatchedB=1
+SPR_ANCHOR_PAIR resource=BRDGDATA.SPR record=0 imageA=3 imageB=4 regionsA=3 regionsB=2 uniqueOrderedMatches=0 ambiguousNew=0 unmatchedA=3 unmatchedB=2
+SPR_ANCHOR_PAIR resource=BRDGDATA.SPR record=0 imageA=4 imageB=5 regionsA=2 regionsB=2 uniqueOrderedMatches=0 ambiguousNew=0 unmatchedA=2 unmatchedB=2
+SPR_ANCHOR_PAIR resource=BRDGDATA.SPR record=0 imageA=5 imageB=6 regionsA=2 regionsB=2 uniqueOrderedMatches=0 ambiguousNew=0 unmatchedA=2 unmatchedB=2
+SPR_ANCHOR_PAIR resource=BRDGDATA.SPR record=2 imageA=1 imageB=2 regionsA=0 regionsB=0 uniqueOrderedMatches=0 ambiguousNew=0 unmatchedA=0 unmatchedB=0
+SPR_ANCHOR_PAIR resource=BRDGDATA.SPR record=2 imageA=2 imageB=3 regionsA=0 regionsB=0 uniqueOrderedMatches=0 ambiguousNew=0 unmatchedA=0 unmatchedB=0
+SPR_ANCHOR_PAIR resource=BRDGDATA.SPR record=2 imageA=3 imageB=4 regionsA=0 regionsB=0 uniqueOrderedMatches=0 ambiguousNew=0 unmatchedA=0 unmatchedB=0
+SPR_ANCHOR_PAIR resource=BRDGDATA.SPR record=2 imageA=4 imageB=5 regionsA=0 regionsB=0 uniqueOrderedMatches=0 ambiguousNew=0 unmatchedA=0 unmatchedB=0
+SPR_ANCHOR_PAIR resource=BRDGDATA.SPR record=2 imageA=5 imageB=6 regionsA=0 regionsB=0 uniqueOrderedMatches=0 ambiguousNew=0 unmatchedA=0 unmatchedB=0
+SPR_ANCHOR_PAIR resource=BRDGDATA.SPR record=2 imageA=6 imageB=7 regionsA=0 regionsB=0 uniqueOrderedMatches=0 ambiguousNew=0 unmatchedA=0 unmatchedB=0
+SPR_ANCHOR_PAIR resource=BRDGDATA.SPR record=2 imageA=7 imageB=8 regionsA=0 regionsB=0 uniqueOrderedMatches=0 ambiguousNew=0 unmatchedA=0 unmatchedB=0
+SPR_ANCHOR_PAIR resource=BRDGDATA.SPR record=2 imageA=8 imageB=9 regionsA=0 regionsB=0 uniqueOrderedMatches=0 ambiguousNew=0 unmatchedA=0 unmatchedB=0
+SPR_ANCHOR_PAIR resource=BRDGDATA.SPR record=3 imageA=0 imageB=1 regionsA=0 regionsB=0 uniqueOrderedMatches=0 ambiguousNew=0 unmatchedA=0 unmatchedB=0
+SPR_ANCHOR_PAIR resource=BRDGDATA.SPR record=3 imageA=1 imageB=2 regionsA=0 regionsB=0 uniqueOrderedMatches=0 ambiguousNew=0 unmatchedA=0 unmatchedB=0
+SPR_ANCHOR_SUMMARY resource=BRDGDATA.SPR direct=19 regions=51 neighboringPairs=16 uniqueOrderedMatches=11 ambiguousNew=4 unmatchedA=38 unmatchedB=18 consecutiveSameDelta=6 detailLimit=80
+SPR_ANCHOR_PAIR resource=BRDGPICA.SPR record=0 imageA=0 imageB=1 regionsA=0 regionsB=0 uniqueOrderedMatches=0 ambiguousNew=0 unmatchedA=0 unmatchedB=0
+SPR_ANCHOR_PAIR resource=BRDGPICA.SPR record=0 imageA=1 imageB=2 regionsA=0 regionsB=0 uniqueOrderedMatches=0 ambiguousNew=0 unmatchedA=0 unmatchedB=0
+SPR_ANCHOR_PAIR resource=BRDGPICA.SPR record=0 imageA=2 imageB=4 regionsA=0 regionsB=0 uniqueOrderedMatches=0 ambiguousNew=0 unmatchedA=0 unmatchedB=0
+SPR_ANCHOR_PAIR resource=BRDGPICA.SPR record=0 imageA=4 imageB=5 regionsA=0 regionsB=0 uniqueOrderedMatches=0 ambiguousNew=0 unmatchedA=0 unmatchedB=0
+SPR_ANCHOR_PAIR resource=BRDGPICA.SPR record=0 imageA=5 imageB=7 regionsA=0 regionsB=0 uniqueOrderedMatches=0 ambiguousNew=0 unmatchedA=0 unmatchedB=0
+SPR_ANCHOR_PAIR resource=BRDGPICA.SPR record=0 imageA=7 imageB=19 regionsA=0 regionsB=0 uniqueOrderedMatches=0 ambiguousNew=0 unmatchedA=0 unmatchedB=0
+SPR_ANCHOR_PAIR resource=BRDGPICA.SPR record=2 imageA=1 imageB=2 regionsA=0 regionsB=0 uniqueOrderedMatches=0 ambiguousNew=0 unmatchedA=0 unmatchedB=0
+SPR_ANCHOR_PAIR resource=BRDGPICA.SPR record=2 imageA=2 imageB=3 regionsA=0 regionsB=0 uniqueOrderedMatches=0 ambiguousNew=0 unmatchedA=0 unmatchedB=0
+SPR_ANCHOR_PAIR resource=BRDGPICA.SPR record=2 imageA=3 imageB=4 regionsA=0 regionsB=0 uniqueOrderedMatches=0 ambiguousNew=0 unmatchedA=0 unmatchedB=0
+SPR_ANCHOR_PAIR resource=BRDGPICA.SPR record=2 imageA=4 imageB=5 regionsA=0 regionsB=0 uniqueOrderedMatches=0 ambiguousNew=0 unmatchedA=0 unmatchedB=0
+SPR_ANCHOR_PAIR resource=BRDGPICA.SPR record=2 imageA=5 imageB=6 regionsA=0 regionsB=0 uniqueOrderedMatches=0 ambiguousNew=0 unmatchedA=0 unmatchedB=0
+SPR_ANCHOR_PAIR resource=BRDGPICA.SPR record=2 imageA=6 imageB=7 regionsA=0 regionsB=0 uniqueOrderedMatches=0 ambiguousNew=0 unmatchedA=0 unmatchedB=0
+SPR_ANCHOR_PAIR resource=BRDGPICA.SPR record=2 imageA=7 imageB=8 regionsA=0 regionsB=0 uniqueOrderedMatches=0 ambiguousNew=0 unmatchedA=0 unmatchedB=0
+SPR_ANCHOR_PAIR resource=BRDGPICA.SPR record=2 imageA=8 imageB=9 regionsA=0 regionsB=0 uniqueOrderedMatches=0 ambiguousNew=0 unmatchedA=0 unmatchedB=0
+SPR_ANCHOR_PAIR resource=BRDGPICA.SPR record=3 imageA=1 imageB=2 regionsA=0 regionsB=0 uniqueOrderedMatches=0 ambiguousNew=0 unmatchedA=0 unmatchedB=0
+SPR_ANCHOR_PAIR resource=BRDGPICA.SPR record=3 imageA=2 imageB=3 regionsA=0 regionsB=1 uniqueOrderedMatches=0 ambiguousNew=0 unmatchedA=0 unmatchedB=1
+SPR_ANCHOR_PAIR resource=BRDGPICA.SPR record=3 imageA=3 imageB=4 regionsA=1 regionsB=1 uniqueOrderedMatches=0 ambiguousNew=0 unmatchedA=1 unmatchedB=1
+SPR_ANCHOR_PAIR resource=BRDGPICA.SPR record=3 imageA=4 imageB=5 regionsA=1 regionsB=0 uniqueOrderedMatches=0 ambiguousNew=0 unmatchedA=1 unmatchedB=0
+SPR_ANCHOR_PAIR resource=BRDGPICA.SPR record=3 imageA=5 imageB=6 regionsA=0 regionsB=0 uniqueOrderedMatches=0 ambiguousNew=0 unmatchedA=0 unmatchedB=0
+SPR_ANCHOR_PAIR resource=BRDGPICA.SPR record=3 imageA=6 imageB=7 regionsA=0 regionsB=0 uniqueOrderedMatches=0 ambiguousNew=0 unmatchedA=0 unmatchedB=0
+SPR_ANCHOR_PAIR resource=BRDGPICA.SPR record=5 imageA=0 imageB=1 regionsA=26 regionsB=22 uniqueOrderedMatches=14 ambiguousNew=0 unmatchedA=12 unmatchedB=8
+SPR_ANCHOR_PAIR resource=BRDGPICA.SPR record=5 imageA=1 imageB=2 regionsA=22 regionsB=23 uniqueOrderedMatches=21 ambiguousNew=0 unmatchedA=1 unmatchedB=2
+SPR_ANCHOR_PAIR resource=BRDGPICA.SPR record=5 imageA=2 imageB=3 regionsA=23 regionsB=22 uniqueOrderedMatches=12 ambiguousNew=0 unmatchedA=11 unmatchedB=10
+SPR_ANCHOR_SUMMARY resource=BRDGPICA.SPR direct=31 regions=178 neighboringPairs=27 uniqueOrderedMatches=84 ambiguousNew=0 unmatchedA=72 unmatchedB=68 consecutiveSameDelta=6 detailLimit=80
+SPR_ANCHOR_PAIR resource=BRDGRIKR.SPR record=0 imageA=0 imageB=1 regionsA=0 regionsB=0 uniqueOrderedMatches=0 ambiguousNew=0 unmatchedA=0 unmatchedB=0
+SPR_ANCHOR_PAIR resource=BRDGRIKR.SPR record=0 imageA=1 imageB=2 regionsA=0 regionsB=0 uniqueOrderedMatches=0 ambiguousNew=0 unmatchedA=0 unmatchedB=0
+SPR_ANCHOR_PAIR resource=BRDGRIKR.SPR record=0 imageA=2 imageB=3 regionsA=0 regionsB=0 uniqueOrderedMatches=0 ambiguousNew=0 unmatchedA=0 unmatchedB=0
+SPR_ANCHOR_PAIR resource=BRDGRIKR.SPR record=0 imageA=3 imageB=4 regionsA=0 regionsB=0 uniqueOrderedMatches=0 ambiguousNew=0 unmatchedA=0 unmatchedB=0
+SPR_ANCHOR_PAIR resource=BRDGRIKR.SPR record=2 imageA=1 imageB=2 regionsA=0 regionsB=0 uniqueOrderedMatches=0 ambiguousNew=0 unmatchedA=0 unmatchedB=0
+SPR_ANCHOR_PAIR resource=BRDGRIKR.SPR record=2 imageA=2 imageB=3 regionsA=0 regionsB=0 uniqueOrderedMatches=0 ambiguousNew=0 unmatchedA=0 unmatchedB=0
+SPR_ANCHOR_PAIR resource=BRDGRIKR.SPR record=2 imageA=3 imageB=4 regionsA=0 regionsB=0 uniqueOrderedMatches=0 ambiguousNew=0 unmatchedA=0 unmatchedB=0
+SPR_ANCHOR_PAIR resource=BRDGRIKR.SPR record=2 imageA=4 imageB=5 regionsA=0 regionsB=0 uniqueOrderedMatches=0 ambiguousNew=0 unmatchedA=0 unmatchedB=0
+SPR_ANCHOR_PAIR resource=BRDGRIKR.SPR record=2 imageA=5 imageB=6 regionsA=0 regionsB=0 uniqueOrderedMatches=0 ambiguousNew=0 unmatchedA=0 unmatchedB=0
+SPR_ANCHOR_PAIR resource=BRDGRIKR.SPR record=2 imageA=6 imageB=7 regionsA=0 regionsB=0 uniqueOrderedMatches=0 ambiguousNew=0 unmatchedA=0 unmatchedB=0
+SPR_ANCHOR_PAIR resource=BRDGRIKR.SPR record=2 imageA=7 imageB=8 regionsA=0 regionsB=0 uniqueOrderedMatches=0 ambiguousNew=0 unmatchedA=0 unmatchedB=0
+SPR_ANCHOR_PAIR resource=BRDGRIKR.SPR record=2 imageA=8 imageB=9 regionsA=0 regionsB=0 uniqueOrderedMatches=0 ambiguousNew=0 unmatchedA=0 unmatchedB=0
+SPR_ANCHOR_PAIR resource=BRDGRIKR.SPR record=3 imageA=1 imageB=2 regionsA=0 regionsB=0 uniqueOrderedMatches=0 ambiguousNew=0 unmatchedA=0 unmatchedB=0
+SPR_ANCHOR_PAIR resource=BRDGRIKR.SPR record=3 imageA=2 imageB=3 regionsA=0 regionsB=0 uniqueOrderedMatches=0 ambiguousNew=0 unmatchedA=0 unmatchedB=0
+SPR_ANCHOR_PAIR resource=BRDGRIKR.SPR record=3 imageA=3 imageB=4 regionsA=0 regionsB=0 uniqueOrderedMatches=0 ambiguousNew=0 unmatchedA=0 unmatchedB=0
+SPR_ANCHOR_PAIR resource=BRDGRIKR.SPR record=3 imageA=4 imageB=5 regionsA=0 regionsB=0 uniqueOrderedMatches=0 ambiguousNew=0 unmatchedA=0 unmatchedB=0
+SPR_ANCHOR_PAIR resource=BRDGRIKR.SPR record=3 imageA=5 imageB=6 regionsA=0 regionsB=0 uniqueOrderedMatches=0 ambiguousNew=0 unmatchedA=0 unmatchedB=0
+SPR_ANCHOR_PAIR resource=BRDGRIKR.SPR record=4 imageA=0 imageB=1 regionsA=0 regionsB=0 uniqueOrderedMatches=0 ambiguousNew=0 unmatchedA=0 unmatchedB=0
+SPR_ANCHOR_PAIR resource=BRDGRIKR.SPR record=4 imageA=1 imageB=2 regionsA=0 regionsB=0 uniqueOrderedMatches=0 ambiguousNew=0 unmatchedA=0 unmatchedB=0
+SPR_ANCHOR_PAIR resource=BRDGRIKR.SPR record=4 imageA=2 imageB=3 regionsA=0 regionsB=0 uniqueOrderedMatches=0 ambiguousNew=0 unmatchedA=0 unmatchedB=0
+SPR_ANCHOR_PAIR resource=BRDGRIKR.SPR record=4 imageA=3 imageB=4 regionsA=0 regionsB=0 uniqueOrderedMatches=0 ambiguousNew=0 unmatchedA=0 unmatchedB=0
+SPR_ANCHOR_PAIR resource=BRDGRIKR.SPR record=4 imageA=4 imageB=5 regionsA=0 regionsB=0 uniqueOrderedMatches=0 ambiguousNew=0 unmatchedA=0 unmatchedB=0
+SPR_ANCHOR_PAIR resource=BRDGRIKR.SPR record=5 imageA=0 imageB=1 regionsA=0 regionsB=0 uniqueOrderedMatches=0 ambiguousNew=0 unmatchedA=0 unmatchedB=0
+SPR_ANCHOR_PAIR resource=BRDGRIKR.SPR record=5 imageA=1 imageB=2 regionsA=0 regionsB=0 uniqueOrderedMatches=0 ambiguousNew=0 unmatchedA=0 unmatchedB=0
+SPR_ANCHOR_PAIR resource=BRDGRIKR.SPR record=5 imageA=2 imageB=3 regionsA=0 regionsB=0 uniqueOrderedMatches=0 ambiguousNew=0 unmatchedA=0 unmatchedB=0
+SPR_ANCHOR_PAIR resource=BRDGRIKR.SPR record=5 imageA=3 imageB=4 regionsA=0 regionsB=0 uniqueOrderedMatches=0 ambiguousNew=0 unmatchedA=0 unmatchedB=0
+SPR_ANCHOR_PAIR resource=BRDGRIKR.SPR record=5 imageA=4 imageB=5 regionsA=0 regionsB=0 uniqueOrderedMatches=0 ambiguousNew=0 unmatchedA=0 unmatchedB=0
+SPR_ANCHOR_PAIR resource=BRDGRIKR.SPR record=5 imageA=5 imageB=6 regionsA=0 regionsB=0 uniqueOrderedMatches=0 ambiguousNew=0 unmatchedA=0 unmatchedB=0
+SPR_ANCHOR_PAIR resource=BRDGRIKR.SPR record=5 imageA=6 imageB=7 regionsA=0 regionsB=1 uniqueOrderedMatches=0 ambiguousNew=0 unmatchedA=0 unmatchedB=1
+SPR_ANCHOR_SUMMARY resource=BRDGRIKR.SPR direct=35 regions=1 neighboringPairs=29 uniqueOrderedMatches=0 ambiguousNew=0 unmatchedA=0 unmatchedB=1 consecutiveSameDelta=0 detailLimit=80
+SPR_ANCHOR_PAIR resource=BRDGTROI.SPR record=0 imageA=0 imageB=1 regionsA=1 regionsB=1 uniqueOrderedMatches=1 ambiguousNew=0 unmatchedA=0 unmatchedB=0
+SPR_ANCHOR_PAIR resource=BRDGTROI.SPR record=0 imageA=1 imageB=2 regionsA=1 regionsB=1 uniqueOrderedMatches=1 ambiguousNew=0 unmatchedA=0 unmatchedB=0
+SPR_ANCHOR_PAIR resource=BRDGTROI.SPR record=0 imageA=2 imageB=3 regionsA=1 regionsB=1 uniqueOrderedMatches=1 ambiguousNew=0 unmatchedA=0 unmatchedB=0
+SPR_ANCHOR_PAIR resource=BRDGTROI.SPR record=2 imageA=1 imageB=2 regionsA=0 regionsB=0 uniqueOrderedMatches=0 ambiguousNew=0 unmatchedA=0 unmatchedB=0
+SPR_ANCHOR_PAIR resource=BRDGTROI.SPR record=2 imageA=2 imageB=3 regionsA=0 regionsB=0 uniqueOrderedMatches=0 ambiguousNew=0 unmatchedA=0 unmatchedB=0
+SPR_ANCHOR_PAIR resource=BRDGTROI.SPR record=2 imageA=3 imageB=4 regionsA=0 regionsB=0 uniqueOrderedMatches=0 ambiguousNew=0 unmatchedA=0 unmatchedB=0
+SPR_ANCHOR_PAIR resource=BRDGTROI.SPR record=2 imageA=4 imageB=5 regionsA=0 regionsB=0 uniqueOrderedMatches=0 ambiguousNew=0 unmatchedA=0 unmatchedB=0
+SPR_ANCHOR_PAIR resource=BRDGTROI.SPR record=2 imageA=5 imageB=6 regionsA=0 regionsB=0 uniqueOrderedMatches=0 ambiguousNew=0 unmatchedA=0 unmatchedB=0
+SPR_ANCHOR_PAIR resource=BRDGTROI.SPR record=2 imageA=6 imageB=7 regionsA=0 regionsB=0 uniqueOrderedMatches=0 ambiguousNew=0 unmatchedA=0 unmatchedB=0
+SPR_ANCHOR_PAIR resource=BRDGTROI.SPR record=2 imageA=7 imageB=8 regionsA=0 regionsB=0 uniqueOrderedMatches=0 ambiguousNew=0 unmatchedA=0 unmatchedB=0
+SPR_ANCHOR_PAIR resource=BRDGTROI.SPR record=2 imageA=8 imageB=9 regionsA=0 regionsB=0 uniqueOrderedMatches=0 ambiguousNew=0 unmatchedA=0 unmatchedB=0
+SPR_ANCHOR_PAIR resource=BRDGTROI.SPR record=3 imageA=0 imageB=1 regionsA=0 regionsB=0 uniqueOrderedMatches=0 ambiguousNew=0 unmatchedA=0 unmatchedB=0
+SPR_ANCHOR_PAIR resource=BRDGTROI.SPR record=3 imageA=1 imageB=3 regionsA=0 regionsB=0 uniqueOrderedMatches=0 ambiguousNew=0 unmatchedA=0 unmatchedB=0
+SPR_ANCHOR_PAIR resource=BRDGTROI.SPR record=3 imageA=3 imageB=12 regionsA=0 regionsB=1 uniqueOrderedMatches=0 ambiguousNew=0 unmatchedA=0 unmatchedB=1
+SPR_ANCHOR_PAIR resource=BRDGTROI.SPR record=3 imageA=12 imageB=13 regionsA=1 regionsB=1 uniqueOrderedMatches=1 ambiguousNew=0 unmatchedA=0 unmatchedB=0
+SPR_ANCHOR_PAIR resource=BRDGTROI.SPR record=3 imageA=13 imageB=14 regionsA=1 regionsB=1 uniqueOrderedMatches=1 ambiguousNew=0 unmatchedA=0 unmatchedB=0
+SPR_ANCHOR_PAIR resource=BRDGTROI.SPR record=3 imageA=14 imageB=15 regionsA=1 regionsB=1 uniqueOrderedMatches=1 ambiguousNew=0 unmatchedA=0 unmatchedB=0
+SPR_ANCHOR_PAIR resource=BRDGTROI.SPR record=3 imageA=15 imageB=16 regionsA=1 regionsB=1 uniqueOrderedMatches=1 ambiguousNew=0 unmatchedA=0 unmatchedB=0
+SPR_ANCHOR_PAIR resource=BRDGTROI.SPR record=3 imageA=16 imageB=17 regionsA=1 regionsB=1 uniqueOrderedMatches=1 ambiguousNew=0 unmatchedA=0 unmatchedB=0
+```
